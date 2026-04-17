@@ -1,0 +1,1 @@
+ALTER TABLE `meal_entries` ADD `meal_type` text DEFAULT 'snack' NOT NULL;

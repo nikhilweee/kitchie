@@ -6,6 +6,7 @@ import type { PantryCategory } from '$lib/server/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { calcExpiry } from '$lib/expiry';
 import { guessQuantityType } from '$lib/quantity';
+import { guessCategory } from '$lib/infer';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
@@ -26,83 +27,64 @@ export const load: PageServerLoad = async ({ locals }) => {
 	};
 };
 
-// Shared helper: parse and insert one pantry item
-async function insertItem(
-	userId: string,
-	name: string,
-	category: PantryCategory,
-	quantityType: 'count' | 'estimate',
-	quantity: number,
-	purchaseDate: Date,
-	expiryDateOverride?: Date
-) {
-	const expiryDate = expiryDateOverride ?? calcExpiry(category, purchaseDate);
-	const expiryOverridden = !!expiryDateOverride;
-
-	await db.insert(pantryItems).values({
-		userId,
-		name: name.trim(),
-		category,
-		quantityType,
-		quantity,
-		purchaseDate,
-		expiryDate,
-		expiryOverridden
-	});
-}
-
 export const actions: Actions = {
-	// Single item entry
-	addSingle: async ({ request, locals }) => {
+	add: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();
 
 		const name = String(data.get('name') ?? '').trim();
-		const category = String(data.get('category') ?? 'other') as PantryCategory;
-		const quantityType = String(data.get('quantityType') ?? 'count') as 'count' | 'estimate';
-		const quantity = parseFloat(String(data.get('quantity') ?? '1'));
-		const purchaseDateStr = String(data.get('purchaseDate') ?? '');
-		const expiryDateStr = String(data.get('expiryDate') ?? '');
-
 		if (!name) return fail(400, { addError: 'Name is required.' });
-		if (isNaN(quantity) || quantity <= 0) return fail(400, { addError: 'Invalid quantity.' });
 
+		const purchaseDateStr = String(data.get('purchaseDate') ?? '');
 		const purchaseDate = purchaseDateStr ? new Date(purchaseDateStr) : new Date();
-		const expiryOverride = expiryDateStr ? new Date(expiryDateStr) : undefined;
 
-		await insertItem(userId, name, category, quantityType, quantity, purchaseDate, expiryOverride);
+		// Use submitted values; fall back to inference if absent
+		const category = (String(data.get('category') || '') as PantryCategory) || guessCategory(name);
+		const quantityType = (String(data.get('quantityType') || '') as 'count' | 'estimate') || guessQuantityType(name);
+		const quantity = parseFloat(String(data.get('quantity') ?? '')) || 1;
+		const expiryDateStr = String(data.get('expiryDate') ?? '');
+		const expiryDate = expiryDateStr ? new Date(expiryDateStr) : calcExpiry(category, purchaseDate);
+		const expiryOverridden = !!expiryDateStr;
+
+		await db.insert(pantryItems).values({
+			userId,
+			name,
+			category,
+			quantityType,
+			quantity,
+			purchaseDate,
+			expiryDate,
+			expiryOverridden
+		});
+
 		return { success: true };
 	},
 
-	// Bulk entry: multiple items sharing a purchase date + category
-	addBulk: async ({ request, locals }) => {
+	update: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();
 
-		const category = String(data.get('category') ?? 'other') as PantryCategory;
+		const id = String(data.get('id') ?? '');
+		const name = String(data.get('name') ?? '').trim();
+		if (!id || !name) return fail(400, { addError: 'Invalid request.' });
+
 		const purchaseDateStr = String(data.get('purchaseDate') ?? '');
 		const purchaseDate = purchaseDateStr ? new Date(purchaseDateStr) : new Date();
+		const category = (String(data.get('category') || '') as PantryCategory) || guessCategory(name);
+		const quantityType = (String(data.get('quantityType') || '') as 'count' | 'estimate') || guessQuantityType(name);
+		const quantity = parseFloat(String(data.get('quantity') ?? '')) || 1;
+		const expiryDateStr = String(data.get('expiryDate') ?? '');
+		const expiryDate = expiryDateStr ? new Date(expiryDateStr) : calcExpiry(category, purchaseDate);
+		const expiryOverridden = !!expiryDateStr;
 
-		const names = data.getAll('name').map(String);
-		const quantities = data.getAll('quantity').map((q) => parseFloat(String(q)));
-		const quantityTypes = data.getAll('quantityType').map(String) as Array<'count' | 'estimate'>;
-
-		const rows = names
-			.map((name, i) => ({ name: name.trim(), quantity: quantities[i] ?? 1, quantityType: quantityTypes[i] ?? 'count' }))
-			.filter((r) => r.name);
-
-		if (rows.length === 0) return fail(400, { addError: 'Add at least one item.' });
-
-		for (const row of rows) {
-			if (!isNaN(row.quantity) && row.quantity > 0) {
-				await insertItem(userId, row.name, category, row.quantityType, row.quantity, purchaseDate);
-			}
-		}
+		await db
+			.update(pantryItems)
+			.set({ name, category, quantityType, quantity, purchaseDate, expiryDate, expiryOverridden })
+			.where(and(eq(pantryItems.id, id), eq(pantryItems.userId, userId)));
 
 		return { success: true };
 	},
 
-	// Delete a single pantry item
 	delete: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();

@@ -76,6 +76,8 @@ export const pantryItems = sqliteTable('pantry_items', {
 // Meal entries
 // ---------------------------------------------------------------------------
 
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
 export const mealEntries = sqliteTable('meal_entries', {
 	id: text('id')
 		.primaryKey()
@@ -84,6 +86,7 @@ export const mealEntries = sqliteTable('meal_entries', {
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
 	name: text('name').notNull(),
+	mealType: text('meal_type').$type<MealType>().notNull().default('snack'),
 	loggedAt: integer('logged_at', { mode: 'timestamp' })
 		.$defaultFn(() => new Date())
 		.notNull()

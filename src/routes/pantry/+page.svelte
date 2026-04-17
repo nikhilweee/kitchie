@@ -2,73 +2,95 @@
 	import { enhance } from '$app/forms';
 	import type { PageData, ActionData } from './$types';
 	import { CATEGORY_LABELS, daysUntilExpiry, calcExpiry } from '$lib/expiry';
-	import { guessQuantityType, ESTIMATE_OPTIONS, estimateLabel } from '$lib/quantity';
+	import { estimateLabel, guessQuantityType, ESTIMATE_OPTIONS } from '$lib/quantity';
+	import { guessCategory } from '$lib/infer';
 	import type { PantryCategory, QuantityType } from '$lib/server/db/schema';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	// ── Add sheet ─────────────────────────────────────────────────────────────
-	let showAdd = $state(false);
-	let mode = $state<'single' | 'bulk'>('single');
+	type Item = PageData['items'][0];
 
-	// Single mode
-	let sName = $state('');
-	let sCategory = $state<PantryCategory>('other');
-	let sQtyType = $state<QuantityType>('count');
-	let sQty = $state(1);
-	let sEstimate = $state(1);
-	let sPurchaseDate = $state(todayStr());
-	let sExpiryDate = $state('');
-	let sAutoExpiry = $state('');
+	// ── Sheet mode: 'add' | 'edit' | null ────────────────────────────────────
+	let sheetMode = $state<'add' | 'edit' | null>(null);
+	let editingItem = $state<Item | null>(null);
 
-	// Bulk mode
-	let bCategory = $state<PantryCategory>('other');
-	let bPurchaseDate = $state(todayStr());
-	let bRows = $state([newRow()]);
-
-	function newRow() {
-		return { name: '', quantityType: 'count' as QuantityType, quantity: 1, estimate: 1 };
-	}
+	// Shared form state
+	let nameInput = $state('');
+	let nameEl = $state<HTMLInputElement | undefined>(undefined);
+	let category = $state<PantryCategory>('other');
+	let quantityType = $state<QuantityType>('estimate');
+	let quantity = $state(1);
+	let expiryDate = $state('');
+	let purchaseDate = $state(todayStr()); // persists across adds
+	let categoryLocked = $state(false);
+	let expiryLocked = $state(false);
 
 	function todayStr() {
 		return new Date().toISOString().split('T')[0];
 	}
 
+	function toDateStr(iso: string) {
+		return iso.split('T')[0];
+	}
+
 	function openAdd() {
-		showAdd = true;
-		mode = 'single';
-		sName = '';
-		sCategory = 'other';
-		sQtyType = 'count';
-		sQty = 1;
-		sEstimate = 1;
-		sPurchaseDate = todayStr();
-		sExpiryDate = '';
-		bRows = [newRow()];
+		sheetMode = 'add';
+		editingItem = null;
+		nameInput = '';
+		category = 'other';
+		quantityType = 'estimate';
+		quantity = 1;
+		expiryDate = '';
+		categoryLocked = false;
+		expiryLocked = false;
+		setTimeout(() => nameEl?.focus(), 50);
 	}
 
-	$effect(() => {
-		if (sName) sQtyType = guessQuantityType(sName);
-	});
-
-	$effect(() => {
-		const pd = sPurchaseDate ? new Date(sPurchaseDate) : new Date();
-		sAutoExpiry = calcExpiry(sCategory, pd).toISOString().split('T')[0];
-	});
-
-	function onBulkNameChange(i: number, name: string) {
-		bRows[i].name = name;
-		bRows[i].quantityType = guessQuantityType(name);
+	function openEdit(item: Item) {
+		sheetMode = 'edit';
+		editingItem = item;
+		nameInput = item.name;
+		category = item.category as PantryCategory;
+		quantityType = item.quantityType as QuantityType;
+		quantity = item.quantity;
+		purchaseDate = toDateStr(item.purchaseDate);
+		expiryDate = toDateStr(item.expiryDate);
+		categoryLocked = true;
+		expiryLocked = item.expiryOverridden;
+		setTimeout(() => nameEl?.focus(), 50);
 	}
 
-	// Close sheet on successful submission
-	$effect(() => {
-		if ((form as any)?.success) showAdd = false;
-	});
+	function closeSheet() {
+		sheetMode = null;
+		editingItem = null;
+	}
 
-	// ── Item grouping ─────────────────────────────────────────────────────────
-	type Item = PageData['items'][0];
+	function onNameInput() {
+		if (!categoryLocked) category = guessCategory(nameInput);
+		quantityType = guessQuantityType(nameInput);
+		if (!expiryLocked) {
+			const pd = purchaseDate ? new Date(purchaseDate) : new Date();
+			expiryDate = calcExpiry(category, pd).toISOString().split('T')[0];
+		}
+		if (sheetMode === 'add') quantity = 1; // reset per new item
+	}
 
+	function onSheetSuccess() {
+		if (sheetMode === 'add') {
+			nameInput = '';
+			categoryLocked = false;
+			expiryLocked = false;
+			category = 'other';
+			quantityType = 'estimate';
+			quantity = 1;
+			expiryDate = '';
+			setTimeout(() => nameEl?.focus(), 50);
+		} else {
+			closeSheet();
+		}
+	}
+
+	// ── Item list helpers ─────────────────────────────────────────────────────
 	function groupItems(items: Item[]) {
 		const expiringSoon: Item[] = [];
 		const runningLow: Item[] = [];
@@ -111,32 +133,34 @@
 
 <svelte:head><title>Pantry — Kitchie</title></svelte:head>
 
-<!-- Backdrop -->
-{#if showAdd}
+{#if sheetMode}
 	<div
 		class="fixed inset-0 z-40 bg-black/40"
 		role="button"
 		tabindex="-1"
 		aria-label="Close"
-		onclick={() => (showAdd = false)}
-		onkeydown={(e) => e.key === 'Escape' && (showAdd = false)}
+		onclick={closeSheet}
+		onkeydown={(e) => e.key === 'Escape' && closeSheet()}
 	></div>
 {/if}
 
 <div class="flex min-h-svh flex-col bg-stone-50">
 	<header class="sticky top-0 z-10 border-b border-stone-200 bg-white px-4 py-3">
-		<div class="mx-auto flex max-w-lg items-center justify-between">
+		<div class="mx-auto max-w-lg">
 			<h1 class="text-lg font-bold text-stone-900">Pantry</h1>
-			<button
-				onclick={openAdd}
-				class="rounded-full bg-orange-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-orange-600"
-			>
-				+ Add
-			</button>
 		</div>
 	</header>
 
-	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-24">
+	<div class="fixed bottom-14 left-0 right-0 z-30 flex justify-center px-4 pb-2">
+		<button
+			onclick={openAdd}
+			class="flex w-full max-w-lg items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-base font-semibold text-white shadow-lg hover:bg-orange-600 active:scale-95"
+		>
+			<span class="text-xl leading-none">+</span> Add to Pantry
+		</button>
+	</div>
+
+	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
 		{#if data.items.length === 0}
 			<div class="mt-16 text-center text-stone-400">
 				<p class="text-5xl">🧺</p>
@@ -150,14 +174,12 @@
 					{@render itemList(groups.expiringSoon)}
 				</section>
 			{/if}
-
 			{#if groups.runningLow.length > 0}
 				<section class="mb-6">
 					<h2 class="mb-2 text-xs font-semibold tracking-wider text-orange-500 uppercase">Running low</h2>
 					{@render itemList(groups.runningLow)}
 				</section>
 			{/if}
-
 			{#if groups.normal.length > 0}
 				<section class="mb-6">
 					<h2 class="mb-2 text-xs font-semibold tracking-wider text-stone-400 uppercase">In stock</h2>
@@ -172,168 +194,159 @@
 	<ul class="space-y-2">
 		{#each items as item (item.id)}
 			<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs">
-				<div class="min-w-0 flex-1">
+				<button
+					type="button"
+					onclick={() => openEdit(item)}
+					class="min-w-0 flex-1 text-left"
+				>
 					<p class="truncate font-medium text-stone-900">{item.name}</p>
 					<p class="text-xs text-stone-400">{CATEGORY_LABELS[item.category as PantryCategory]}</p>
-				</div>
+				</button>
 				<span class="shrink-0 text-sm font-medium text-stone-600">{qtyLabel(item)}</span>
 				<span class="shrink-0 text-xs font-medium {expiryColor(item.expiryDate)}">
 					{expiryLabel(item.expiryDate)}
 				</span>
 				<form method="POST" action="?/delete" use:enhance>
 					<input type="hidden" name="id" value={item.id} />
-					<button type="submit" aria-label="Delete {item.name}" class="shrink-0 text-stone-300 hover:text-red-400">
-						✕
-					</button>
+					<button type="submit" aria-label="Delete {item.name}" class="shrink-0 text-stone-300 hover:text-red-400">✕</button>
 				</form>
 			</li>
 		{/each}
 	</ul>
 {/snippet}
 
-<!-- ── Add sheet ──────────────────────────────────────────────────────────── -->
-{#if showAdd}
+<!-- ── Add / Edit sheet ───────────────────────────────────────────────────── -->
+{#if sheetMode}
 	<div
-		class="fixed inset-x-0 bottom-0 z-50 max-h-[90svh] overflow-y-auto rounded-t-2xl bg-white px-4 pt-3 pb-10 shadow-2xl"
+		class="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white px-4 pt-3 pb-10 shadow-2xl"
 		role="dialog"
 		aria-modal="true"
 	>
-		<div class="mx-auto mb-4 h-1 w-10 rounded-full bg-stone-200"></div>
+		<div class="mx-auto mb-5 h-1 w-10 rounded-full bg-stone-200"></div>
 
-		<!-- Mode toggle -->
-		<div class="mb-4 flex rounded-xl bg-stone-100 p-1 text-sm font-medium">
-			<button
-				onclick={() => (mode = 'single')}
-				class="flex-1 rounded-lg py-1.5 transition-colors {mode === 'single' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-500'}"
-			>
-				Single item
-			</button>
-			<button
-				onclick={() => (mode = 'bulk')}
-				class="flex-1 rounded-lg py-1.5 transition-colors {mode === 'bulk' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-500'}"
-			>
-				Bulk entry
-			</button>
-		</div>
+		<form
+			method="POST"
+			action={sheetMode === 'add' ? '?/add' : '?/update'}
+			use:enhance={() => async ({ result, update }) => {
+				await update({ reset: false });
+				if (result.type === 'success') onSheetSuccess();
+			}}
+		>
+			{#if sheetMode === 'edit' && editingItem}
+				<input type="hidden" name="id" value={editingItem.id} />
+			{/if}
 
-		{#if (form as any)?.addError}
-			<p class="mb-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{(form as any).addError}</p>
-		{/if}
+			<!-- Hidden default submit so Enter key always triggers save, not delete -->
+			<button type="submit" class="sr-only" tabindex="-1" aria-hidden="true"></button>
 
-		<!-- Single mode -->
-		{#if mode === 'single'}
-			<form method="POST" action="?/addSingle" use:enhance>
-				<div class="space-y-3">
-					<div>
-						<label for="s-name" class="mb-1 block text-sm font-medium text-stone-700">Item name</label>
-						<input id="s-name" name="name" type="text" bind:value={sName} placeholder="e.g. Eggs" autocapitalize="sentences" required class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none" />
-					</div>
+			<input
+				bind:this={nameEl}
+				bind:value={nameInput}
+				oninput={onNameInput}
+				name="name"
+				type="text"
+				placeholder="What did you buy?"
+				autocapitalize="sentences"
+				autocomplete="off"
+				required
+				class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+			/>
 
-					<div>
-						<label for="s-cat" class="mb-1 block text-sm font-medium text-stone-700">Category</label>
-						<select id="s-cat" name="category" bind:value={sCategory} class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none">
-							{#each categories as [val, label] (val)}
-								<option value={val}>{label}</option>
+			<div class="mt-3 space-y-2">
+				<div>
+					<label for="sheet-category" class="mb-1 block text-xs font-medium text-stone-500">Category</label>
+					<select
+						id="sheet-category"
+						name="category"
+						bind:value={category}
+						onchange={() => (categoryLocked = true)}
+						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+					>
+						{#each categories as [val, label] (val)}
+							<option value={val}>{label}</option>
+						{/each}
+					</select>
+				</div>
+
+				<div>
+					<p class="mb-1 text-xs font-medium text-stone-500">Quantity</p>
+					<input type="hidden" name="quantityType" value={quantityType} />
+					{#if quantityType === 'count'}
+						<input
+							name="quantity"
+							type="number"
+							bind:value={quantity}
+							min="0.5"
+							step="0.5"
+							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+						/>
+					{:else}
+						<input type="hidden" name="quantity" value={quantity} />
+						<div class="flex gap-2">
+							{#each ESTIMATE_OPTIONS as opt (opt.value)}
+								<button
+									type="button"
+									onclick={() => (quantity = opt.value)}
+									class="flex-1 rounded-xl border py-2.5 text-sm font-medium transition-colors {quantity === opt.value ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-600 hover:bg-stone-50'}"
+								>
+									{opt.label}
+								</button>
 							{/each}
-						</select>
-					</div>
-
-					<div>
-						<p class="mb-1 text-sm font-medium text-stone-700">Quantity</p>
-						<input type="hidden" name="quantityType" value={sQtyType} />
-						{#if sQtyType === 'count'}
-							<input id="s-qty" name="quantity" type="number" bind:value={sQty} min="1" step="1" class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none" />
-						{:else}
-							<input type="hidden" name="quantity" value={sEstimate} />
-							<div class="flex gap-2">
-								{#each ESTIMATE_OPTIONS as opt (opt.value)}
-									<button type="button" onclick={() => (sEstimate = opt.value)} class="flex-1 rounded-xl border py-2 text-sm font-medium {sEstimate === opt.value ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-600 hover:bg-stone-50'}">
-										{opt.label}
-									</button>
-								{/each}
-							</div>
-						{/if}
-					</div>
-
-					<div class="grid grid-cols-2 gap-3">
-						<div>
-							<label for="s-purchase" class="mb-1 block text-sm font-medium text-stone-700">Purchased</label>
-							<input id="s-purchase" name="purchaseDate" type="date" bind:value={sPurchaseDate} class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none" />
 						</div>
-						<div>
-							<label for="s-expiry" class="mb-1 flex items-center justify-between text-sm font-medium text-stone-700">
-								<span>Expires</span>
-								{#if !sExpiryDate}<span class="text-xs font-normal text-stone-400">auto: {sAutoExpiry}</span>{/if}
-							</label>
-							<input id="s-expiry" name="expiryDate" type="date" bind:value={sExpiryDate} class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none" />
-						</div>
-					</div>
+					{/if}
 				</div>
 
-				<div class="mt-4 flex gap-2">
-					<button type="button" onclick={() => (showAdd = false)} class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600">Cancel</button>
-					<button type="submit" class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600">Add item</button>
-				</div>
-			</form>
-
-		<!-- Bulk mode -->
-		{:else}
-			<form method="POST" action="?/addBulk" use:enhance>
-				<div class="mb-4 grid grid-cols-2 gap-3">
+				<div class="grid grid-cols-2 gap-2">
 					<div>
-						<label for="b-date" class="mb-1 block text-sm font-medium text-stone-700">Shopping date</label>
-						<input id="b-date" name="purchaseDate" type="date" bind:value={bPurchaseDate} class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none" />
+						<label for="sheet-purchased" class="mb-1 block text-xs font-medium text-stone-500">Purchased</label>
+						<input
+							id="sheet-purchased"
+							name="purchaseDate"
+							type="date"
+							bind:value={purchaseDate}
+							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
+						/>
 					</div>
 					<div>
-						<label for="b-cat" class="mb-1 block text-sm font-medium text-stone-700">Category</label>
-						<select id="b-cat" name="category" bind:value={bCategory} class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none">
-							{#each categories as [val, label] (val)}
-								<option value={val}>{label}</option>
-							{/each}
-						</select>
+						<label for="sheet-expiry" class="mb-1 block text-xs font-medium text-stone-500">Expires</label>
+						<input
+							id="sheet-expiry"
+							name="expiryDate"
+							type="date"
+							bind:value={expiryDate}
+							oninput={() => (expiryLocked = true)}
+							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
+						/>
 					</div>
 				</div>
+			</div>
 
-				<div class="space-y-2">
-					{#each bRows as row, i (i)}
-						<div class="flex items-center gap-2">
-							<input
-								name="name"
-								type="text"
-								value={row.name}
-								oninput={(e) => onBulkNameChange(i, e.currentTarget.value)}
-								placeholder="Item name"
-								autocapitalize="sentences"
-								class="min-w-0 flex-1 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
-							/>
-							<input type="hidden" name="quantityType" value={row.quantityType} />
-							{#if row.quantityType === 'count'}
-								<input name="quantity" type="number" bind:value={row.quantity} min="1" step="1" class="w-20 rounded-xl border border-stone-300 bg-stone-50 px-2 py-2.5 text-center text-sm focus:border-orange-500 focus:outline-none" />
-							{:else}
-								<select name="quantity" bind:value={row.estimate} onchange={() => (row.quantity = row.estimate)} class="w-24 rounded-xl border border-stone-300 bg-stone-50 px-2 py-2.5 text-sm focus:border-orange-500 focus:outline-none">
-									{#each ESTIMATE_OPTIONS as opt (opt.value)}
-										<option value={opt.value}>{opt.label}</option>
-									{/each}
-								</select>
-							{/if}
-							{#if bRows.length > 1}
-								<button type="button" onclick={() => bRows.splice(i, 1)} aria-label="Remove row" class="shrink-0 text-stone-400 hover:text-red-500">✕</button>
-							{/if}
-						</div>
-					{/each}
-				</div>
-
-				<button type="button" onclick={() => bRows.push(newRow())} class="mt-2 text-sm text-orange-500 hover:text-orange-600">
-					+ Add another item
-				</button>
-
-				<div class="mt-4 flex gap-2">
-					<button type="button" onclick={() => (showAdd = false)} class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600">Cancel</button>
-					<button type="submit" class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600">
-						Add {bRows.filter((r) => r.name).length || ''} items
+			<div class="mt-4 flex gap-2">
+				{#if sheetMode === 'edit'}
+					<button
+						type="submit"
+						formaction="?/delete"
+						class="flex-1 rounded-xl border border-red-200 py-3 text-sm font-medium text-red-500 hover:bg-red-50"
+					>
+						Delete
 					</button>
-				</div>
-			</form>
-		{/if}
+				{:else}
+					<button
+						type="button"
+						onclick={closeSheet}
+						class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600"
+					>
+						Done
+					</button>
+				{/if}
+				<button
+					type="submit"
+					disabled={!nameInput.trim()}
+					class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40"
+				>
+					{sheetMode === 'edit' ? 'Save' : 'Add item'}
+				</button>
+			</div>
+		</form>
 	</div>
 {/if}

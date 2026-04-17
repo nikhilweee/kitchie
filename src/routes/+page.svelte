@@ -1,32 +1,55 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
-	import type { PageData, ActionData } from './$types';
+	import type { PageData } from './$types';
+	import { MEAL_TYPE_LABELS, MEAL_TYPES, guessMealType, currentDateTimeStr } from '$lib/meal-type';
+	import type { MealType } from '$lib/server/db/schema';
 
-	let { data, form }: { data: PageData; form: ActionData } = $props();
+	let { data }: { data: PageData } = $props();
 
-	// ── Add Meal sheet ───────────────────────────────────────────────────────
-	let showAddMeal = $state(false);
+	// ── Sheet mode ────────────────────────────────────────────────────────────
+	type Entry = PageData['entries'][0];
+	let sheetMode = $state<'add' | 'edit' | null>(null);
+	let editingEntry = $state<Entry | null>(null);
+
+	// Shared form fields
 	let mealInput = $state('');
+	let mealDateTime = $state(currentDateTimeStr());
+	let mealType = $state<MealType>('snack');
+	let mealTypeLocked = $state(false);
+
+	// Suggestions (add mode only)
 	let suggestions = $state<string[]>([]);
 	let loadingSuggestions = $state(false);
+	let inputEl = $state<HTMLInputElement | undefined>(undefined);
+	let debounceTimer: ReturnType<typeof setTimeout>;
 
-	// Open sheet and immediately fetch proactive suggestions
-	async function openAddMeal() {
-		showAddMeal = true;
+	function openAdd() {
+		sheetMode = 'add';
+		editingEntry = null;
 		mealInput = '';
-		await fetchSuggestions('');
+		mealDateTime = currentDateTimeStr();
+		mealType = guessMealType(new Date().getHours());
+		mealTypeLocked = false;
+		suggestions = [];
+		fetchSuggestions('');
 		setTimeout(() => inputEl?.focus(), 50);
 	}
 
-	function closeAddMeal() {
-		showAddMeal = false;
-		mealInput = '';
-		suggestions = [];
+	function openEdit(entry: Entry) {
+		sheetMode = 'edit';
+		editingEntry = entry;
+		mealInput = entry.name;
+		mealDateTime = entry.loggedAt.slice(0, 16); // "YYYY-MM-DDTHH:MM"
+		mealType = entry.mealType as MealType;
+		mealTypeLocked = true;
 	}
 
-	let inputEl = $state<HTMLInputElement | undefined>(undefined);
-	let debounceTimer: ReturnType<typeof setTimeout>;
+	function closeSheet() {
+		sheetMode = null;
+		editingEntry = null;
+		suggestions = [];
+	}
 
 	async function fetchSuggestions(q: string) {
 		loadingSuggestions = true;
@@ -35,7 +58,7 @@
 		loadingSuggestions = false;
 	}
 
-	function onInput() {
+	function onNameInput() {
 		clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(() => fetchSuggestions(mealInput), 200);
 	}
@@ -46,8 +69,6 @@
 	}
 
 	// ── Meal log grouping ────────────────────────────────────────────────────
-	type Entry = PageData['entries'][0];
-
 	function groupByDay(entries: Entry[]) {
 		const groups = new Map<string, Entry[]>();
 		for (const e of entries) {
@@ -71,48 +92,59 @@
 	function isToday(key: string) {
 		return (
 			key ===
-			new Date().toLocaleDateString('en-US', {
-				weekday: 'long',
-				month: 'short',
-				day: 'numeric'
-			})
+			new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 		);
 	}
 
 	// ── Pantry update sheet (step 2) ─────────────────────────────────────────
-	let pantrySelections = $state<Record<string, boolean>>({});
+	type PantryItem = PageData['pantrySuggestions'][0]['item'];
+	type PantrySelection = { item: PantryItem; quantityUsed: number };
+	let pantrySelected = $state<PantrySelection[]>([]);
+	let pantrySearch = $state('');
 
 	$effect(() => {
+		// Pre-populate with keyword-matched items when the sheet opens
 		if (data.pantrySuggestions.length > 0) {
-			pantrySelections = Object.fromEntries(
-				data.pantrySuggestions.map((s) => [s.item.id, s.suggested])
-			);
+			pantrySelected = data.pantrySuggestions
+				.filter((s) => s.suggested)
+				.map((s) => ({ item: s.item, quantityUsed: 1 }));
 		}
 	});
+
+	const pantryFiltered = $derived(
+		pantrySearch.length === 0
+			? []
+			: data.pantrySuggestions
+					.filter((s) => !pantrySelected.some((sel) => sel.item.id === s.item.id))
+					.filter((s) => s.item.name.toLowerCase().includes(pantrySearch.toLowerCase()))
+					.map((s) => s.item)
+	);
+
+	function addPantryItem(item: PantryItem) {
+		pantrySelected = [...pantrySelected, { item, quantityUsed: 1 }];
+		pantrySearch = '';
+	}
+
+	function removePantryItem(id: string) {
+		pantrySelected = pantrySelected.filter((s) => s.item.id !== id);
+	}
 </script>
 
-<svelte:head>
-	<title>Kitchie</title>
-</svelte:head>
+<svelte:head><title>Kitchie</title></svelte:head>
 
-<!-- ── Backdrop ──────────────────────────────────────────────────────────── -->
-{#if showAddMeal || data.updateMeal}
+<!-- Backdrop -->
+{#if sheetMode || data.updateMeal}
 	<div
 		class="fixed inset-0 z-40 bg-black/40"
 		role="button"
 		tabindex="-1"
 		aria-label="Close"
-		onclick={() => {
-			closeAddMeal();
-			if (data.updateMeal) goto('/');
-		}}
-		onkeydown={(e) => e.key === 'Escape' && (closeAddMeal(), data.updateMeal && goto('/'))}
+		onclick={() => { closeSheet(); if (data.updateMeal) goto('/'); }}
+		onkeydown={(e) => e.key === 'Escape' && (closeSheet(), data.updateMeal && goto('/'))}
 	></div>
 {/if}
 
-<!-- ── App shell ──────────────────────────────────────────────────────────── -->
 <div class="flex min-h-svh flex-col bg-stone-50">
-	<!-- Header -->
 	<header class="sticky top-0 z-10 border-b border-stone-200 bg-white px-4 py-3">
 		<div class="mx-auto flex max-w-lg items-center justify-between">
 			<h1 class="text-lg font-bold text-stone-900">Kitchie</h1>
@@ -120,7 +152,6 @@
 		</div>
 	</header>
 
-	<!-- Meal log -->
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
 		{#if data.entries.length === 0}
 			<div class="mt-16 text-center text-stone-400">
@@ -137,15 +168,24 @@
 					<ul class="space-y-2">
 						{#each entries as entry (entry.id)}
 							<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs">
-								<div class="flex-1">
-									<p class="font-medium text-stone-900">{entry.name}</p>
-									{#if entry.ingredients.length > 0}
-										<p class="mt-0.5 text-xs text-stone-400">
-											{entry.ingredients.join(', ')}
-										</p>
-									{/if}
-								</div>
+								<button
+									type="button"
+									onclick={() => openEdit(entry)}
+									class="min-w-0 flex-1 text-left"
+								>
+									<p class="truncate font-medium text-stone-900">{entry.name}</p>
+									<p class="text-xs text-stone-400">
+										{MEAL_TYPE_LABELS[entry.mealType as MealType]}
+										{#if entry.ingredients.length > 0}
+											· {entry.ingredients.join(', ')}
+										{/if}
+									</p>
+								</button>
 								<span class="shrink-0 text-xs text-stone-400">{formatTime(entry.loggedAt)}</span>
+								<form method="POST" action="?/deleteMeal" use:enhance>
+									<input type="hidden" name="id" value={entry.id} />
+									<button type="submit" aria-label="Delete {entry.name}" class="shrink-0 text-stone-300 hover:text-red-400">✕</button>
+								</form>
 							</li>
 						{/each}
 					</ul>
@@ -154,10 +194,9 @@
 		{/if}
 	</main>
 
-	<!-- Add Meal FAB -->
 	<div class="fixed bottom-14 left-0 right-0 z-30 flex justify-center px-4 pb-2">
 		<button
-			onclick={openAddMeal}
+			onclick={openAdd}
 			class="flex w-full max-w-lg items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-base font-semibold text-white shadow-lg hover:bg-orange-600 active:scale-95"
 		>
 			<span class="text-xl leading-none">+</span> Add Meal
@@ -165,69 +204,120 @@
 	</div>
 </div>
 
-<!-- ── Add Meal sheet ─────────────────────────────────────────────────────── -->
-{#if showAddMeal}
+<!-- ── Add / Edit meal sheet ─────────────────────────────────────────────── -->
+{#if sheetMode}
 	<div
 		class="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white px-4 pt-3 pb-8 shadow-2xl"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Add meal"
 	>
-		<!-- Handle -->
 		<div class="mx-auto mb-4 h-1 w-10 rounded-full bg-stone-200"></div>
-
-		<h2 class="mb-3 text-base font-semibold text-stone-900">What did you eat?</h2>
 
 		<form
 			method="POST"
-			action="?/addMeal"
-			use:enhance
+			action={sheetMode === 'add' ? '?/addMeal' : '?/updateMeal'}
+			use:enhance={() => async ({ result, update }) => {
+				if (sheetMode === 'edit') {
+					await update({ reset: false });
+					if (result.type === 'success') closeSheet();
+				} else {
+					await update(); // follows the 302 redirect to /?update=<id>
+				}
+			}}
 		>
-			<input
-				bind:this={inputEl}
-				bind:value={mealInput}
-				oninput={onInput}
-				name="name"
-				type="text"
-				placeholder="e.g. Avocado toast"
-				autocomplete="off"
-				autocapitalize="sentences"
-				class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-3 text-base text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none"
-			/>
+			<!-- Hidden default submit so Enter triggers save, not delete -->
+			<button type="submit" class="sr-only" tabindex="-1" aria-hidden="true"></button>
 
-			<!-- Suggestions -->
-			{#if suggestions.length > 0}
-				<ul class="mt-2 space-y-1">
-					{#each suggestions as s (s)}
-						<li>
-							<button
-								type="button"
-								onclick={() => selectSuggestion(s)}
-								class="w-full rounded-lg px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100 active:bg-stone-200"
-							>
-								{s}
-							</button>
-						</li>
-					{/each}
-				</ul>
-			{:else if mealInput.length > 0 && !loadingSuggestions}
-				<p class="mt-2 px-1 text-xs text-stone-400">No past matches — will save as new meal.</p>
+			{#if sheetMode === 'edit' && editingEntry}
+				<input type="hidden" name="id" value={editingEntry.id} />
 			{/if}
 
+			<!-- Name -->
+			<div class="relative">
+				<input
+					bind:this={inputEl}
+					bind:value={mealInput}
+					oninput={onNameInput}
+					name="name"
+					type="text"
+					placeholder="What did you eat?"
+					autocomplete="off"
+					autocapitalize="sentences"
+					required
+					class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+				/>
+				<!-- Suggestions dropdown (add mode only) — absolute so layout stays stable -->
+				{#if sheetMode === 'add' && suggestions.length > 0}
+					<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+						{#each suggestions as s (s)}
+							<li>
+								<button
+									type="button"
+									onclick={() => selectSuggestion(s)}
+									class="w-full px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
+								>
+									{s}
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+
+			<!-- Date/time + Meal type -->
+			<div class="mt-3 space-y-2">
+				<div class="grid grid-cols-2 gap-2">
+					<div>
+						<label for="meal-datetime" class="mb-1 block text-xs font-medium text-stone-500">Date & time</label>
+						<input
+							id="meal-datetime"
+							name="datetime"
+							type="datetime-local"
+							bind:value={mealDateTime}
+							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+						/>
+					</div>
+					<div>
+						<label for="meal-type" class="mb-1 block text-xs font-medium text-stone-500">Meal type</label>
+						<select
+							id="meal-type"
+							name="mealType"
+							bind:value={mealType}
+							onchange={() => (mealTypeLocked = true)}
+							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+						>
+							{#each MEAL_TYPES as t (t)}
+								<option value={t}>{MEAL_TYPE_LABELS[t]}</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+			</div>
+
 			<div class="mt-4 flex gap-2">
-				<button
-					type="button"
-					onclick={closeAddMeal}
-					class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50"
-				>
-					Cancel
-				</button>
+				{#if sheetMode === 'edit'}
+					<button
+						type="submit"
+						formaction="?/deleteMeal"
+						class="flex-1 rounded-xl border border-red-200 py-3 text-sm font-medium text-red-500 hover:bg-red-50"
+					>
+						Delete
+					</button>
+				{:else}
+					<button
+						type="button"
+						onclick={closeSheet}
+						class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600"
+					>
+						Cancel
+					</button>
+				{/if}
 				<button
 					type="submit"
 					disabled={!mealInput.trim()}
 					class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40"
 				>
-					Log meal
+					{sheetMode === 'edit' ? 'Save' : 'Log meal'}
 				</button>
 			</div>
 		</form>
@@ -240,7 +330,6 @@
 		class="fixed inset-x-0 bottom-0 z-50 max-h-[80svh] overflow-y-auto rounded-t-2xl bg-white px-4 pt-3 pb-8 shadow-2xl"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Update pantry"
 	>
 		<div class="mx-auto mb-4 h-1 w-10 rounded-full bg-stone-200"></div>
 
@@ -249,61 +338,75 @@
 			What did you use for <span class="font-medium text-stone-700">{data.updateMeal.name}</span>?
 		</p>
 
-		{#if data.pantrySuggestions.length === 0}
-			<p class="py-6 text-center text-sm text-stone-400">
-				Your pantry is empty — add items first.
-			</p>
-			<a
-				href="/"
-				class="block w-full rounded-xl bg-stone-100 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-200"
-			>
-				Skip for now
-			</a>
-		{:else}
-			<form method="POST" action="?/updatePantry" use:enhance>
-				<input type="hidden" name="mealId" value={data.updateMeal.id} />
+		<form method="POST" action="?/updatePantry" use:enhance>
+			<input type="hidden" name="mealId" value={data.updateMeal.id} />
 
-				<ul class="space-y-2">
-					{#each data.pantrySuggestions as { item, suggested } (item.id)}
-						<li class="flex items-center gap-3 rounded-xl border border-stone-200 px-4 py-3">
-							<input
-								type="checkbox"
-								name="itemId"
-								value={item.id}
-								checked={pantrySelections[item.id] ?? suggested}
-								onchange={(e) => {
-									pantrySelections[item.id] = e.currentTarget.checked;
-								}}
-								class="h-5 w-5 rounded border-stone-300 text-orange-500 focus:ring-orange-500/30"
-							/>
-							<span class="flex-1 text-sm font-medium text-stone-800">{item.name}</span>
+			<!-- Selected ingredients -->
+			{#if pantrySelected.length > 0}
+				<ul class="mb-3 space-y-2">
+					{#each pantrySelected as sel (sel.item.id)}
+						<li class="flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5">
+							<input type="hidden" name="itemId" value={sel.item.id} />
+							<span class="flex-1 text-sm font-medium text-stone-800">{sel.item.name}</span>
 							<input
 								type="number"
 								name="quantityUsed"
-								value="1"
+								bind:value={sel.quantityUsed}
 								min="0.1"
 								step="0.5"
 								class="w-16 rounded-lg border border-stone-200 px-2 py-1 text-center text-sm text-stone-700 focus:border-orange-500 focus:outline-none"
 							/>
+							<button
+								type="button"
+								onclick={() => removePantryItem(sel.item.id)}
+								class="shrink-0 text-stone-300 hover:text-red-400"
+								aria-label="Remove {sel.item.name}"
+							>✕</button>
 						</li>
 					{/each}
 				</ul>
+			{:else}
+				<p class="mb-3 text-sm text-stone-400">No ingredients added yet.</p>
+			{/if}
 
-				<div class="mt-4 flex gap-2">
-					<a
-						href="/"
-						class="flex-1 rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-50"
-					>
-						Skip
-					</a>
-					<button
-						type="submit"
-						class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600"
-					>
-						Update pantry
-					</button>
+			<!-- Search to add more -->
+			{#if data.pantrySuggestions.length > 0}
+				<div class="relative">
+					<input
+						type="text"
+						bind:value={pantrySearch}
+						placeholder="Search pantry to add ingredients…"
+						autocomplete="off"
+						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+					/>
+					{#if pantryFiltered.length > 0}
+						<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+							{#each pantryFiltered as item (item.id)}
+								<li>
+									<button
+										type="button"
+										onclick={() => addPantryItem(item)}
+										class="w-full px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
+									>
+										{item.name}
+									</button>
+								</li>
+							{/each}
+						</ul>
+					{/if}
 				</div>
-			</form>
-		{/if}
+			{:else}
+				<p class="text-sm text-stone-400">Your pantry is empty — add items first.</p>
+			{/if}
+
+			<div class="mt-4 flex gap-2">
+				<a href="/" class="flex-1 rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-50">
+					Skip
+				</a>
+				<button type="submit" class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600">
+					Update pantry
+				</button>
+			</div>
+		</form>
 	</div>
 {/if}

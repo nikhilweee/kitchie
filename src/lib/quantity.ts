@@ -1,17 +1,19 @@
 import type { QuantityType } from '$lib/server/db/schema';
 
-// Keywords that indicate a bulk/liquid item → use fuzzy estimate
-const ESTIMATE_KEYWORDS = [
-	'milk', 'flour', 'sugar', 'oil', 'butter', 'cream', 'juice', 'water',
-	'sauce', 'syrup', 'honey', 'vinegar', 'broth', 'stock', 'wine', 'beer',
-	'yogurt', 'yoghurt', 'oats', 'oatmeal', 'rice', 'pasta', 'cereal',
-	'powder', 'spice', 'salt', 'pepper', 'cumin', 'paprika', 'cinnamon',
-	'coffee', 'tea', 'shampoo', 'soap', 'detergent'
+// Only clearly countable discrete items use count; everything else defaults to estimate
+const COUNT_KEYWORDS = [
+	'egg', 'eggs', 'banana', 'bananas', 'apple', 'apples', 'orange', 'oranges',
+	'lemon', 'lemons', 'lime', 'limes', 'potato', 'potatoes', 'onion', 'onions',
+	'tomato', 'tomatoes', 'avocado', 'avocados', 'can', 'cans', 'tin', 'tins',
+	'bottle', 'bottles', 'bag', 'bags', 'box', 'boxes', 'pack', 'packs',
+	'piece', 'pieces', 'slice', 'slices', 'loaf', 'loaves', 'roll', 'rolls',
+	'bun', 'buns', 'muffin', 'muffins', 'bagel', 'bagels', 'wrap', 'wraps',
+	'bar', 'bars', 'sachet', 'sachets', 'tablet', 'tablets'
 ];
 
 export function guessQuantityType(name: string): QuantityType {
 	const lower = name.toLowerCase();
-	return ESTIMATE_KEYWORDS.some((k) => lower.includes(k)) ? 'estimate' : 'count';
+	return COUNT_KEYWORDS.some((k) => lower.includes(k)) ? 'count' : 'estimate';
 }
 
 // Estimate levels stored as numbers: full=1, half=0.5, low=0.1
