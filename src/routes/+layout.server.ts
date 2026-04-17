@@ -10,7 +10,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 
 	return {
 		user: locals.user
-			? { id: locals.user.id, username: locals.user.username }
+			? { id: locals.user.id, username: locals.user.username, name: locals.user.name ?? null }
 			: null
 	};
 };

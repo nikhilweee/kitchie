@@ -16,5 +16,12 @@
       "tag": "0001_smart_rictor",
       "breakpoints": true
     }
+    ,{
+      "idx": 2,
+      "version": "6",
+      "when": 1776500000000,
+      "tag": "0002_recipes_and_profile",
+      "breakpoints": true
+    }
   ]
 }

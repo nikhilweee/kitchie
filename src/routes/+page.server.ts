@@ -1,7 +1,7 @@
 import { redirect, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { mealEntries, mealIngredients, pantryItems } from '$lib/server/db/schema';
+import { mealEntries, mealIngredients, pantryItems, recipes, recipeItems } from '$lib/server/db/schema';
 import type { MealType } from '$lib/server/db/schema';
 import { eq, desc, and, inArray } from 'drizzle-orm';
 import { guessMealType } from '$lib/meal-type';
@@ -25,8 +25,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					.where(inArray(mealIngredients.mealEntryId, entryIds))
 			: [];
 
-	// If ?update=<mealId>, load that meal + pantry suggestions for step 2
+	// Step 2: ?update=<mealId>[&recipe=<recipeId>]
 	const updateMealId = url.searchParams.get('update');
+	const recipeId = url.searchParams.get('recipe');
 	let updateMeal: (typeof entries)[0] | null = null;
 	let pantrySuggestions: Array<{ item: typeof pantryItems.$inferSelect; suggested: boolean }> = [];
 
@@ -40,13 +41,50 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 				.where(eq(pantryItems.userId, userId))
 				.orderBy(pantryItems.name);
 
-			const mealWords = updateMeal.name.toLowerCase().split(/\s+/);
-			pantrySuggestions = allItems.map((item) => ({
-				item,
-				suggested: mealWords.some(
-					(word) => word.length > 2 && item.name.toLowerCase().includes(word)
-				)
-			}));
+			if (recipeId) {
+				// Pre-select recipe items; also surface all pantry items for search
+				const rItems = await db
+					.select()
+					.from(recipeItems)
+					.where(eq(recipeItems.recipeId, recipeId));
+				const recipeItemIds = new Set(rItems.map((i) => i.pantryItemId).filter(Boolean));
+				pantrySuggestions = allItems.map((item) => ({
+					item,
+					suggested: recipeItemIds.has(item.id)
+				}));
+			} else {
+				// Keyword-match fallback
+				const mealWords = updateMeal.name.toLowerCase().split(/\s+/);
+				pantrySuggestions = allItems.map((item) => ({
+					item,
+					suggested: mealWords.some(
+						(word) => word.length > 2 && item.name.toLowerCase().includes(word)
+					)
+				}));
+			}
+		}
+	}
+
+	// Step 3: ?save_recipe=<mealId> — offer to save logged ingredients as recipe
+	const saveMealId = url.searchParams.get('save_recipe');
+	let saveRecipeMeal: { id: string; name: string; ingredients: string[] } | null = null;
+	if (saveMealId) {
+		const meal = entries.find((e) => e.id === saveMealId) ?? null;
+		if (meal) {
+			const logged = ingredients.filter((i) => i.mealEntryId === saveMealId);
+			// Only offer if no recipe already exists with this name
+			const existing = await db
+				.select()
+				.from(recipes)
+				.where(and(eq(recipes.userId, userId), eq(recipes.name, meal.name)))
+				.get();
+			if (!existing && logged.length > 0) {
+				saveRecipeMeal = {
+					id: meal.id,
+					name: meal.name,
+					ingredients: logged.map((i) => i.itemName)
+				};
+			}
 		}
 	}
 
@@ -57,6 +95,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			ingredients: ingredients.filter((i) => i.mealEntryId === e.id).map((i) => i.itemName)
 		})),
 		updateMeal: updateMeal ? { ...updateMeal, loggedAt: updateMeal.loggedAt.toISOString() } : null,
+		saveRecipeMeal,
 		pantrySuggestions: pantrySuggestions.map((s) => ({
 			...s,
 			item: {
@@ -77,6 +116,7 @@ export const actions: Actions = {
 		const name = String(data.get('name') ?? '').trim();
 		const datetimeStr = String(data.get('datetime') ?? '');
 		const mealType = String(data.get('mealType') ?? '') as MealType;
+		const recipeId = String(data.get('recipeId') ?? '');
 
 		if (!name) return fail(400, { error: 'Meal name is required.' });
 
@@ -91,7 +131,9 @@ export const actions: Actions = {
 			.values({ userId, name, mealType: resolvedMealType, loggedAt })
 			.returning();
 
-		redirect(302, `/?update=${meal.id}`);
+		const params = new URLSearchParams({ update: meal.id });
+		if (recipeId) params.set('recipe', recipeId);
+		redirect(302, `/?${params}`);
 	},
 
 	// Edit a meal entry (name, time, meal type)
@@ -141,7 +183,7 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	// Step 2: save pantry depletions
+	// Step 2: save pantry depletions, then offer to save as recipe
 	updatePantry: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();
@@ -180,6 +222,45 @@ export const actions: Actions = {
 
 			const newQty = Math.max(0, item.quantity - used);
 			await db.update(pantryItems).set({ quantity: newQty }).where(eq(pantryItems.id, itemId));
+		}
+
+		// If items were selected, offer to save as recipe (handled in load via ?save_recipe=)
+		if (selectedIds.length > 0) {
+			redirect(302, `/?save_recipe=${mealId}`);
+		}
+		redirect(302, '/');
+	},
+
+	// Step 3: save selected meal ingredients as a new recipe
+	saveRecipe: async ({ request, locals }) => {
+		const userId = locals.user!.id;
+		const data = await request.formData();
+		const mealId = String(data.get('mealId') ?? '');
+
+		if (!mealId) return fail(400, {});
+
+		const meal = await db
+			.select()
+			.from(mealEntries)
+			.where(and(eq(mealEntries.id, mealId), eq(mealEntries.userId, userId)))
+			.get();
+		if (!meal) return fail(404, {});
+
+		const logged = await db
+			.select()
+			.from(mealIngredients)
+			.where(eq(mealIngredients.mealEntryId, mealId));
+
+		if (logged.length === 0) redirect(302, '/');
+
+		const [recipe] = await db.insert(recipes).values({ userId, name: meal.name }).returning();
+		for (const ing of logged) {
+			await db.insert(recipeItems).values({
+				recipeId: recipe.id,
+				pantryItemId: ing.pantryItemId,
+				itemName: ing.itemName,
+				defaultQuantity: ing.quantityUsed
+			});
 		}
 
 		redirect(302, '/');

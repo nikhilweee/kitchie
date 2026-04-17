@@ -19,7 +19,9 @@
 	let mealTypeLocked = $state(false);
 
 	// Suggestions (add mode only)
-	let suggestions = $state<string[]>([]);
+	interface Suggestion { name: string; type: 'meal' | 'recipe'; recipeId?: string; }
+	let suggestions = $state<Suggestion[]>([]);
+	let selectedRecipeId = $state<string | null>(null); // set when user picks a recipe suggestion
 	let loadingSuggestions = $state(false);
 	let inputEl = $state<HTMLInputElement | undefined>(undefined);
 	let debounceTimer: ReturnType<typeof setTimeout>;
@@ -32,6 +34,7 @@
 		mealType = guessMealType(new Date().getHours());
 		mealTypeLocked = false;
 		suggestions = [];
+		selectedRecipeId = null;
 		fetchSuggestions('');
 		setTimeout(() => inputEl?.focus(), 50);
 	}
@@ -63,8 +66,9 @@
 		debounceTimer = setTimeout(() => fetchSuggestions(mealInput), 200);
 	}
 
-	function selectSuggestion(name: string) {
-		mealInput = name;
+	function selectSuggestion(s: Suggestion) {
+		mealInput = s.name;
+		selectedRecipeId = s.recipeId ?? null;
 		suggestions = [];
 	}
 
@@ -133,14 +137,14 @@
 <svelte:head><title>Kitchie</title></svelte:head>
 
 <!-- Backdrop -->
-{#if sheetMode || data.updateMeal}
+{#if sheetMode || data.updateMeal || data.saveRecipeMeal}
 	<div
 		class="fixed inset-0 z-40 bg-black/40"
 		role="button"
 		tabindex="-1"
 		aria-label="Close"
-		onclick={() => { closeSheet(); if (data.updateMeal) goto('/'); }}
-		onkeydown={(e) => e.key === 'Escape' && (closeSheet(), data.updateMeal && goto('/'))}
+		onclick={() => { closeSheet(); if (data.updateMeal || data.saveRecipeMeal) goto('/'); }}
+		onkeydown={(e) => e.key === 'Escape' && (closeSheet(), (data.updateMeal || data.saveRecipeMeal) && goto('/'))}
 	></div>
 {/if}
 
@@ -231,6 +235,9 @@
 			{#if sheetMode === 'edit' && editingEntry}
 				<input type="hidden" name="id" value={editingEntry.id} />
 			{/if}
+			{#if sheetMode === 'add' && selectedRecipeId}
+				<input type="hidden" name="recipeId" value={selectedRecipeId} />
+			{/if}
 
 			<!-- Name -->
 			<div class="relative">
@@ -249,14 +256,17 @@
 				<!-- Suggestions dropdown (add mode only) — absolute so layout stays stable -->
 				{#if sheetMode === 'add' && suggestions.length > 0}
 					<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
-						{#each suggestions as s (s)}
+						{#each suggestions as s (s.name)}
 							<li>
 								<button
 									type="button"
 									onclick={() => selectSuggestion(s)}
-									class="w-full px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
+									class="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
 								>
-									{s}
+									<span class="flex-1">{s.name}</span>
+									{#if s.type === 'recipe'}
+										<span class="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600">recipe</span>
+									{/if}
 								</button>
 							</li>
 						{/each}
@@ -408,5 +418,38 @@
 				</button>
 			</div>
 		</form>
+	</div>
+{/if}
+
+<!-- ── Save as recipe sheet (step 3, optional) ───────────────────────────── -->
+{#if data.saveRecipeMeal}
+	<div
+		class="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white px-4 pt-3 pb-8 shadow-2xl"
+		role="dialog"
+		aria-modal="true"
+	>
+		<div class="mx-auto mb-4 h-1 w-10 rounded-full bg-stone-200"></div>
+		<h2 class="text-base font-semibold text-stone-900">Save as recipe?</h2>
+		<p class="mt-0.5 mb-3 text-sm text-stone-500">
+			Save the ingredients you just used for <span class="font-medium text-stone-700">{data.saveRecipeMeal.name}</span> as a recipe for next time.
+		</p>
+		{#if data.saveRecipeMeal.ingredients.length > 0}
+			<ul class="mb-4 space-y-1">
+				{#each data.saveRecipeMeal.ingredients as ing (ing)}
+					<li class="text-sm text-stone-700">· {ing}</li>
+				{/each}
+			</ul>
+		{/if}
+		<div class="flex gap-2">
+			<a href="/" class="flex-1 rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-50">
+				Skip
+			</a>
+			<form method="POST" action="?/saveRecipe" use:enhance class="flex-1">
+				<input type="hidden" name="mealId" value={data.saveRecipeMeal.id} />
+				<button type="submit" class="w-full rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600">
+					Save recipe
+				</button>
+			</form>
+		</div>
 	</div>
 {/if}

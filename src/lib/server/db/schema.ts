@@ -11,6 +11,7 @@ export const users = sqliteTable('users', {
 		.$defaultFn(() => crypto.randomUUID()),
 	username: text('username').notNull().unique(),
 	passwordHash: text('password_hash').notNull(),
+	name: text('name'),
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.$defaultFn(() => new Date())
 		.notNull()
@@ -109,6 +110,37 @@ export const mealIngredients = sqliteTable('meal_ingredients', {
 });
 
 // ---------------------------------------------------------------------------
+// Recipes
+// ---------------------------------------------------------------------------
+
+// A recipe is a saved collection of pantry items for a named meal.
+// Used to pre-fill the pantry depletion step when the same meal is logged again.
+export const recipes = sqliteTable('recipes', {
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	createdAt: integer('created_at', { mode: 'timestamp' })
+		.$defaultFn(() => new Date())
+		.notNull()
+});
+
+export const recipeItems = sqliteTable('recipe_items', {
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	recipeId: text('recipe_id')
+		.notNull()
+		.references(() => recipes.id, { onDelete: 'cascade' }),
+	pantryItemId: text('pantry_item_id').references(() => pantryItems.id, { onDelete: 'set null' }),
+	itemName: text('item_name').notNull(),
+	defaultQuantity: real('default_quantity').notNull().default(1)
+});
+
+// ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------
 
@@ -136,4 +168,14 @@ export const mealIngredientsRelations = relations(mealIngredients, ({ one }) => 
 
 export const pantryItemsRelations = relations(pantryItems, ({ one }) => ({
 	user: one(users, { fields: [pantryItems.userId], references: [users.id] })
+}));
+
+export const recipesRelations = relations(recipes, ({ one, many }) => ({
+	user: one(users, { fields: [recipes.userId], references: [users.id] }),
+	items: many(recipeItems)
+}));
+
+export const recipeItemsRelations = relations(recipeItems, ({ one }) => ({
+	recipe: one(recipes, { fields: [recipeItems.recipeId], references: [recipes.id] }),
+	pantryItem: one(pantryItems, { fields: [recipeItems.pantryItemId], references: [pantryItems.id] })
 }));

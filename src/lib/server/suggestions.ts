@@ -1,6 +1,12 @@
 import { db } from '$lib/server/db';
-import { mealEntries } from '$lib/server/db/schema';
+import { mealEntries, recipes } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+
+export interface Suggestion {
+	name: string;
+	type: 'meal' | 'recipe';
+	recipeId?: string;
+}
 
 interface ScoredMeal {
 	name: string;
@@ -21,13 +27,16 @@ export async function getSuggestions(
 	userId: string,
 	query: string,
 	limit = 6
-): Promise<string[]> {
-	const all = await db
-		.select()
-		.from(mealEntries)
-		.where(eq(mealEntries.userId, userId));
+): Promise<Suggestion[]> {
+	const [all, userRecipes] = await Promise.all([
+		db.select().from(mealEntries).where(eq(mealEntries.userId, userId)),
+		db.select().from(recipes).where(eq(recipes.userId, userId))
+	]);
 
-	if (all.length === 0) return [];
+	// Build recipe lookup by name (lowercase)
+	const recipeByName = new Map(userRecipes.map((r) => [r.name.toLowerCase(), r]));
+
+	if (all.length === 0 && userRecipes.length === 0) return [];
 
 	const now = new Date();
 	const currentPeriod = mealPeriod(now.getHours());
@@ -75,8 +84,31 @@ export async function getSuggestions(
 		candidates = candidates.filter((m) => m.name.toLowerCase().includes(q));
 	}
 
-	return candidates
+	const mealResults = candidates
 		.sort((a, b) => b.score - a.score)
-		.slice(0, limit)
-		.map((m) => m.name);
+		.slice(0, limit);
+
+	// Recipes that match the query but aren't already in meal results
+	const mealNames = new Set(mealResults.map((m) => m.name.toLowerCase()));
+	const q = query.toLowerCase();
+	const recipeResults = userRecipes
+		.filter(
+			(r) =>
+				!mealNames.has(r.name.toLowerCase()) &&
+				(q.trim() === '' || r.name.toLowerCase().includes(q))
+		)
+		.slice(0, limit);
+
+	// Interleave: for each meal result, check if it has a matching recipe
+	const results: Suggestion[] = mealResults.map((m) => {
+		const recipe = recipeByName.get(m.name.toLowerCase());
+		return { name: m.name, type: recipe ? 'recipe' : 'meal', recipeId: recipe?.id };
+	});
+
+	// Append recipe-only results (recipes with no logged meal history yet)
+	for (const r of recipeResults) {
+		results.push({ name: r.name, type: 'recipe', recipeId: r.id });
+	}
+
+	return results.slice(0, limit);
 }

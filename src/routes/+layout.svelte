@@ -2,14 +2,25 @@
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import type { LayoutData } from './$types';
 
 	let { children, data }: { children: any; data: LayoutData } = $props();
 
 	const navItems = [
-		{ href: '/', label: 'Log', icon: '🍽️' },
+		{ href: '/', label: 'Meals', icon: '🍽️' },
+		{ href: '/recipes', label: 'Recipes', icon: '📋' },
 		{ href: '/pantry', label: 'Pantry', icon: '🧺' }
 	];
+
+	function initials(user: { name: string | null; username: string }) {
+		const src = user.name ?? user.username;
+		return src
+			.split(/\s+/)
+			.slice(0, 2)
+			.map((w) => w[0]?.toUpperCase() ?? '')
+			.join('');
+	}
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
@@ -17,6 +28,15 @@
 {@render children()}
 
 {#if data.user}
+	<!-- Avatar pill — always visible in top-right of every page -->
+	<a
+		href="/profile"
+		class="fixed top-3 right-4 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-600 shadow-sm hover:bg-orange-200"
+		aria-label="Profile"
+	>
+		{initials(data.user)}
+	</a>
+
 	<nav class="fixed bottom-0 left-0 right-0 z-20 border-t border-stone-200 bg-white">
 		<ul class="mx-auto flex max-w-lg">
 			{#each navItems as item (item.href)}
