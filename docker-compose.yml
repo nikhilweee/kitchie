@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"       # point Nginx Proxy Manager at this port
+    volumes:
+      - db_data:/app/data # SQLite file persists here
+    environment:
+      DATABASE_URL: /app/data/kitchie.db
+      # Override in a .env file or with docker-compose --env-file:
+      # SESSION_SECRET: change-me
+
+volumes:
+  db_data:
