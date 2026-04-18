@@ -189,6 +189,7 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const mealId = String(data.get('mealId') ?? '');
 		const selectedIds = data.getAll('itemId').map(String);
+		const itemNames = data.getAll('itemName').map(String);
 		const quantitiesUsed = data.getAll('quantityUsed').map(Number);
 
 		if (!mealId) return fail(400, { error: 'Invalid request.' });
@@ -201,27 +202,34 @@ export const actions: Actions = {
 
 		if (!meal) return fail(404, { error: 'Meal not found.' });
 
-		for (let i = 0; i < selectedIds.length; i++) {
-			const itemId = selectedIds[i];
+		for (let i = 0; i < itemNames.length; i++) {
+			const pantryItemId = selectedIds[i] || null;
+			const itemName = itemNames[i];
 			const used = quantitiesUsed[i] ?? 1;
 
-			const item = await db
-				.select()
-				.from(pantryItems)
-				.where(and(eq(pantryItems.id, itemId), eq(pantryItems.userId, userId)))
-				.get();
-
-			if (!item) continue;
+			if (!itemName) continue;
 
 			await db.insert(mealIngredients).values({
 				mealEntryId: mealId,
-				pantryItemId: itemId,
-				itemName: item.name,
+				pantryItemId,
+				itemName,
 				quantityUsed: used
 			});
 
-			const newQty = Math.max(0, item.quantity - used);
-			await db.update(pantryItems).set({ quantity: newQty }).where(eq(pantryItems.id, itemId));
+			// Only deplete pantry for linked items
+			if (pantryItemId) {
+				const item = await db
+					.select()
+					.from(pantryItems)
+					.where(and(eq(pantryItems.id, pantryItemId), eq(pantryItems.userId, userId)))
+					.get();
+				if (item) {
+					await db
+						.update(pantryItems)
+						.set({ quantity: Math.max(0, item.quantity - used) })
+						.where(eq(pantryItems.id, pantryItemId));
+				}
+			}
 		}
 
 		// If items were selected, offer to save as recipe (handled in load via ?save_recipe=)

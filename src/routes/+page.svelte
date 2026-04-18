@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 	import { MEAL_TYPE_LABELS, MEAL_TYPES, guessMealType, currentDateTimeStr } from '$lib/meal-type';
+	import { ESTIMATE_OPTIONS } from '$lib/quantity';
 	import type { MealType } from '$lib/server/db/schema';
 
 	let { data }: { data: PageData } = $props();
@@ -101,36 +102,66 @@
 	}
 
 	// ── Pantry update sheet (step 2) ─────────────────────────────────────────
-	type PantryItem = PageData['pantrySuggestions'][0]['item'];
-	type PantrySelection = { item: PantryItem; quantityUsed: number };
+	type PantrySelection = {
+		pantryItemId: string | null;
+		itemName: string;
+		quantityType: 'count' | 'estimate';
+		quantityUsed: number;
+	};
 	let pantrySelected = $state<PantrySelection[]>([]);
 	let pantrySearch = $state('');
 
 	$effect(() => {
-		// Pre-populate with keyword-matched items when the sheet opens
-		if (data.pantrySuggestions.length > 0) {
-			pantrySelected = data.pantrySuggestions
-				.filter((s) => s.suggested)
-				.map((s) => ({ item: s.item, quantityUsed: 1 }));
-		}
+		// Pre-populate with keyword/recipe-matched items when the sheet opens
+		pantrySelected = data.pantrySuggestions
+			.filter((s) => s.suggested)
+			.map((s) => ({
+				pantryItemId: s.item.id,
+				itemName: s.item.name,
+				quantityType: s.item.quantityType as 'count' | 'estimate',
+				quantityUsed: 1
+			}));
 	});
 
 	const pantryFiltered = $derived(
 		pantrySearch.length === 0
 			? []
 			: data.pantrySuggestions
-					.filter((s) => !pantrySelected.some((sel) => sel.item.id === s.item.id))
+					.filter((s) => !pantrySelected.some((sel) => sel.pantryItemId === s.item.id))
 					.filter((s) => s.item.name.toLowerCase().includes(pantrySearch.toLowerCase()))
 					.map((s) => s.item)
 	);
 
-	function addPantryItem(item: PantryItem) {
-		pantrySelected = [...pantrySelected, { item, quantityUsed: 1 }];
+	// Whether the current search text is an exact (case-insensitive) match of an existing pantry item
+	const pantrySearchIsExactMatch = $derived(
+		data.pantrySuggestions.some(
+			(s) => s.item.name.toLowerCase() === pantrySearch.trim().toLowerCase()
+		)
+	);
+
+	function addPantryItem(item: PageData['pantrySuggestions'][0]['item']) {
+		pantrySelected = [
+			...pantrySelected,
+			{
+				pantryItemId: item.id,
+				itemName: item.name,
+				quantityType: item.quantityType as 'count' | 'estimate',
+				quantityUsed: 1
+			}
+		];
 		pantrySearch = '';
 	}
 
-	function removePantryItem(id: string) {
-		pantrySelected = pantrySelected.filter((s) => s.item.id !== id);
+	function addCustomPantryItem(name: string) {
+		pantrySelected = [
+			...pantrySelected,
+			{ pantryItemId: null, itemName: name, quantityType: 'count', quantityUsed: 1 }
+		];
+		pantrySearch = '';
+	}
+
+	function removePantryItem(name: string) {
+		pantrySelected = pantrySelected.filter((s) => s.itemName !== name);
 	}
 </script>
 
@@ -150,9 +181,8 @@
 
 <div class="flex min-h-svh flex-col bg-stone-50">
 	<header class="sticky top-0 z-10 border-b border-stone-200 bg-white px-4 py-3">
-		<div class="mx-auto flex max-w-lg items-center justify-between">
+		<div class="mx-auto max-w-lg">
 			<h1 class="text-lg font-bold text-stone-900">Kitchie</h1>
-			<span class="text-sm text-stone-400">{data.user?.username}</span>
 		</div>
 	</header>
 
@@ -354,23 +384,37 @@
 			<!-- Selected ingredients -->
 			{#if pantrySelected.length > 0}
 				<ul class="mb-3 space-y-2">
-					{#each pantrySelected as sel (sel.item.id)}
-						<li class="flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5">
-							<input type="hidden" name="itemId" value={sel.item.id} />
-							<span class="flex-1 text-sm font-medium text-stone-800">{sel.item.name}</span>
-							<input
-								type="number"
-								name="quantityUsed"
-								bind:value={sel.quantityUsed}
-								min="0.1"
-								step="0.5"
-								class="w-16 rounded-lg border border-stone-200 px-2 py-1 text-center text-sm text-stone-700 focus:border-orange-500 focus:outline-none"
-							/>
+					{#each pantrySelected as sel (sel.itemName)}
+						<li class="flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5">
+							<input type="hidden" name="itemId" value={sel.pantryItemId ?? ''} />
+							<input type="hidden" name="itemName" value={sel.itemName} />
+							<span class="min-w-0 flex-1 truncate text-sm font-medium text-stone-800">{sel.itemName}</span>
+							{#if sel.quantityType === 'count'}
+								<input
+									type="number"
+									name="quantityUsed"
+									bind:value={sel.quantityUsed}
+									min="0.5"
+									step="0.5"
+									class="w-16 rounded-lg border border-stone-200 px-2 py-1 text-center text-sm text-stone-700 focus:border-orange-500 focus:outline-none"
+								/>
+							{:else}
+								<input type="hidden" name="quantityUsed" value={sel.quantityUsed} />
+								<div class="flex gap-1">
+									{#each ESTIMATE_OPTIONS as opt (opt.value)}
+										<button
+											type="button"
+											onclick={() => (sel.quantityUsed = opt.value)}
+											class="rounded-lg border px-2 py-1 text-xs font-medium transition-colors {sel.quantityUsed === opt.value ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-600 hover:bg-stone-50'}"
+										>{opt.label}</button>
+									{/each}
+								</div>
+							{/if}
 							<button
 								type="button"
-								onclick={() => removePantryItem(sel.item.id)}
+								onclick={() => removePantryItem(sel.itemName)}
 								class="shrink-0 text-stone-300 hover:text-red-400"
-								aria-label="Remove {sel.item.name}"
+								aria-label="Remove {sel.itemName}"
 							>✕</button>
 						</li>
 					{/each}
@@ -379,36 +423,42 @@
 				<p class="mb-3 text-sm text-stone-400">No ingredients added yet.</p>
 			{/if}
 
-			<!-- Search to add more -->
-			{#if data.pantrySuggestions.length > 0}
-				<div class="relative">
-					<input
-						type="text"
-						bind:value={pantrySearch}
-						placeholder="Search pantry to add ingredients…"
-						autocomplete="off"
-						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
-					/>
-					{#if pantryFiltered.length > 0}
-						<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
-							{#each pantryFiltered as item (item.id)}
-								<li>
-									<button
-										type="button"
-										onclick={() => addPantryItem(item)}
-										class="w-full px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
-									>
-										{item.name}
-									</button>
-								</li>
-							{/each}
-						</ul>
-					{/if}
-				</div>
-			{:else}
-				<p class="text-sm text-stone-400">Your pantry is empty — add items first.</p>
-			{/if}
-
+			<!-- Search to add more (always shown) -->
+			<div class="relative">
+				<input
+					type="text"
+					bind:value={pantrySearch}
+					placeholder="Search or type an ingredient…"
+					autocomplete="off"
+					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+				/>
+				{#if pantrySearch.trim()}
+					<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+						{#each pantryFiltered as item (item.id)}
+							<li>
+								<button
+									type="button"
+									onclick={() => addPantryItem(item)}
+									class="w-full px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
+								>
+									{item.name}
+								</button>
+							</li>
+						{/each}
+						{#if !pantrySearchIsExactMatch}
+							<li>
+								<button
+									type="button"
+									onclick={() => addCustomPantryItem(pantrySearch.trim())}
+									class="w-full px-4 py-2.5 text-left text-sm text-orange-600 hover:bg-orange-50"
+								>
+									Add "{pantrySearch.trim()}" as ingredient
+								</button>
+							</li>
+						{/if}
+					</ul>
+				{/if}
+			</div>
 			<div class="mt-4 flex gap-2">
 				<a href="/" class="flex-1 rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-50">
 					Skip

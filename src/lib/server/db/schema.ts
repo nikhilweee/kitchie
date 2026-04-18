@@ -102,7 +102,6 @@ export const mealIngredients = sqliteTable('meal_ingredients', {
 		.notNull()
 		.references(() => mealEntries.id, { onDelete: 'cascade' }),
 	pantryItemId: text('pantry_item_id')
-		.notNull()
 		.references(() => pantryItems.id, { onDelete: 'set null' }),
 	// snapshot of the item name at log time (in case item is deleted later)
 	itemName: text('item_name').notNull(),

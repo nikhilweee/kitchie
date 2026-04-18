@@ -23,5 +23,12 @@
       "tag": "0002_recipes_and_profile",
       "breakpoints": true
     }
+    ,{
+      "idx": 3,
+      "version": "6",
+      "when": 1776510000000,
+      "tag": "0003_nullable_ingredient",
+      "breakpoints": true
+    }
   ]
 }

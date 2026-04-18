@@ -28,6 +28,12 @@
 				)
 	);
 
+	const ingredientSearchIsExactMatch = $derived(
+		data.pantryItems.some(
+			(p) => p.name.toLowerCase() === ingredientSearch.trim().toLowerCase()
+		)
+	);
+
 	function openAdd() {
 		sheetMode = 'add';
 		editingRecipe = null;
@@ -57,6 +63,11 @@
 
 	function addIngredient(item: PantryItem) {
 		draftItems = [...draftItems, { pantryItemId: item.id, itemName: item.name, quantity: 1 }];
+		ingredientSearch = '';
+	}
+
+	function addCustomIngredient(name: string) {
+		draftItems = [...draftItems, { pantryItemId: null, itemName: name, quantity: 1 }];
 		ingredientSearch = '';
 	}
 
@@ -193,16 +204,16 @@
 				</ul>
 			{/if}
 
-			<!-- Search pantry items to add -->
+			<!-- Search pantry items to add (or type a custom ingredient) -->
 			<div class="relative">
 				<input
 					type="text"
 					bind:value={ingredientSearch}
-					placeholder="Search pantry to add ingredients…"
+					placeholder="Search or type an ingredient…"
 					autocomplete="off"
 					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
 				/>
-				{#if ingredientSuggestions.length > 0}
+				{#if ingredientSearch.trim()}
 					<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
 						{#each ingredientSuggestions as item (item.id)}
 							<li>
@@ -215,6 +226,17 @@
 								</button>
 							</li>
 						{/each}
+						{#if !ingredientSearchIsExactMatch}
+							<li>
+								<button
+									type="button"
+									onclick={() => addCustomIngredient(ingredientSearch.trim())}
+									class="w-full px-4 py-2.5 text-left text-sm text-orange-600 hover:bg-orange-50"
+								>
+									Add "{ingredientSearch.trim()}" as ingredient
+								</button>
+							</li>
+						{/if}
 					</ul>
 				{/if}
 			</div>
