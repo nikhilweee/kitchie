@@ -12,6 +12,7 @@
 	import { guessCategory } from '$lib/infer';
 	import { UNITS, guessUnit } from '$lib/units';
 	import { toDateStr } from '$lib/date-format';
+	import { clickOutside } from '$lib/actions/click-outside';
 	import type { PantryCategory, QuantityType } from '$lib/server/db/schema';
 
 	let { data }: { data: PageData } = $props();
@@ -223,13 +224,12 @@
 
 		<button type="submit" class="sr-only" tabindex="-1" aria-hidden="true"></button>
 
-		<div class="relative">
+		<div class="relative" use:clickOutside={() => (showNameSuggestions = false)}>
 			<input
 				bind:this={nameEl}
 				bind:value={nameInput}
 				oninput={onNameInput}
 				onfocus={() => (showNameSuggestions = true)}
-				onblur={() => setTimeout(() => (showNameSuggestions = false), 150)}
 				name="name"
 				type="text"
 				placeholder="What did you buy?"

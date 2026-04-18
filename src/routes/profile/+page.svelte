@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import type { PageData, ActionData } from './$types';
+	import type { PageData } from './$types';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 
-	let { data, form }: { data: PageData; form: ActionData } = $props();
+	let { data, form }: { data: PageData; form: { error?: string; success?: boolean } | null } = $props();
 
 	let nameInput = $state(data.user.name ?? '');
 	let usernameInput = $state(data.user.username);

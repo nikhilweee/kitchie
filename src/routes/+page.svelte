@@ -11,6 +11,7 @@
 	import BottomSheet from '$lib/components/BottomSheet.svelte';
 	import FormActions from '$lib/components/FormActions.svelte';
 	import type { MealType } from '$lib/server/db/schema';
+	import { clickOutside } from '$lib/actions/click-outside';
 
 	let { data }: { data: PageData } = $props();
 
@@ -23,7 +24,6 @@
 	let mealInput = $state('');
 	let mealDateTime = $state(currentDateTimeStr());
 	let mealType = $state<MealType>('snack');
-	let mealTypeLocked = $state(false);
 
 	// Suggestions (add mode only)
 	interface Suggestion { name: string; type: 'meal' | 'recipe'; recipeId?: string; }
@@ -38,7 +38,6 @@
 		mealInput = '';
 		mealDateTime = currentDateTimeStr();
 		mealType = guessMealType(new Date().getHours());
-		mealTypeLocked = false;
 		suggestions = [];
 		selectedRecipeId = null;
 		fetchSuggestions('');
@@ -51,7 +50,6 @@
 		mealInput = entry.name;
 		mealDateTime = toDateTimeLocalStr(entry.loggedAt);
 		mealType = entry.mealType as MealType;
-		mealTypeLocked = true;
 	}
 
 	function closeSheet() {
@@ -231,7 +229,7 @@
 		{/if}
 
 		<!-- Name -->
-		<div class="relative">
+		<div class="relative" use:clickOutside={() => (suggestions = [])}>
 			<input
 				bind:this={inputEl}
 				bind:value={mealInput}
@@ -283,7 +281,6 @@
 						id="meal-type"
 						name="mealType"
 						bind:value={mealType}
-						onchange={() => (mealTypeLocked = true)}
 						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
 					>
 						{#each MEAL_TYPES as t (t)}
@@ -305,7 +302,7 @@
 </BottomSheet>
 
 <!-- ── Pantry update sheet (step 2) ──────────────────────────────────────── -->
-<BottomSheet open={!!data.updateMeal} onclose={() => goto('/')} scrollable>
+<BottomSheet open={!!data.updateMeal} onclose={() => goto('/')}>
 	<h2 class="text-base font-semibold text-stone-900">Update pantry</h2>
 	<p class="mt-0.5 mb-4 text-sm text-stone-500">
 		Set what's left after <span class="font-medium text-stone-700">{data.updateMeal?.name}</span>.
@@ -370,7 +367,7 @@
 			<p class="mb-3 text-sm text-stone-400">No ingredients added yet.</p>
 		{/if}
 
-		<div class="relative">
+		<div class="relative" use:clickOutside={() => (pantrySearch = '')}>
 			<input
 				type="text"
 				bind:value={pantrySearch}

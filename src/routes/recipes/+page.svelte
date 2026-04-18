@@ -7,6 +7,7 @@
 	import BottomSheet from '$lib/components/BottomSheet.svelte';
 	import FormActions from '$lib/components/FormActions.svelte';
 	import type { PageData } from './$types';
+	import { clickOutside } from '$lib/actions/click-outside';
 
 	let { data }: { data: PageData } = $props();
 
@@ -130,7 +131,7 @@
 </div>
 
 <!-- ── Add / Edit sheet ───────────────────────────────────────────────────── -->
-<BottomSheet open={!!sheetMode} onclose={closeSheet} scrollable>
+<BottomSheet open={!!sheetMode} onclose={closeSheet}>
 	<form
 		method="POST"
 		action="?/save"
@@ -146,12 +147,11 @@
 		{/if}
 
 		<!-- Recipe name -->
-		<div class="relative">
+		<div class="relative" use:clickOutside={() => (showNameSuggestions = false)}>
 			<input
 				bind:this={nameEl}
 				bind:value={nameInput}
 				onfocus={() => (showNameSuggestions = true)}
-				onblur={() => setTimeout(() => (showNameSuggestions = false), 150)}
 				name="name"
 				type="text"
 				placeholder="Recipe name"
@@ -201,7 +201,7 @@
 		{/if}
 
 		<!-- Search pantry items to add (or type a custom ingredient) -->
-		<div class="relative">
+		<div class="relative" use:clickOutside={() => (ingredientSearch = '')}>
 			<input
 				type="text"
 				bind:value={ingredientSearch}
