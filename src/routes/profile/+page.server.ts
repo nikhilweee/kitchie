@@ -17,6 +17,7 @@ export const actions: Actions = {
 		const username = String(data.get('username') ?? '').trim();
 		const currentPassword = String(data.get('currentPassword') ?? '');
 		const newPassword = String(data.get('newPassword') ?? '');
+		const confirmPassword = String(data.get('confirmPassword') ?? '');
 
 		if (!username) return fail(400, { error: 'Username is required.' });
 
@@ -25,6 +26,7 @@ export const actions: Actions = {
 
 		// If changing password, verify current one
 		if (newPassword) {
+			if (newPassword !== confirmPassword) return fail(400, { error: 'New passwords do not match.' });
 			if (!currentPassword) return fail(400, { error: 'Enter your current password to set a new one.' });
 			const ok = await verifyPassword(currentPassword, existing.passwordHash);
 			if (!ok) return fail(400, { error: 'Current password is incorrect.' });

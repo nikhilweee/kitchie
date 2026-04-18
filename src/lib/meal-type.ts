@@ -10,9 +10,9 @@ export const MEAL_TYPE_LABELS: Record<MealType, string> = {
 export const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 export function guessMealType(hour: number): MealType {
-	if (hour >= 5 && hour < 11) return 'breakfast';
-	if (hour >= 11 && hour < 15) return 'lunch';
-	if (hour >= 17 && hour < 22) return 'dinner';
+	if (hour >= 7 && hour < 11) return 'breakfast';
+	if (hour >= 12 && hour < 15) return 'lunch';
+	if (hour >= 18 && hour < 22) return 'dinner';
 	return 'snack';
 }
 

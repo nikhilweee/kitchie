@@ -2,8 +2,10 @@
 	import { enhance } from '$app/forms';
 	import type { PageData, ActionData } from './$types';
 	import { CATEGORY_LABELS, daysUntilExpiry, calcExpiry } from '$lib/expiry';
-	import { estimateLabel, guessQuantityType, ESTIMATE_OPTIONS } from '$lib/quantity';
+	import { guessQuantityType } from '$lib/quantity';
+	import EstimatePicker from '$lib/components/EstimatePicker.svelte';
 	import { guessCategory } from '$lib/infer';
+	import { UNITS, guessUnit } from '$lib/units';
 	import type { PantryCategory, QuantityType } from '$lib/server/db/schema';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -17,9 +19,20 @@
 	// Shared form state
 	let nameInput = $state('');
 	let nameEl = $state<HTMLInputElement | undefined>(undefined);
+	let showNameSuggestions = $state(false);
+
+	// Suggest existing pantry items when typing in add mode
+	const nameSuggestions = $derived(
+		sheetMode === 'add' && nameInput.trim().length > 0
+			? data.items.filter((i) =>
+					i.name.toLowerCase().includes(nameInput.trim().toLowerCase())
+				)
+			: []
+	);
 	let category = $state<PantryCategory>('other');
 	let quantityType = $state<QuantityType>('estimate');
 	let quantity = $state(1);
+	let unit = $state('count');
 	let expiryDate = $state('');
 	let purchaseDate = $state(todayStr()); // persists across adds
 	let categoryLocked = $state(false);
@@ -40,6 +53,7 @@
 		category = 'other';
 		quantityType = 'estimate';
 		quantity = 1;
+		unit = 'count';
 		expiryDate = '';
 		categoryLocked = false;
 		expiryLocked = false;
@@ -53,6 +67,7 @@
 		category = item.category as PantryCategory;
 		quantityType = item.quantityType as QuantityType;
 		quantity = item.quantity;
+		unit = item.unit ?? 'count';
 		purchaseDate = toDateStr(item.purchaseDate);
 		expiryDate = toDateStr(item.expiryDate);
 		categoryLocked = true;
@@ -68,6 +83,7 @@
 	function onNameInput() {
 		if (!categoryLocked) category = guessCategory(nameInput);
 		quantityType = guessQuantityType(nameInput);
+		unit = guessUnit(nameInput);
 		if (!expiryLocked) {
 			const pd = purchaseDate ? new Date(purchaseDate) : new Date();
 			expiryDate = calcExpiry(category, pd).toISOString().split('T')[0];
@@ -108,7 +124,6 @@
 	const groups = $derived(groupItems(data.items));
 
 	function qtyLabel(item: Item) {
-		if (item.quantityType === 'estimate') return estimateLabel(item.quantity);
 		const n = item.quantity;
 		return `×${n % 1 === 0 ? n : n.toFixed(1)}`;
 	}
@@ -202,7 +217,13 @@
 					<p class="truncate font-medium text-stone-900">{item.name}</p>
 					<p class="text-xs text-stone-400">{CATEGORY_LABELS[item.category as PantryCategory]}</p>
 				</button>
-				<span class="shrink-0 text-sm font-medium text-stone-600">{qtyLabel(item)}</span>
+				{#if item.quantityType === 'estimate'}
+					<EstimatePicker value={item.quantity} readonly />
+				{:else}
+					<span class="shrink-0 text-sm font-medium text-stone-600">
+						×{item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(1)}{item.unit && item.unit !== 'count' ? ' ' + item.unit : ''}
+					</span>
+				{/if}
 				<span class="shrink-0 text-xs font-medium {expiryColor(item.expiryDate)}">
 					{expiryLabel(item.expiryDate)}
 				</span>
@@ -239,18 +260,38 @@
 			<!-- Hidden default submit so Enter key always triggers save, not delete -->
 			<button type="submit" class="sr-only" tabindex="-1" aria-hidden="true"></button>
 
-			<input
-				bind:this={nameEl}
-				bind:value={nameInput}
-				oninput={onNameInput}
-				name="name"
-				type="text"
-				placeholder="What did you buy?"
-				autocapitalize="sentences"
-				autocomplete="off"
-				required
-				class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
-			/>
+			<div class="relative">
+				<input
+					bind:this={nameEl}
+					bind:value={nameInput}
+					oninput={onNameInput}
+					onfocus={() => (showNameSuggestions = true)}
+					onblur={() => setTimeout(() => (showNameSuggestions = false), 150)}
+					name="name"
+					type="text"
+					placeholder="What did you buy?"
+					autocapitalize="sentences"
+					autocomplete="off"
+					required
+					class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+				/>
+				{#if showNameSuggestions && nameSuggestions.length > 0}
+					<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+						{#each nameSuggestions as item (item.id)}
+							<li>
+								<button
+									type="button"
+									onmousedown={() => openEdit(item)}
+									class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
+								>
+									<span class="flex-1 font-medium">{item.name}</span>
+									<span class="shrink-0 text-xs text-stone-400">{CATEGORY_LABELS[item.category as PantryCategory]} · already in pantry</span>
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
 
 			<div class="mt-3 space-y-2">
 				<div>
@@ -272,27 +313,27 @@
 					<p class="mb-1 text-xs font-medium text-stone-500">Quantity</p>
 					<input type="hidden" name="quantityType" value={quantityType} />
 					{#if quantityType === 'count'}
-						<input
-							name="quantity"
-							type="number"
-							bind:value={quantity}
-							min="0.5"
-							step="0.5"
-							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-						/>
-					{:else}
-						<input type="hidden" name="quantity" value={quantity} />
 						<div class="flex gap-2">
-							{#each ESTIMATE_OPTIONS as opt (opt.value)}
-								<button
-									type="button"
-									onclick={() => (quantity = opt.value)}
-									class="flex-1 rounded-xl border py-2.5 text-sm font-medium transition-colors {quantity === opt.value ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-600 hover:bg-stone-50'}"
-								>
-									{opt.label}
-								</button>
-							{/each}
+							<input
+								name="quantity"
+								type="number"
+								bind:value={quantity}
+								min="0"
+								step="1"
+								class="w-24 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+							/>
+							<select
+								name="unit"
+								bind:value={unit}
+								class="flex-1 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+							>
+								{#each UNITS as u (u.value)}
+									<option value={u.value}>{u.label}</option>
+								{/each}
+							</select>
 						</div>
+					{:else}
+						<EstimatePicker bind:value={quantity} name="quantity" />
 					{/if}
 				</div>
 

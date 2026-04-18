@@ -8,7 +8,12 @@
 	let usernameInput = $state(data.user.username);
 	let currentPassword = $state('');
 	let newPassword = $state('');
+	let confirmPassword = $state('');
 	let saved = $state(false);
+
+	const passwordMismatch = $derived(
+		newPassword.length > 0 && confirmPassword.length > 0 && newPassword !== confirmPassword
+	);
 </script>
 
 <svelte:head><title>Profile — Kitchie</title></svelte:head>
@@ -31,6 +36,7 @@
 					saved = true;
 					currentPassword = '';
 					newPassword = '';
+					confirmPassword = '';
 					setTimeout(() => (saved = false), 2500);
 				}
 			}}
@@ -87,11 +93,25 @@
 					autocomplete="new-password"
 					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm focus:border-orange-500 focus:outline-none"
 				/>
+				<div>
+					<input
+						name="confirmPassword"
+						type="password"
+						bind:value={confirmPassword}
+						placeholder="Confirm new password"
+						autocomplete="new-password"
+						class="block w-full rounded-xl border px-4 py-3 text-sm focus:outline-none {passwordMismatch ? 'border-red-400 bg-red-50 focus:border-red-400' : 'border-stone-300 bg-stone-50 focus:border-orange-500'}"
+					/>
+					{#if passwordMismatch}
+						<p class="mt-1 text-xs text-red-500">Passwords don't match.</p>
+					{/if}
+				</div>
 			</div>
 
 			<button
 				type="submit"
-				class="w-full rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600"
+				disabled={passwordMismatch}
+				class="w-full rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40"
 			>
 				Save changes
 			</button>

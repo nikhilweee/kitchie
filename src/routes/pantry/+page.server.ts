@@ -42,6 +42,7 @@ export const actions: Actions = {
 		const category = (String(data.get('category') || '') as PantryCategory) || guessCategory(name);
 		const quantityType = (String(data.get('quantityType') || '') as 'count' | 'estimate') || guessQuantityType(name);
 		const quantity = parseFloat(String(data.get('quantity') ?? '')) || 1;
+		const unit = quantityType === 'count' ? (String(data.get('unit') ?? '') || 'count') : null;
 		const expiryDateStr = String(data.get('expiryDate') ?? '');
 		const expiryDate = expiryDateStr ? new Date(expiryDateStr) : calcExpiry(category, purchaseDate);
 		const expiryOverridden = !!expiryDateStr;
@@ -52,6 +53,7 @@ export const actions: Actions = {
 			category,
 			quantityType,
 			quantity,
+			unit,
 			purchaseDate,
 			expiryDate,
 			expiryOverridden
@@ -73,13 +75,14 @@ export const actions: Actions = {
 		const category = (String(data.get('category') || '') as PantryCategory) || guessCategory(name);
 		const quantityType = (String(data.get('quantityType') || '') as 'count' | 'estimate') || guessQuantityType(name);
 		const quantity = parseFloat(String(data.get('quantity') ?? '')) || 1;
+		const unit = quantityType === 'count' ? (String(data.get('unit') ?? '') || 'count') : null;
 		const expiryDateStr = String(data.get('expiryDate') ?? '');
 		const expiryDate = expiryDateStr ? new Date(expiryDateStr) : calcExpiry(category, purchaseDate);
 		const expiryOverridden = !!expiryDateStr;
 
 		await db
 			.update(pantryItems)
-			.set({ name, category, quantityType, quantity, purchaseDate, expiryDate, expiryOverridden })
+			.set({ name, category, quantityType, quantity, unit, purchaseDate, expiryDate, expiryOverridden })
 			.where(and(eq(pantryItems.id, id), eq(pantryItems.userId, userId)));
 
 		return { success: true };

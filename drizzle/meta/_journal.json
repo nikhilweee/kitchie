@@ -30,5 +30,12 @@
       "tag": "0003_nullable_ingredient",
       "breakpoints": true
     }
+    ,{
+      "idx": 4,
+      "version": "6",
+      "when": 1776520000000,
+      "tag": "0004_pantry_unit",
+      "breakpoints": true
+    }
   ]
 }

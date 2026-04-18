@@ -65,6 +65,8 @@ export const pantryItems = sqliteTable('pantry_items', {
 	quantityType: text('quantity_type').$type<QuantityType>().notNull().default('count'),
 	// For 'count': a number. For 'estimate': stored as 1 (full), 0.5 (half), 0.1 (low)
 	quantity: real('quantity').notNull().default(1),
+	// Unit for count items (e.g. 'count', 'oz', 'g'); null for estimate items
+	unit: text('unit'),
 	purchaseDate: integer('purchase_date', { mode: 'timestamp' }).notNull(),
 	expiryDate: integer('expiry_date', { mode: 'timestamp' }).notNull(),
 	expiryOverridden: integer('expiry_overridden', { mode: 'boolean' }).notNull().default(false),

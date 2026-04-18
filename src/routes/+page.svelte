@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 	import { MEAL_TYPE_LABELS, MEAL_TYPES, guessMealType, currentDateTimeStr } from '$lib/meal-type';
-	import { ESTIMATE_OPTIONS } from '$lib/quantity';
+	import EstimatePicker from '$lib/components/EstimatePicker.svelte';
 	import type { MealType } from '$lib/server/db/schema';
 
 	let { data }: { data: PageData } = $props();
@@ -106,7 +106,7 @@
 		pantryItemId: string | null;
 		itemName: string;
 		quantityType: 'count' | 'estimate';
-		quantityUsed: number;
+		newQuantity: number;
 	};
 	let pantrySelected = $state<PantrySelection[]>([]);
 	let pantrySearch = $state('');
@@ -119,7 +119,7 @@
 				pantryItemId: s.item.id,
 				itemName: s.item.name,
 				quantityType: s.item.quantityType as 'count' | 'estimate',
-				quantityUsed: 1
+				newQuantity: s.item.quantity
 			}));
 	});
 
@@ -146,7 +146,7 @@
 				pantryItemId: item.id,
 				itemName: item.name,
 				quantityType: item.quantityType as 'count' | 'estimate',
-				quantityUsed: 1
+				newQuantity: item.quantity
 			}
 		];
 		pantrySearch = '';
@@ -155,13 +155,18 @@
 	function addCustomPantryItem(name: string) {
 		pantrySelected = [
 			...pantrySelected,
-			{ pantryItemId: null, itemName: name, quantityType: 'count', quantityUsed: 1 }
+			{ pantryItemId: null, itemName: name, quantityType: 'count', newQuantity: 0 }
 		];
 		pantrySearch = '';
 	}
 
 	function removePantryItem(name: string) {
 		pantrySelected = pantrySelected.filter((s) => s.itemName !== name);
+	}
+
+	function pantryStock(pantryItemId: string | null) {
+		if (!pantryItemId) return null;
+		return data.pantrySuggestions.find((s) => s.item.id === pantryItemId)?.item ?? null;
 	}
 </script>
 
@@ -375,7 +380,7 @@
 
 		<h2 class="text-base font-semibold text-stone-900">Update pantry</h2>
 		<p class="mt-0.5 mb-4 text-sm text-stone-500">
-			What did you use for <span class="font-medium text-stone-700">{data.updateMeal.name}</span>?
+			Set what's left after <span class="font-medium text-stone-700">{data.updateMeal.name}</span>.
 		</p>
 
 		<form method="POST" action="?/updatePantry" use:enhance>
@@ -385,37 +390,55 @@
 			{#if pantrySelected.length > 0}
 				<ul class="mb-3 space-y-2">
 					{#each pantrySelected as sel (sel.itemName)}
-						<li class="flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5">
+						{@const stock = pantryStock(sel.pantryItemId)}
+						<li class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5">
 							<input type="hidden" name="itemId" value={sel.pantryItemId ?? ''} />
 							<input type="hidden" name="itemName" value={sel.itemName} />
-							<span class="min-w-0 flex-1 truncate text-sm font-medium text-stone-800">{sel.itemName}</span>
-							{#if sel.quantityType === 'count'}
-								<input
-									type="number"
-									name="quantityUsed"
-									bind:value={sel.quantityUsed}
-									min="0.5"
-									step="0.5"
-									class="w-16 rounded-lg border border-stone-200 px-2 py-1 text-center text-sm text-stone-700 focus:border-orange-500 focus:outline-none"
-								/>
-							{:else}
-								<input type="hidden" name="quantityUsed" value={sel.quantityUsed} />
-								<div class="flex gap-1">
-									{#each ESTIMATE_OPTIONS as opt (opt.value)}
+							<div class="flex items-center gap-2">
+								<div class="min-w-0 flex-1">
+									<span class="truncate text-sm font-medium text-stone-800">{sel.itemName}</span>
+									{#if stock?.unit && stock.unit !== 'count'}
+										<span class="ml-1 text-xs text-stone-400">{stock.unit}</span>
+									{/if}
+								</div>
+								{#if sel.pantryItemId === null}
+									<!-- Custom item: decimal input, value = what's left (added to pantry) -->
+									<input
+										type="number"
+										name="newQuantity"
+										bind:value={sel.newQuantity}
+										min="0"
+										step="0.5"
+										placeholder="0"
+										class="w-16 rounded-lg border border-stone-200 px-2 py-1 text-center text-sm text-stone-700 focus:border-orange-500 focus:outline-none"
+									/>
+								{:else if sel.quantityType === 'count'}
+									<!-- Stepper: remaining quantity for pantry-linked count items -->
+									<div class="flex items-center gap-1">
 										<button
 											type="button"
-											onclick={() => (sel.quantityUsed = opt.value)}
-											class="rounded-lg border px-2 py-1 text-xs font-medium transition-colors {sel.quantityUsed === opt.value ? 'border-orange-500 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-600 hover:bg-stone-50'}"
-										>{opt.label}</button>
-									{/each}
-								</div>
-							{/if}
-							<button
-								type="button"
-								onclick={() => removePantryItem(sel.itemName)}
-								class="shrink-0 text-stone-300 hover:text-red-400"
-								aria-label="Remove {sel.itemName}"
-							>✕</button>
+											onclick={() => (sel.newQuantity = Math.max(0, sel.newQuantity - 1))}
+											class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100"
+										>−</button>
+										<span class="w-8 text-center text-sm font-medium text-stone-800">{sel.newQuantity}</span>
+										<button
+											type="button"
+											onclick={() => sel.newQuantity++}
+											class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100"
+										>+</button>
+									</div>
+									<input type="hidden" name="newQuantity" value={sel.newQuantity} />
+								{:else}
+									<!-- Bar: user sets the new level directly -->
+									<EstimatePicker bind:value={sel.newQuantity} name="newQuantity" />
+								{/if}
+								<button
+									type="button"
+									onclick={() => removePantryItem(sel.itemName)}
+									class="shrink-0 text-stone-300 hover:text-red-400"
+									aria-label="Remove {sel.itemName}"
+								>✕</button>
+							</div>
 						</li>
 					{/each}
 				</ul>

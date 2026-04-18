@@ -5,6 +5,10 @@ import { mealEntries, mealIngredients, pantryItems, recipes, recipeItems } from 
 import type { MealType } from '$lib/server/db/schema';
 import { eq, desc, and, inArray } from 'drizzle-orm';
 import { guessMealType } from '$lib/meal-type';
+import { guessCategory } from '$lib/infer';
+import { guessQuantityType } from '$lib/quantity';
+import { guessUnit } from '$lib/units';
+import { calcExpiry } from '$lib/expiry';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const userId = locals.user!.id;
@@ -190,7 +194,7 @@ export const actions: Actions = {
 		const mealId = String(data.get('mealId') ?? '');
 		const selectedIds = data.getAll('itemId').map(String);
 		const itemNames = data.getAll('itemName').map(String);
-		const quantitiesUsed = data.getAll('quantityUsed').map(Number);
+		const newQuantities = data.getAll('newQuantity').map(Number);
 
 		if (!mealId) return fail(400, { error: 'Invalid request.' });
 
@@ -203,11 +207,42 @@ export const actions: Actions = {
 		if (!meal) return fail(404, { error: 'Meal not found.' });
 
 		for (let i = 0; i < itemNames.length; i++) {
-			const pantryItemId = selectedIds[i] || null;
+			let pantryItemId = selectedIds[i] || null;
 			const itemName = itemNames[i];
-			const used = quantitiesUsed[i] ?? 1;
+			const newQty = newQuantities[i] ?? 0;
 
 			if (!itemName) continue;
+
+			let used = newQty;
+
+			if (pantryItemId) {
+				// Linked pantry item: set remaining quantity directly, compute depletion
+				const item = await db
+					.select()
+					.from(pantryItems)
+					.where(and(eq(pantryItems.id, pantryItemId), eq(pantryItems.userId, userId)))
+					.get();
+				if (item) {
+					used = Math.max(0, item.quantity - newQty);
+					await db
+						.update(pantryItems)
+						.set({ quantity: Math.max(0, newQty) })
+						.where(eq(pantryItems.id, pantryItemId));
+				}
+			} else {
+				// Custom item: create a pantry entry with inferred defaults (quantity = 0, already used)
+				const category = guessCategory(itemName);
+				const quantityType = guessQuantityType(itemName);
+				const unit = quantityType === 'count' ? guessUnit(itemName) : null;
+				const purchaseDate = new Date();
+				const expiryDate = calcExpiry(category, purchaseDate);
+				const [created] = await db
+					.insert(pantryItems)
+					.values({ userId, name: itemName, category, quantityType, quantity: Math.max(0, newQty), unit, purchaseDate, expiryDate, expiryOverridden: false })
+					.returning();
+				pantryItemId = created.id;
+				used = 0; // we don't know the starting quantity, so depletion is unknown
+			}
 
 			await db.insert(mealIngredients).values({
 				mealEntryId: mealId,
@@ -215,21 +250,6 @@ export const actions: Actions = {
 				itemName,
 				quantityUsed: used
 			});
-
-			// Only deplete pantry for linked items
-			if (pantryItemId) {
-				const item = await db
-					.select()
-					.from(pantryItems)
-					.where(and(eq(pantryItems.id, pantryItemId), eq(pantryItems.userId, userId)))
-					.get();
-				if (item) {
-					await db
-						.update(pantryItems)
-						.set({ quantity: Math.max(0, item.quantity - used) })
-						.where(eq(pantryItems.id, pantryItemId));
-				}
-			}
 		}
 
 		// If items were selected, offer to save as recipe (handled in load via ?save_recipe=)

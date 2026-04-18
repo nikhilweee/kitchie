@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import EstimatePicker from '$lib/components/EstimatePicker.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -12,6 +13,16 @@
 	let editingRecipe = $state<Recipe | null>(null);
 	let nameInput = $state('');
 	let nameEl = $state<HTMLInputElement | undefined>(undefined);
+	let showNameSuggestions = $state(false);
+
+	// Suggest existing recipes when typing in add mode
+	const nameSuggestions = $derived(
+		sheetMode === 'add' && nameInput.trim().length > 0
+			? data.recipes.filter((r) =>
+					r.name.toLowerCase().includes(nameInput.trim().toLowerCase())
+				)
+			: []
+	);
 
 	// Ingredients in the sheet
 	type DraftItem = { pantryItemId: string | null; itemName: string; quantity: number };
@@ -163,17 +174,37 @@
 			{/if}
 
 			<!-- Recipe name -->
-			<input
-				bind:this={nameEl}
-				bind:value={nameInput}
-				name="name"
-				type="text"
-				placeholder="Recipe name"
-				autocapitalize="sentences"
-				autocomplete="off"
-				required
-				class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
-			/>
+			<div class="relative">
+				<input
+					bind:this={nameEl}
+					bind:value={nameInput}
+					onfocus={() => (showNameSuggestions = true)}
+					onblur={() => setTimeout(() => (showNameSuggestions = false), 150)}
+					name="name"
+					type="text"
+					placeholder="Recipe name"
+					autocapitalize="sentences"
+					autocomplete="off"
+					required
+					class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+				/>
+				{#if showNameSuggestions && nameSuggestions.length > 0}
+					<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+						{#each nameSuggestions as recipe (recipe.id)}
+							<li>
+								<button
+									type="button"
+									onmousedown={() => openEdit(recipe)}
+									class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
+								>
+									<span class="flex-1 font-medium">{recipe.name}</span>
+									<span class="shrink-0 text-xs text-stone-400">already saved · edit</span>
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
 
 			<!-- Ingredient list -->
 			<p class="mt-4 mb-2 text-xs font-medium text-stone-500">Ingredients</p>
@@ -184,15 +215,8 @@
 						<li class="flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5">
 							<input type="hidden" name="pantryItemId" value={item.pantryItemId ?? ''} />
 							<input type="hidden" name="itemName" value={item.itemName} />
-							<span class="flex-1 text-sm font-medium text-stone-800">{item.itemName}</span>
-							<input
-								type="number"
-								name="quantity"
-								bind:value={item.quantity}
-								min="0.1"
-								step="0.5"
-								class="w-16 rounded-lg border border-stone-200 px-2 py-1 text-center text-sm text-stone-700 focus:border-orange-500 focus:outline-none"
-							/>
+							<span class="min-w-0 flex-1 truncate text-sm font-medium text-stone-800">{item.itemName}</span>
+							<EstimatePicker bind:value={item.quantity} name="quantity" />
 							<button
 								type="button"
 								onclick={() => removeIngredient(idx)}
