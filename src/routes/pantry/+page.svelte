@@ -13,6 +13,7 @@
 	import { UNITS, guessUnit } from '$lib/units';
 	import { toDateStr } from '$lib/date-format';
 	import { clickOutside } from '$lib/actions/click-outside';
+	import Toast from '$lib/components/Toast.svelte';
 	import type { PantryCategory, QuantityType } from '$lib/server/db/schema';
 
 	let { data }: { data: PageData } = $props();
@@ -35,6 +36,15 @@
 	let purchaseDate = $state(todayStr()); // persists across adds
 	let categoryLocked = $state(false);
 	let expiryLocked = $state(false);
+
+	// Toast
+	let toast = $state<string | null>(null);
+	let toastTimer: ReturnType<typeof setTimeout>;
+	function showToast(msg: string) {
+		clearTimeout(toastTimer);
+		toast = msg;
+		toastTimer = setTimeout(() => (toast = null), 2500);
+	}
 
 	// Suggest existing pantry items when typing in add mode
 	const nameSuggestions = $derived(
@@ -95,18 +105,9 @@
 	}
 
 	function onSheetSuccess() {
-		if (sheetMode === 'add') {
-			nameInput = '';
-			categoryLocked = false;
-			expiryLocked = false;
-			category = 'other';
-			quantityType = 'estimate';
-			quantity = 1;
-			expiryDate = '';
-			setTimeout(() => nameEl?.focus(), 50);
-		} else {
-			closeSheet();
-		}
+		const msg = sheetMode === 'add' ? 'Added to pantry' : 'Pantry item updated';
+		closeSheet();
+		showToast(msg);
 	}
 
 	// ── Item list helpers ─────────────────────────────────────────────────────
@@ -145,6 +146,8 @@
 </script>
 
 <svelte:head><title>Pantry — Kitchie</title></svelte:head>
+
+<Toast message={toast} />
 
 <div class="flex min-h-svh flex-col bg-stone-50">
 	<PageHeader title="Pantry" />
@@ -201,7 +204,7 @@
 				</span>
 				<form method="POST" action="?/delete" use:enhance>
 					<input type="hidden" name="id" value={item.id} />
-					<button type="submit" aria-label="Delete {item.name}" class="shrink-0 text-stone-300 hover:text-red-400">✕</button>
+					<button type="submit" aria-label="Delete {item.name}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400">✕</button>
 				</form>
 			</li>
 		{/each}

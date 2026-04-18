@@ -8,11 +8,21 @@
 	import FormActions from '$lib/components/FormActions.svelte';
 	import type { PageData } from './$types';
 	import { clickOutside } from '$lib/actions/click-outside';
+	import Toast from '$lib/components/Toast.svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	type Recipe = PageData['recipes'][0];
 	type PantryItem = PageData['pantryItems'][0];
+
+	// Toast
+	let toast = $state<string | null>(null);
+	let toastTimer: ReturnType<typeof setTimeout>;
+	function showToast(msg: string) {
+		clearTimeout(toastTimer);
+		toast = msg;
+		toastTimer = setTimeout(() => (toast = null), 2500);
+	}
 
 	// ── Sheet mode ────────────────────────────────────────────────────────────
 	let sheetMode = $state<'add' | 'edit' | null>(null);
@@ -95,6 +105,8 @@
 
 <svelte:head><title>Recipes — Kitchie</title></svelte:head>
 
+<Toast message={toast} />
+
 <div class="flex min-h-svh flex-col bg-stone-50">
 	<PageHeader title="Recipes" />
 
@@ -119,7 +131,7 @@
 						</button>
 						<form method="POST" action="?/delete" use:enhance>
 							<input type="hidden" name="id" value={recipe.id} />
-							<button type="submit" aria-label="Delete {recipe.name}" class="shrink-0 text-stone-300 hover:text-red-400">✕</button>
+							<button type="submit" aria-label="Delete {recipe.name}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400">✕</button>
 						</form>
 					</li>
 				{/each}
@@ -137,7 +149,11 @@
 		action="?/save"
 		use:enhance={() => async ({ result, update }) => {
 			await update({ reset: false });
-			if (result.type === 'success') closeSheet();
+			if (result.type === 'success') {
+				const msg = sheetMode === 'add' ? 'Recipe saved' : 'Recipe updated';
+				closeSheet();
+				showToast(msg);
+			}
 		}}
 	>
 		<button type="submit" class="sr-only" tabindex="-1" aria-hidden="true"></button>
@@ -192,7 +208,7 @@
 						<button
 							type="button"
 							onclick={() => removeIngredient(idx)}
-							class="shrink-0 text-stone-300 hover:text-red-400"
+							class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400"
 							aria-label="Remove {item.itemName}"
 						>✕</button>
 					</li>
