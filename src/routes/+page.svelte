@@ -3,7 +3,13 @@
 	import { goto } from '$app/navigation';
 	import type { PageData } from './$types';
 	import { MEAL_TYPE_LABELS, MEAL_TYPES, guessMealType, currentDateTimeStr } from '$lib/meal-type';
+	import { toDateTimeLocalStr } from '$lib/date-format';
 	import EstimatePicker from '$lib/components/EstimatePicker.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import AddButton from '$lib/components/AddButton.svelte';
+	import EmptyState from '$lib/components/EmptyState.svelte';
+	import BottomSheet from '$lib/components/BottomSheet.svelte';
+	import FormActions from '$lib/components/FormActions.svelte';
 	import type { MealType } from '$lib/server/db/schema';
 
 	let { data }: { data: PageData } = $props();
@@ -22,8 +28,7 @@
 	// Suggestions (add mode only)
 	interface Suggestion { name: string; type: 'meal' | 'recipe'; recipeId?: string; }
 	let suggestions = $state<Suggestion[]>([]);
-	let selectedRecipeId = $state<string | null>(null); // set when user picks a recipe suggestion
-	let loadingSuggestions = $state(false);
+	let selectedRecipeId = $state<string | null>(null);
 	let inputEl = $state<HTMLInputElement | undefined>(undefined);
 	let debounceTimer: ReturnType<typeof setTimeout>;
 
@@ -44,7 +49,7 @@
 		sheetMode = 'edit';
 		editingEntry = entry;
 		mealInput = entry.name;
-		mealDateTime = entry.loggedAt.slice(0, 16); // "YYYY-MM-DDTHH:MM"
+		mealDateTime = toDateTimeLocalStr(entry.loggedAt);
 		mealType = entry.mealType as MealType;
 		mealTypeLocked = true;
 	}
@@ -56,10 +61,8 @@
 	}
 
 	async function fetchSuggestions(q: string) {
-		loadingSuggestions = true;
 		const res = await fetch(`/api/suggestions?q=${encodeURIComponent(q)}`);
 		suggestions = await res.json();
-		loadingSuggestions = false;
 	}
 
 	function onNameInput() {
@@ -78,9 +81,7 @@
 		const groups = new Map<string, Entry[]>();
 		for (const e of entries) {
 			const key = new Date(e.loggedAt).toLocaleDateString('en-US', {
-				weekday: 'long',
-				month: 'short',
-				day: 'numeric'
+				weekday: 'long', month: 'short', day: 'numeric'
 			});
 			if (!groups.has(key)) groups.set(key, []);
 			groups.get(key)!.push(e);
@@ -95,10 +96,7 @@
 	}
 
 	function isToday(key: string) {
-		return (
-			key ===
-			new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
-		);
+		return key === new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 	}
 
 	// ── Pantry update sheet (step 2) ─────────────────────────────────────────
@@ -112,7 +110,6 @@
 	let pantrySearch = $state('');
 
 	$effect(() => {
-		// Pre-populate with keyword/recipe-matched items when the sheet opens
 		pantrySelected = data.pantrySuggestions
 			.filter((s) => s.suggested)
 			.map((s) => ({
@@ -132,7 +129,6 @@
 					.map((s) => s.item)
 	);
 
-	// Whether the current search text is an exact (case-insensitive) match of an existing pantry item
 	const pantrySearchIsExactMatch = $derived(
 		data.pantrySuggestions.some(
 			(s) => s.item.name.toLowerCase() === pantrySearch.trim().toLowerCase()
@@ -142,12 +138,7 @@
 	function addPantryItem(item: PageData['pantrySuggestions'][0]['item']) {
 		pantrySelected = [
 			...pantrySelected,
-			{
-				pantryItemId: item.id,
-				itemName: item.name,
-				quantityType: item.quantityType as 'count' | 'estimate',
-				newQuantity: item.quantity
-			}
+			{ pantryItemId: item.id, itemName: item.name, quantityType: item.quantityType as 'count' | 'estimate', newQuantity: item.quantity }
 		];
 		pantrySearch = '';
 	}
@@ -172,32 +163,12 @@
 
 <svelte:head><title>Kitchie</title></svelte:head>
 
-<!-- Backdrop -->
-{#if sheetMode || data.updateMeal || data.saveRecipeMeal}
-	<div
-		class="fixed inset-0 z-40 bg-black/40"
-		role="button"
-		tabindex="-1"
-		aria-label="Close"
-		onclick={() => { closeSheet(); if (data.updateMeal || data.saveRecipeMeal) goto('/'); }}
-		onkeydown={(e) => e.key === 'Escape' && (closeSheet(), (data.updateMeal || data.saveRecipeMeal) && goto('/'))}
-	></div>
-{/if}
-
 <div class="flex min-h-svh flex-col bg-stone-50">
-	<header class="sticky top-0 z-10 border-b border-stone-200 bg-white px-4 py-3">
-		<div class="mx-auto max-w-lg">
-			<h1 class="text-lg font-bold text-stone-900">Kitchie</h1>
-		</div>
-	</header>
+	<PageHeader title="Kitchie" />
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
 		{#if data.entries.length === 0}
-			<div class="mt-16 text-center text-stone-400">
-				<p class="text-5xl">🍽️</p>
-				<p class="mt-4 text-base font-medium">No meals logged yet</p>
-				<p class="mt-1 text-sm">Tap the button below to log your first meal.</p>
-			</div>
+			<EmptyState emoji="🍽️" heading="No meals logged yet" detail="Tap the button below to log your first meal." />
 		{:else}
 			{#each grouped as [day, entries] (day)}
 				<section class="mb-6">
@@ -233,296 +204,229 @@
 		{/if}
 	</main>
 
-	<div class="fixed bottom-14 left-0 right-0 z-30 flex justify-center px-4 pb-2">
-		<button
-			onclick={openAdd}
-			class="flex w-full max-w-lg items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-base font-semibold text-white shadow-lg hover:bg-orange-600 active:scale-95"
-		>
-			<span class="text-xl leading-none">+</span> Add Meal
-		</button>
-	</div>
+	<AddButton label="Add Meal" onclick={openAdd} />
 </div>
 
 <!-- ── Add / Edit meal sheet ─────────────────────────────────────────────── -->
-{#if sheetMode}
-	<div
-		class="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white px-4 pt-3 pb-8 shadow-2xl"
-		role="dialog"
-		aria-modal="true"
+<BottomSheet open={!!sheetMode} onclose={closeSheet}>
+	<form
+		method="POST"
+		action={sheetMode === 'add' ? '?/addMeal' : '?/updateMeal'}
+		use:enhance={() => async ({ result, update }) => {
+			if (sheetMode === 'edit') {
+				await update({ reset: false });
+				if (result.type === 'success') closeSheet();
+			} else {
+				await update();
+			}
+		}}
 	>
-		<div class="mx-auto mb-4 h-1 w-10 rounded-full bg-stone-200"></div>
+		<button type="submit" class="sr-only" tabindex="-1" aria-hidden="true"></button>
 
-		<form
-			method="POST"
-			action={sheetMode === 'add' ? '?/addMeal' : '?/updateMeal'}
-			use:enhance={() => async ({ result, update }) => {
-				if (sheetMode === 'edit') {
-					await update({ reset: false });
-					if (result.type === 'success') closeSheet();
-				} else {
-					await update(); // follows the 302 redirect to /?update=<id>
-				}
-			}}
-		>
-			<!-- Hidden default submit so Enter triggers save, not delete -->
-			<button type="submit" class="sr-only" tabindex="-1" aria-hidden="true"></button>
+		{#if sheetMode === 'edit' && editingEntry}
+			<input type="hidden" name="id" value={editingEntry.id} />
+		{/if}
+		{#if sheetMode === 'add' && selectedRecipeId}
+			<input type="hidden" name="recipeId" value={selectedRecipeId} />
+		{/if}
 
-			{#if sheetMode === 'edit' && editingEntry}
-				<input type="hidden" name="id" value={editingEntry.id} />
-			{/if}
-			{#if sheetMode === 'add' && selectedRecipeId}
-				<input type="hidden" name="recipeId" value={selectedRecipeId} />
-			{/if}
-
-			<!-- Name -->
-			<div class="relative">
-				<input
-					bind:this={inputEl}
-					bind:value={mealInput}
-					oninput={onNameInput}
-					name="name"
-					type="text"
-					placeholder="What did you eat?"
-					autocomplete="off"
-					autocapitalize="sentences"
-					required
-					class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
-				/>
-				<!-- Suggestions dropdown (add mode only) — absolute so layout stays stable -->
-				{#if sheetMode === 'add' && suggestions.length > 0}
-					<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
-						{#each suggestions as s (s.name)}
-							<li>
-								<button
-									type="button"
-									onclick={() => selectSuggestion(s)}
-									class="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
-								>
-									<span class="flex-1">{s.name}</span>
-									{#if s.type === 'recipe'}
-										<span class="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600">recipe</span>
-									{/if}
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			</div>
-
-			<!-- Date/time + Meal type -->
-			<div class="mt-3 space-y-2">
-				<div class="grid grid-cols-2 gap-2">
-					<div>
-						<label for="meal-datetime" class="mb-1 block text-xs font-medium text-stone-500">Date & time</label>
-						<input
-							id="meal-datetime"
-							name="datetime"
-							type="datetime-local"
-							bind:value={mealDateTime}
-							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-						/>
-					</div>
-					<div>
-						<label for="meal-type" class="mb-1 block text-xs font-medium text-stone-500">Meal type</label>
-						<select
-							id="meal-type"
-							name="mealType"
-							bind:value={mealType}
-							onchange={() => (mealTypeLocked = true)}
-							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-						>
-							{#each MEAL_TYPES as t (t)}
-								<option value={t}>{MEAL_TYPE_LABELS[t]}</option>
-							{/each}
-						</select>
-					</div>
-				</div>
-			</div>
-
-			<div class="mt-4 flex gap-2">
-				{#if sheetMode === 'edit'}
-					<button
-						type="submit"
-						formaction="?/deleteMeal"
-						class="flex-1 rounded-xl border border-red-200 py-3 text-sm font-medium text-red-500 hover:bg-red-50"
-					>
-						Delete
-					</button>
-				{:else}
-					<button
-						type="button"
-						onclick={closeSheet}
-						class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600"
-					>
-						Cancel
-					</button>
-				{/if}
-				<button
-					type="submit"
-					disabled={!mealInput.trim()}
-					class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40"
-				>
-					{sheetMode === 'edit' ? 'Save' : 'Log meal'}
-				</button>
-			</div>
-		</form>
-	</div>
-{/if}
-
-<!-- ── Pantry update sheet (step 2) ──────────────────────────────────────── -->
-{#if data.updateMeal}
-	<div
-		class="fixed inset-x-0 bottom-0 z-50 max-h-[80svh] overflow-y-auto rounded-t-2xl bg-white px-4 pt-3 pb-8 shadow-2xl"
-		role="dialog"
-		aria-modal="true"
-	>
-		<div class="mx-auto mb-4 h-1 w-10 rounded-full bg-stone-200"></div>
-
-		<h2 class="text-base font-semibold text-stone-900">Update pantry</h2>
-		<p class="mt-0.5 mb-4 text-sm text-stone-500">
-			Set what's left after <span class="font-medium text-stone-700">{data.updateMeal.name}</span>.
-		</p>
-
-		<form method="POST" action="?/updatePantry" use:enhance>
-			<input type="hidden" name="mealId" value={data.updateMeal.id} />
-
-			<!-- Selected ingredients -->
-			{#if pantrySelected.length > 0}
-				<ul class="mb-3 space-y-2">
-					{#each pantrySelected as sel (sel.itemName)}
-						{@const stock = pantryStock(sel.pantryItemId)}
-						<li class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5">
-							<input type="hidden" name="itemId" value={sel.pantryItemId ?? ''} />
-							<input type="hidden" name="itemName" value={sel.itemName} />
-							<div class="flex items-center gap-2">
-								<div class="min-w-0 flex-1">
-									<span class="truncate text-sm font-medium text-stone-800">{sel.itemName}</span>
-									{#if stock?.unit && stock.unit !== 'count'}
-										<span class="ml-1 text-xs text-stone-400">{stock.unit}</span>
-									{/if}
-								</div>
-								{#if sel.pantryItemId === null}
-									<!-- Custom item: decimal input, value = what's left (added to pantry) -->
-									<input
-										type="number"
-										name="newQuantity"
-										bind:value={sel.newQuantity}
-										min="0"
-										step="0.5"
-										placeholder="0"
-										class="w-16 rounded-lg border border-stone-200 px-2 py-1 text-center text-sm text-stone-700 focus:border-orange-500 focus:outline-none"
-									/>
-								{:else if sel.quantityType === 'count'}
-									<!-- Stepper: remaining quantity for pantry-linked count items -->
-									<div class="flex items-center gap-1">
-										<button
-											type="button"
-											onclick={() => (sel.newQuantity = Math.max(0, sel.newQuantity - 1))}
-											class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100"
-										>−</button>
-										<span class="w-8 text-center text-sm font-medium text-stone-800">{sel.newQuantity}</span>
-										<button
-											type="button"
-											onclick={() => sel.newQuantity++}
-											class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100"
-										>+</button>
-									</div>
-									<input type="hidden" name="newQuantity" value={sel.newQuantity} />
-								{:else}
-									<!-- Bar: user sets the new level directly -->
-									<EstimatePicker bind:value={sel.newQuantity} name="newQuantity" />
+		<!-- Name -->
+		<div class="relative">
+			<input
+				bind:this={inputEl}
+				bind:value={mealInput}
+				oninput={onNameInput}
+				name="name"
+				type="text"
+				placeholder="What did you eat?"
+				autocomplete="off"
+				autocapitalize="sentences"
+				required
+				class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+			/>
+			{#if sheetMode === 'add' && suggestions.length > 0}
+				<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+					{#each suggestions as s (s.name)}
+						<li>
+							<button
+								type="button"
+								onclick={() => selectSuggestion(s)}
+								class="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
+							>
+								<span class="flex-1">{s.name}</span>
+								{#if s.type === 'recipe'}
+									<span class="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600">recipe</span>
 								{/if}
-								<button
-									type="button"
-									onclick={() => removePantryItem(sel.itemName)}
-									class="shrink-0 text-stone-300 hover:text-red-400"
-									aria-label="Remove {sel.itemName}"
-								>✕</button>
-							</div>
+							</button>
 						</li>
 					{/each}
 				</ul>
-			{:else}
-				<p class="mb-3 text-sm text-stone-400">No ingredients added yet.</p>
 			{/if}
+		</div>
 
-			<!-- Search to add more (always shown) -->
-			<div class="relative">
-				<input
-					type="text"
-					bind:value={pantrySearch}
-					placeholder="Search or type an ingredient…"
-					autocomplete="off"
-					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
-				/>
-				{#if pantrySearch.trim()}
-					<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
-						{#each pantryFiltered as item (item.id)}
-							<li>
-								<button
-									type="button"
-									onclick={() => addPantryItem(item)}
-									class="w-full px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
-								>
-									{item.name}
-								</button>
-							</li>
+		<!-- Date/time + Meal type -->
+		<div class="mt-3 space-y-2">
+			<div class="grid grid-cols-2 gap-2">
+				<div>
+					<label for="meal-datetime" class="mb-1 block text-xs font-medium text-stone-500">Date & time</label>
+					<input
+						id="meal-datetime"
+						name="datetime"
+						type="datetime-local"
+						bind:value={mealDateTime}
+						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+					/>
+				</div>
+				<div>
+					<label for="meal-type" class="mb-1 block text-xs font-medium text-stone-500">Meal type</label>
+					<select
+						id="meal-type"
+						name="mealType"
+						bind:value={mealType}
+						onchange={() => (mealTypeLocked = true)}
+						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+					>
+						{#each MEAL_TYPES as t (t)}
+							<option value={t}>{MEAL_TYPE_LABELS[t]}</option>
 						{/each}
-						{#if !pantrySearchIsExactMatch}
-							<li>
-								<button
-									type="button"
-									onclick={() => addCustomPantryItem(pantrySearch.trim())}
-									class="w-full px-4 py-2.5 text-left text-sm text-orange-600 hover:bg-orange-50"
-								>
-									Add "{pantrySearch.trim()}" as ingredient
-								</button>
-							</li>
-						{/if}
-					</ul>
-				{/if}
+					</select>
+				</div>
 			</div>
-			<div class="mt-4 flex gap-2">
-				<a href="/" class="flex-1 rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-50">
-					Skip
-				</a>
-				<button type="submit" class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600">
-					Update pantry
-				</button>
-			</div>
-		</form>
-	</div>
-{/if}
+		</div>
 
-<!-- ── Save as recipe sheet (step 3, optional) ───────────────────────────── -->
-{#if data.saveRecipeMeal}
-	<div
-		class="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white px-4 pt-3 pb-8 shadow-2xl"
-		role="dialog"
-		aria-modal="true"
-	>
-		<div class="mx-auto mb-4 h-1 w-10 rounded-full bg-stone-200"></div>
-		<h2 class="text-base font-semibold text-stone-900">Save as recipe?</h2>
-		<p class="mt-0.5 mb-3 text-sm text-stone-500">
-			Save the ingredients you just used for <span class="font-medium text-stone-700">{data.saveRecipeMeal.name}</span> as a recipe for next time.
-		</p>
-		{#if data.saveRecipeMeal.ingredients.length > 0}
-			<ul class="mb-4 space-y-1">
-				{#each data.saveRecipeMeal.ingredients as ing (ing)}
-					<li class="text-sm text-stone-700">· {ing}</li>
+		<FormActions
+			isEditing={sheetMode === 'edit'}
+			saveLabel={sheetMode === 'edit' ? 'Save' : 'Log meal'}
+			deleteAction="?/deleteMeal"
+			disabled={!mealInput.trim()}
+			oncancel={closeSheet}
+		/>
+	</form>
+</BottomSheet>
+
+<!-- ── Pantry update sheet (step 2) ──────────────────────────────────────── -->
+<BottomSheet open={!!data.updateMeal} onclose={() => goto('/')} scrollable>
+	<h2 class="text-base font-semibold text-stone-900">Update pantry</h2>
+	<p class="mt-0.5 mb-4 text-sm text-stone-500">
+		Set what's left after <span class="font-medium text-stone-700">{data.updateMeal?.name}</span>.
+	</p>
+
+	<form method="POST" action="?/updatePantry" use:enhance>
+		<input type="hidden" name="mealId" value={data.updateMeal?.id} />
+
+		{#if pantrySelected.length > 0}
+			<ul class="mb-3 space-y-2">
+				{#each pantrySelected as sel (sel.itemName)}
+					{@const stock = pantryStock(sel.pantryItemId)}
+					<li class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5">
+						<input type="hidden" name="itemId" value={sel.pantryItemId ?? ''} />
+						<input type="hidden" name="itemName" value={sel.itemName} />
+						<div class="flex items-center gap-2">
+							<div class="min-w-0 flex-1">
+								<span class="truncate text-sm font-medium text-stone-800">{sel.itemName}</span>
+								{#if stock?.unit && stock.unit !== 'count'}
+									<span class="ml-1 text-xs text-stone-400">{stock.unit}</span>
+								{/if}
+							</div>
+							{#if sel.pantryItemId === null}
+								<input
+									type="number"
+									name="newQuantity"
+									bind:value={sel.newQuantity}
+									min="0"
+									step="0.5"
+									placeholder="0"
+									class="w-16 rounded-lg border border-stone-200 px-2 py-1 text-center text-sm text-stone-700 focus:border-orange-500 focus:outline-none"
+								/>
+							{:else if sel.quantityType === 'count'}
+								<div class="flex items-center gap-1">
+									<button
+										type="button"
+										onclick={() => (sel.newQuantity = Math.max(0, sel.newQuantity - 1))}
+										class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100"
+									>−</button>
+									<span class="w-8 text-center text-sm font-medium text-stone-800">{sel.newQuantity}</span>
+									<button
+										type="button"
+										onclick={() => sel.newQuantity++}
+										class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100"
+									>+</button>
+								</div>
+								<input type="hidden" name="newQuantity" value={sel.newQuantity} />
+							{:else}
+								<EstimatePicker bind:value={sel.newQuantity} name="newQuantity" />
+							{/if}
+							<button
+								type="button"
+								onclick={() => removePantryItem(sel.itemName)}
+								class="shrink-0 text-stone-300 hover:text-red-400"
+								aria-label="Remove {sel.itemName}"
+							>✕</button>
+						</div>
+					</li>
 				{/each}
 			</ul>
+		{:else}
+			<p class="mb-3 text-sm text-stone-400">No ingredients added yet.</p>
 		{/if}
-		<div class="flex gap-2">
-			<a href="/" class="flex-1 rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-50">
-				Skip
-			</a>
-			<form method="POST" action="?/saveRecipe" use:enhance class="flex-1">
-				<input type="hidden" name="mealId" value={data.saveRecipeMeal.id} />
-				<button type="submit" class="w-full rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600">
-					Save recipe
-				</button>
-			</form>
+
+		<div class="relative">
+			<input
+				type="text"
+				bind:value={pantrySearch}
+				placeholder="Search or type an ingredient…"
+				autocomplete="off"
+				class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+			/>
+			{#if pantrySearch.trim()}
+				<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+					{#each pantryFiltered as item (item.id)}
+						<li>
+							<button
+								type="button"
+								onclick={() => addPantryItem(item)}
+								class="w-full px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
+							>{item.name}</button>
+						</li>
+					{/each}
+					{#if !pantrySearchIsExactMatch}
+						<li>
+							<button
+								type="button"
+								onclick={() => addCustomPantryItem(pantrySearch.trim())}
+								class="w-full px-4 py-2.5 text-left text-sm text-orange-600 hover:bg-orange-50"
+							>Add "{pantrySearch.trim()}" as ingredient</button>
+						</li>
+					{/if}
+				</ul>
+			{/if}
 		</div>
+
+		<div class="mt-4 flex gap-2">
+			<a href="/" class="flex-1 rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-50">Skip</a>
+			<button type="submit" class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600">Update pantry</button>
+		</div>
+	</form>
+</BottomSheet>
+
+<!-- ── Save as recipe sheet (step 3, optional) ───────────────────────────── -->
+<BottomSheet open={!!data.saveRecipeMeal} onclose={() => goto('/')}>
+	<h2 class="text-base font-semibold text-stone-900">Save as recipe?</h2>
+	<p class="mt-0.5 mb-3 text-sm text-stone-500">
+		Save the ingredients you just used for <span class="font-medium text-stone-700">{data.saveRecipeMeal?.name}</span> as a recipe for next time.
+	</p>
+	{#if data.saveRecipeMeal && data.saveRecipeMeal.ingredients.length > 0}
+		<ul class="mb-4 space-y-1">
+			{#each data.saveRecipeMeal.ingredients as ing (ing)}
+				<li class="text-sm text-stone-700">· {ing}</li>
+			{/each}
+		</ul>
+	{/if}
+	<div class="flex gap-2">
+		<a href="/" class="flex-1 rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-50">Skip</a>
+		<form method="POST" action="?/saveRecipe" use:enhance class="flex-1">
+			<input type="hidden" name="mealId" value={data.saveRecipeMeal?.id} />
+			<button type="submit" class="w-full rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600">Save recipe</button>
+		</form>
 	</div>
-{/if}
+</BottomSheet>

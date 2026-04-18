@@ -3,6 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { recipes, recipeItems, pantryItems } from '$lib/server/db/schema';
 import { eq, and, desc, inArray } from 'drizzle-orm';
+import { getString, getStrings, getNumbers } from '$lib/server/form-data';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
@@ -39,18 +40,17 @@ export const actions: Actions = {
 	save: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();
-		const id = String(data.get('id') ?? '');
-		const name = String(data.get('name') ?? '').trim();
-		const pantryIds = data.getAll('pantryItemId').map(String);
-		const itemNames = data.getAll('itemName').map(String);
-		const quantities = data.getAll('quantity').map(Number);
+		const id = getString(data, 'id');
+		const name = getString(data, 'name');
+		const pantryIds = getStrings(data, 'pantryItemId');
+		const itemNames = getStrings(data, 'itemName');
+		const quantities = getNumbers(data, 'quantity');
 
 		if (!name) return fail(400, { error: 'Recipe name is required.' });
 
 		let recipeId: string;
 
 		if (id) {
-			// Update: verify ownership
 			const existing = await db
 				.select()
 				.from(recipes)
@@ -81,7 +81,7 @@ export const actions: Actions = {
 	delete: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();
-		const id = String(data.get('id') ?? '');
+		const id = getString(data, 'id');
 		if (!id) return fail(400, {});
 		await db.delete(recipes).where(and(eq(recipes.id, id), eq(recipes.userId, userId)));
 		return { success: true };

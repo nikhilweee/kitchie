@@ -5,8 +5,8 @@ import { pantryItems } from '$lib/server/db/schema';
 import type { PantryCategory } from '$lib/server/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { calcExpiry } from '$lib/expiry';
-import { guessQuantityType } from '$lib/quantity';
-import { guessCategory } from '$lib/infer';
+import { getString, getNumber } from '$lib/server/form-data';
+import { inferItemDefaults } from '$lib/server/infer-item';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
@@ -32,31 +32,26 @@ export const actions: Actions = {
 		const userId = locals.user!.id;
 		const data = await request.formData();
 
-		const name = String(data.get('name') ?? '').trim();
+		const name = getString(data, 'name');
 		if (!name) return fail(400, { addError: 'Name is required.' });
 
-		const purchaseDateStr = String(data.get('purchaseDate') ?? '');
+		const purchaseDateStr = getString(data, 'purchaseDate');
 		const purchaseDate = purchaseDateStr ? new Date(purchaseDateStr) : new Date();
 
-		// Use submitted values; fall back to inference if absent
-		const category = (String(data.get('category') || '') as PantryCategory) || guessCategory(name);
-		const quantityType = (String(data.get('quantityType') || '') as 'count' | 'estimate') || guessQuantityType(name);
-		const quantity = parseFloat(String(data.get('quantity') ?? '')) || 1;
-		const unit = quantityType === 'count' ? (String(data.get('unit') ?? '') || 'count') : null;
-		const expiryDateStr = String(data.get('expiryDate') ?? '');
+		const submittedCategory = getString(data, 'category') as PantryCategory;
+		const submittedQType = getString(data, 'quantityType') as 'count' | 'estimate';
+		const inferred = inferItemDefaults(name);
+		const category = submittedCategory || inferred.category;
+		const quantityType = submittedQType || inferred.quantityType;
+		const quantity = getNumber(data, 'quantity', 1);
+		const unit = quantityType === 'count' ? (getString(data, 'unit') || 'count') : null;
+
+		const expiryDateStr = getString(data, 'expiryDate');
 		const expiryDate = expiryDateStr ? new Date(expiryDateStr) : calcExpiry(category, purchaseDate);
 		const expiryOverridden = !!expiryDateStr;
 
 		await db.insert(pantryItems).values({
-			userId,
-			name,
-			category,
-			quantityType,
-			quantity,
-			unit,
-			purchaseDate,
-			expiryDate,
-			expiryOverridden
+			userId, name, category, quantityType, quantity, unit, purchaseDate, expiryDate, expiryOverridden
 		});
 
 		return { success: true };
@@ -66,17 +61,21 @@ export const actions: Actions = {
 		const userId = locals.user!.id;
 		const data = await request.formData();
 
-		const id = String(data.get('id') ?? '');
-		const name = String(data.get('name') ?? '').trim();
+		const id = getString(data, 'id');
+		const name = getString(data, 'name');
 		if (!id || !name) return fail(400, { addError: 'Invalid request.' });
 
-		const purchaseDateStr = String(data.get('purchaseDate') ?? '');
+		const purchaseDateStr = getString(data, 'purchaseDate');
 		const purchaseDate = purchaseDateStr ? new Date(purchaseDateStr) : new Date();
-		const category = (String(data.get('category') || '') as PantryCategory) || guessCategory(name);
-		const quantityType = (String(data.get('quantityType') || '') as 'count' | 'estimate') || guessQuantityType(name);
-		const quantity = parseFloat(String(data.get('quantity') ?? '')) || 1;
-		const unit = quantityType === 'count' ? (String(data.get('unit') ?? '') || 'count') : null;
-		const expiryDateStr = String(data.get('expiryDate') ?? '');
+		const submittedCategory = getString(data, 'category') as PantryCategory;
+		const submittedQType = getString(data, 'quantityType') as 'count' | 'estimate';
+		const inferred = inferItemDefaults(name);
+		const category = submittedCategory || inferred.category;
+		const quantityType = submittedQType || inferred.quantityType;
+		const quantity = getNumber(data, 'quantity', 1);
+		const unit = quantityType === 'count' ? (getString(data, 'unit') || 'count') : null;
+
+		const expiryDateStr = getString(data, 'expiryDate');
 		const expiryDate = expiryDateStr ? new Date(expiryDateStr) : calcExpiry(category, purchaseDate);
 		const expiryOverridden = !!expiryDateStr;
 
@@ -91,7 +90,7 @@ export const actions: Actions = {
 	delete: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();
-		const id = String(data.get('id') ?? '');
+		const id = getString(data, 'id');
 
 		if (!id) return fail(400, {});
 

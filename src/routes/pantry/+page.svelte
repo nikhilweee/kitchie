@@ -1,14 +1,20 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import type { PageData, ActionData } from './$types';
+	import type { PageData } from './$types';
 	import { CATEGORY_LABELS, daysUntilExpiry, calcExpiry } from '$lib/expiry';
 	import { guessQuantityType } from '$lib/quantity';
 	import EstimatePicker from '$lib/components/EstimatePicker.svelte';
+	import PageHeader from '$lib/components/PageHeader.svelte';
+	import AddButton from '$lib/components/AddButton.svelte';
+	import EmptyState from '$lib/components/EmptyState.svelte';
+	import BottomSheet from '$lib/components/BottomSheet.svelte';
+	import FormActions from '$lib/components/FormActions.svelte';
 	import { guessCategory } from '$lib/infer';
 	import { UNITS, guessUnit } from '$lib/units';
+	import { toDateStr } from '$lib/date-format';
 	import type { PantryCategory, QuantityType } from '$lib/server/db/schema';
 
-	let { data, form }: { data: PageData; form: ActionData } = $props();
+	let { data }: { data: PageData } = $props();
 
 	type Item = PageData['items'][0];
 
@@ -20,15 +26,6 @@
 	let nameInput = $state('');
 	let nameEl = $state<HTMLInputElement | undefined>(undefined);
 	let showNameSuggestions = $state(false);
-
-	// Suggest existing pantry items when typing in add mode
-	const nameSuggestions = $derived(
-		sheetMode === 'add' && nameInput.trim().length > 0
-			? data.items.filter((i) =>
-					i.name.toLowerCase().includes(nameInput.trim().toLowerCase())
-				)
-			: []
-	);
 	let category = $state<PantryCategory>('other');
 	let quantityType = $state<QuantityType>('estimate');
 	let quantity = $state(1);
@@ -38,12 +35,17 @@
 	let categoryLocked = $state(false);
 	let expiryLocked = $state(false);
 
+	// Suggest existing pantry items when typing in add mode
+	const nameSuggestions = $derived(
+		sheetMode === 'add' && nameInput.trim().length > 0
+			? data.items.filter((i) =>
+					i.name.toLowerCase().includes(nameInput.trim().toLowerCase())
+				)
+			: []
+	);
+
 	function todayStr() {
 		return new Date().toISOString().split('T')[0];
-	}
-
-	function toDateStr(iso: string) {
-		return iso.split('T')[0];
 	}
 
 	function openAdd() {
@@ -88,7 +90,7 @@
 			const pd = purchaseDate ? new Date(purchaseDate) : new Date();
 			expiryDate = calcExpiry(category, pd).toISOString().split('T')[0];
 		}
-		if (sheetMode === 'add') quantity = 1; // reset per new item
+		if (sheetMode === 'add') quantity = 1;
 	}
 
 	function onSheetSuccess() {
@@ -123,11 +125,6 @@
 
 	const groups = $derived(groupItems(data.items));
 
-	function qtyLabel(item: Item) {
-		const n = item.quantity;
-		return `×${n % 1 === 0 ? n : n.toFixed(1)}`;
-	}
-
 	function expiryLabel(iso: string) {
 		const d = daysUntilExpiry(new Date(iso));
 		if (d < 0) return 'Expired';
@@ -148,40 +145,12 @@
 
 <svelte:head><title>Pantry — Kitchie</title></svelte:head>
 
-{#if sheetMode}
-	<div
-		class="fixed inset-0 z-40 bg-black/40"
-		role="button"
-		tabindex="-1"
-		aria-label="Close"
-		onclick={closeSheet}
-		onkeydown={(e) => e.key === 'Escape' && closeSheet()}
-	></div>
-{/if}
-
 <div class="flex min-h-svh flex-col bg-stone-50">
-	<header class="sticky top-0 z-10 border-b border-stone-200 bg-white px-4 py-3">
-		<div class="mx-auto max-w-lg">
-			<h1 class="text-lg font-bold text-stone-900">Pantry</h1>
-		</div>
-	</header>
-
-	<div class="fixed bottom-14 left-0 right-0 z-30 flex justify-center px-4 pb-2">
-		<button
-			onclick={openAdd}
-			class="flex w-full max-w-lg items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-base font-semibold text-white shadow-lg hover:bg-orange-600 active:scale-95"
-		>
-			<span class="text-xl leading-none">+</span> Add to Pantry
-		</button>
-	</div>
+	<PageHeader title="Pantry" />
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
 		{#if data.items.length === 0}
-			<div class="mt-16 text-center text-stone-400">
-				<p class="text-5xl">🧺</p>
-				<p class="mt-4 text-base font-medium">Pantry is empty</p>
-				<p class="mt-1 text-sm">Add items after your next shopping trip.</p>
-			</div>
+			<EmptyState emoji="🧺" heading="Pantry is empty" detail="Add items after your next shopping trip." />
 		{:else}
 			{#if groups.expiringSoon.length > 0}
 				<section class="mb-6">
@@ -203,6 +172,8 @@
 			{/if}
 		{/if}
 	</main>
+
+	<AddButton label="Add to Pantry" onclick={openAdd} />
 </div>
 
 {#snippet itemList(items: Item[])}
@@ -237,157 +208,129 @@
 {/snippet}
 
 <!-- ── Add / Edit sheet ───────────────────────────────────────────────────── -->
-{#if sheetMode}
-	<div
-		class="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white px-4 pt-3 pb-10 shadow-2xl"
-		role="dialog"
-		aria-modal="true"
+<BottomSheet open={!!sheetMode} onclose={closeSheet}>
+	<form
+		method="POST"
+		action={sheetMode === 'add' ? '?/add' : '?/update'}
+		use:enhance={() => async ({ result, update }) => {
+			await update({ reset: false });
+			if (result.type === 'success') onSheetSuccess();
+		}}
 	>
-		<div class="mx-auto mb-5 h-1 w-10 rounded-full bg-stone-200"></div>
+		{#if sheetMode === 'edit' && editingItem}
+			<input type="hidden" name="id" value={editingItem.id} />
+		{/if}
 
-		<form
-			method="POST"
-			action={sheetMode === 'add' ? '?/add' : '?/update'}
-			use:enhance={() => async ({ result, update }) => {
-				await update({ reset: false });
-				if (result.type === 'success') onSheetSuccess();
-			}}
-		>
-			{#if sheetMode === 'edit' && editingItem}
-				<input type="hidden" name="id" value={editingItem.id} />
-			{/if}
+		<button type="submit" class="sr-only" tabindex="-1" aria-hidden="true"></button>
 
-			<!-- Hidden default submit so Enter key always triggers save, not delete -->
-			<button type="submit" class="sr-only" tabindex="-1" aria-hidden="true"></button>
-
-			<div class="relative">
-				<input
-					bind:this={nameEl}
-					bind:value={nameInput}
-					oninput={onNameInput}
-					onfocus={() => (showNameSuggestions = true)}
-					onblur={() => setTimeout(() => (showNameSuggestions = false), 150)}
-					name="name"
-					type="text"
-					placeholder="What did you buy?"
-					autocapitalize="sentences"
-					autocomplete="off"
-					required
-					class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
-				/>
-				{#if showNameSuggestions && nameSuggestions.length > 0}
-					<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
-						{#each nameSuggestions as item (item.id)}
-							<li>
-								<button
-									type="button"
-									onmousedown={() => openEdit(item)}
-									class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
-								>
-									<span class="flex-1 font-medium">{item.name}</span>
-									<span class="shrink-0 text-xs text-stone-400">{CATEGORY_LABELS[item.category as PantryCategory]} · already in pantry</span>
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			</div>
-
-			<div class="mt-3 space-y-2">
-				<div>
-					<label for="sheet-category" class="mb-1 block text-xs font-medium text-stone-500">Category</label>
-					<select
-						id="sheet-category"
-						name="category"
-						bind:value={category}
-						onchange={() => (categoryLocked = true)}
-						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-					>
-						{#each categories as [val, label] (val)}
-							<option value={val}>{label}</option>
-						{/each}
-					</select>
-				</div>
-
-				<div>
-					<p class="mb-1 text-xs font-medium text-stone-500">Quantity</p>
-					<input type="hidden" name="quantityType" value={quantityType} />
-					{#if quantityType === 'count'}
-						<div class="flex gap-2">
-							<input
-								name="quantity"
-								type="number"
-								bind:value={quantity}
-								min="0"
-								step="1"
-								class="w-24 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-							/>
-							<select
-								name="unit"
-								bind:value={unit}
-								class="flex-1 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+		<div class="relative">
+			<input
+				bind:this={nameEl}
+				bind:value={nameInput}
+				oninput={onNameInput}
+				onfocus={() => (showNameSuggestions = true)}
+				onblur={() => setTimeout(() => (showNameSuggestions = false), 150)}
+				name="name"
+				type="text"
+				placeholder="What did you buy?"
+				autocapitalize="sentences"
+				autocomplete="off"
+				required
+				class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+			/>
+			{#if showNameSuggestions && nameSuggestions.length > 0}
+				<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+					{#each nameSuggestions as item (item.id)}
+						<li>
+							<button
+								type="button"
+								onmousedown={() => openEdit(item)}
+								class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
 							>
-								{#each UNITS as u (u.value)}
-									<option value={u.value}>{u.label}</option>
-								{/each}
-							</select>
-						</div>
-					{:else}
-						<EstimatePicker bind:value={quantity} name="quantity" />
-					{/if}
-				</div>
+								<span class="flex-1 font-medium">{item.name}</span>
+								<span class="shrink-0 text-xs text-stone-400">{CATEGORY_LABELS[item.category as PantryCategory]} · already in pantry</span>
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
 
-				<div class="grid grid-cols-2 gap-2">
-					<div>
-						<label for="sheet-purchased" class="mb-1 block text-xs font-medium text-stone-500">Purchased</label>
-						<input
-							id="sheet-purchased"
-							name="purchaseDate"
-							type="date"
-							bind:value={purchaseDate}
-							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
-						/>
-					</div>
-					<div>
-						<label for="sheet-expiry" class="mb-1 block text-xs font-medium text-stone-500">Expires</label>
-						<input
-							id="sheet-expiry"
-							name="expiryDate"
-							type="date"
-							bind:value={expiryDate}
-							oninput={() => (expiryLocked = true)}
-							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
-						/>
-					</div>
-				</div>
-			</div>
-
-			<div class="mt-4 flex gap-2">
-				{#if sheetMode === 'edit'}
-					<button
-						type="submit"
-						formaction="?/delete"
-						class="flex-1 rounded-xl border border-red-200 py-3 text-sm font-medium text-red-500 hover:bg-red-50"
-					>
-						Delete
-					</button>
-				{:else}
-					<button
-						type="button"
-						onclick={closeSheet}
-						class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600"
-					>
-						Done
-					</button>
-				{/if}
-				<button
-					type="submit"
-					disabled={!nameInput.trim()}
-					class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40"
+		<div class="mt-3 space-y-2">
+			<div>
+				<label for="sheet-category" class="mb-1 block text-xs font-medium text-stone-500">Category</label>
+				<select
+					id="sheet-category"
+					name="category"
+					bind:value={category}
+					onchange={() => (categoryLocked = true)}
+					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
 				>
-					{sheetMode === 'edit' ? 'Save' : 'Add item'}
-				</button>
+					{#each categories as [val, label] (val)}
+						<option value={val}>{label}</option>
+					{/each}
+				</select>
 			</div>
-		</form>
-	</div>
-{/if}
+
+			<div>
+				<p class="mb-1 text-xs font-medium text-stone-500">Quantity</p>
+				<input type="hidden" name="quantityType" value={quantityType} />
+				{#if quantityType === 'count'}
+					<div class="flex gap-2">
+						<input
+							name="quantity"
+							type="number"
+							bind:value={quantity}
+							min="0"
+							step="1"
+							class="w-24 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+						/>
+						<select
+							name="unit"
+							bind:value={unit}
+							class="flex-1 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+						>
+							{#each UNITS as u (u.value)}
+								<option value={u.value}>{u.label}</option>
+							{/each}
+						</select>
+					</div>
+				{:else}
+					<EstimatePicker bind:value={quantity} name="quantity" />
+				{/if}
+			</div>
+
+			<div class="grid grid-cols-2 gap-2">
+				<div>
+					<label for="sheet-purchased" class="mb-1 block text-xs font-medium text-stone-500">Purchased</label>
+					<input
+						id="sheet-purchased"
+						name="purchaseDate"
+						type="date"
+						bind:value={purchaseDate}
+						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
+					/>
+				</div>
+				<div>
+					<label for="sheet-expiry" class="mb-1 block text-xs font-medium text-stone-500">Expires</label>
+					<input
+						id="sheet-expiry"
+						name="expiryDate"
+						type="date"
+						bind:value={expiryDate}
+						oninput={() => (expiryLocked = true)}
+						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
+					/>
+				</div>
+			</div>
+		</div>
+
+		<FormActions
+			isEditing={sheetMode === 'edit'}
+			saveLabel={sheetMode === 'edit' ? 'Save' : 'Add item'}
+			deleteAction="?/delete"
+			disabled={!nameInput.trim()}
+			oncancel={closeSheet}
+		/>
+	</form>
+</BottomSheet>

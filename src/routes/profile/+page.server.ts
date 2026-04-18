@@ -4,6 +4,7 @@ import { db } from '$lib/server/db';
 import { users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { hashPassword, verifyPassword, deleteSession, SESSION_COOKIE } from '$lib/server/auth';
+import { getString } from '$lib/server/form-data';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	return { user: locals.user! };
@@ -13,11 +14,11 @@ export const actions: Actions = {
 	updateProfile: async ({ request, locals, cookies }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();
-		const name = String(data.get('name') ?? '').trim();
-		const username = String(data.get('username') ?? '').trim();
-		const currentPassword = String(data.get('currentPassword') ?? '');
-		const newPassword = String(data.get('newPassword') ?? '');
-		const confirmPassword = String(data.get('confirmPassword') ?? '');
+		const name = getString(data, 'name');
+		const username = getString(data, 'username');
+		const currentPassword = getString(data, 'currentPassword');
+		const newPassword = getString(data, 'newPassword');
+		const confirmPassword = getString(data, 'confirmPassword');
 
 		if (!username) return fail(400, { error: 'Username is required.' });
 

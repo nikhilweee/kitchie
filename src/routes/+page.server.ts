@@ -5,10 +5,9 @@ import { mealEntries, mealIngredients, pantryItems, recipes, recipeItems } from 
 import type { MealType } from '$lib/server/db/schema';
 import { eq, desc, and, inArray } from 'drizzle-orm';
 import { guessMealType } from '$lib/meal-type';
-import { guessCategory } from '$lib/infer';
-import { guessQuantityType } from '$lib/quantity';
-import { guessUnit } from '$lib/units';
 import { calcExpiry } from '$lib/expiry';
+import { getString, getStrings, getNumbers } from '$lib/server/form-data';
+import { inferItemDefaults } from '$lib/server/infer-item';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const userId = locals.user!.id;
@@ -117,10 +116,10 @@ export const actions: Actions = {
 	addMeal: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();
-		const name = String(data.get('name') ?? '').trim();
-		const datetimeStr = String(data.get('datetime') ?? '');
-		const mealType = String(data.get('mealType') ?? '') as MealType;
-		const recipeId = String(data.get('recipeId') ?? '');
+		const name = getString(data, 'name');
+		const datetimeStr = getString(data, 'datetime');
+		const mealType = getString(data, 'mealType') as MealType;
+		const recipeId = getString(data, 'recipeId');
 
 		if (!name) return fail(400, { error: 'Meal name is required.' });
 
@@ -144,10 +143,10 @@ export const actions: Actions = {
 	updateMeal: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();
-		const id = String(data.get('id') ?? '');
-		const name = String(data.get('name') ?? '').trim();
-		const datetimeStr = String(data.get('datetime') ?? '');
-		const mealType = String(data.get('mealType') ?? '') as MealType;
+		const id = getString(data, 'id');
+		const name = getString(data, 'name');
+		const datetimeStr = getString(data, 'datetime');
+		const mealType = getString(data, 'mealType') as MealType;
 
 		if (!id || !name) return fail(400, { error: 'Invalid request.' });
 
@@ -177,7 +176,7 @@ export const actions: Actions = {
 	deleteMeal: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();
-		const id = String(data.get('id') ?? '');
+		const id = getString(data, 'id');
 		if (!id) return fail(400, {});
 
 		await db
@@ -191,10 +190,10 @@ export const actions: Actions = {
 	updatePantry: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();
-		const mealId = String(data.get('mealId') ?? '');
-		const selectedIds = data.getAll('itemId').map(String);
-		const itemNames = data.getAll('itemName').map(String);
-		const newQuantities = data.getAll('newQuantity').map(Number);
+		const mealId = getString(data, 'mealId');
+		const selectedIds = getStrings(data, 'itemId');
+		const itemNames = getStrings(data, 'itemName');
+		const newQuantities = getNumbers(data, 'newQuantity');
 
 		if (!mealId) return fail(400, { error: 'Invalid request.' });
 
@@ -231,9 +230,7 @@ export const actions: Actions = {
 				}
 			} else {
 				// Custom item: create a pantry entry with inferred defaults (quantity = 0, already used)
-				const category = guessCategory(itemName);
-				const quantityType = guessQuantityType(itemName);
-				const unit = quantityType === 'count' ? guessUnit(itemName) : null;
+				const { category, quantityType, unit } = inferItemDefaults(itemName);
 				const purchaseDate = new Date();
 				const expiryDate = calcExpiry(category, purchaseDate);
 				const [created] = await db
@@ -263,7 +260,7 @@ export const actions: Actions = {
 	saveRecipe: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();
-		const mealId = String(data.get('mealId') ?? '');
+		const mealId = getString(data, 'mealId');
 
 		if (!mealId) return fail(400, {});
 

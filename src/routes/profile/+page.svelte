@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { PageData, ActionData } from './$types';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -19,11 +20,7 @@
 <svelte:head><title>Profile — Kitchie</title></svelte:head>
 
 <div class="flex min-h-svh flex-col bg-stone-50">
-	<header class="sticky top-0 z-10 border-b border-stone-200 bg-white px-4 py-3">
-		<div class="mx-auto max-w-lg">
-			<h1 class="text-lg font-bold text-stone-900">Profile</h1>
-		</div>
-	</header>
+	<PageHeader title="Profile" />
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-6 pb-28">
 		<!-- Edit profile -->
