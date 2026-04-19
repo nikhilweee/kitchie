@@ -5,7 +5,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-RUN npm run build
+RUN DATABASE_URL=file::memory: npm run build
 # Prune dev dependencies
 RUN npm prune --production
 
@@ -18,6 +18,7 @@ WORKDIR /app
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/drizzle ./drizzle
 
 # SQLite database lives in /app/data (mounted as a volume)
 RUN mkdir -p /app/data

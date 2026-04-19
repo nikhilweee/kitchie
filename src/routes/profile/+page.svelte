@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { untrack } from 'svelte';
 	import type { PageData } from './$types';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 
 	let { data, form }: { data: PageData; form: { error?: string; success?: boolean } | null } = $props();
 
-	let nameInput = $state(data.user.name ?? '');
-	let usernameInput = $state(data.user.username);
+	let nameInput = $state(untrack(() => data.user.name ?? ''));
+	let usernameInput = $state(untrack(() => data.user.username));
 	let currentPassword = $state('');
 	let newPassword = $state('');
 	let confirmPassword = $state('');

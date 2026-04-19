@@ -54,6 +54,7 @@
 				type="button"
 				onclick={() => setValue(zone as 1 | 2 | 3)}
 				aria-pressed={l === zone}
+				aria-label={zone === 1 ? 'Low' : zone === 2 ? 'Half' : 'Full'}
 				class="h-full transition-colors {zoneColor(zone as 1|2|3, l)} {l === zone ? 'opacity-100' : 'opacity-60 hover:opacity-80'}"
 			></button>
 		{/each}
