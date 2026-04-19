@@ -258,7 +258,7 @@ export const actions: Actions = {
 					.select()
 					.from(mealIngredients)
 					.where(eq(mealIngredients.mealEntryId, mealId));
-				const [recipe] = await db.insert(recipes).values({ userId, name: meal.name }).returning();
+				const [recipe] = await db.insert(recipes).values({ userId, name: meal.name, mealType: meal.mealType }).returning();
 				for (const ing of logged) {
 					await db.insert(recipeItems).values({
 						recipeId: recipe.id,

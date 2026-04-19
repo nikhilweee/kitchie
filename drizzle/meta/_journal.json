@@ -15,26 +15,33 @@
       "when": 1776412135594,
       "tag": "0001_smart_rictor",
       "breakpoints": true
-    }
-    ,{
+    },
+    {
       "idx": 2,
       "version": "6",
       "when": 1776500000000,
       "tag": "0002_recipes_and_profile",
       "breakpoints": true
-    }
-    ,{
+    },
+    {
       "idx": 3,
       "version": "6",
       "when": 1776510000000,
       "tag": "0003_nullable_ingredient",
       "breakpoints": true
-    }
-    ,{
+    },
+    {
       "idx": 4,
       "version": "6",
       "when": 1776520000000,
       "tag": "0004_pantry_unit",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1776497286056,
+      "tag": "0005_plain_lord_hawal",
       "breakpoints": true
     }
   ]

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import EstimatePicker from '$lib/components/EstimatePicker.svelte';
+	import SmallEstimatePicker from '$lib/components/SmallEstimatePicker.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
@@ -9,10 +9,29 @@
 	import type { PageData } from './$types';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
+	import { MEAL_TYPE_LABELS, MEAL_TYPES } from '$lib/meal-type';
+	import type { MealType } from '$lib/server/db/schema';
 
 	let { data }: { data: PageData } = $props();
 
 	type Recipe = PageData['recipes'][0];
+
+	let search = $state('');
+	let activeMealTypes = $state<Set<MealType>>(new Set());
+
+	function toggleMealType(t: MealType) {
+		const next = new Set(activeMealTypes);
+		if (next.has(t)) next.delete(t); else next.add(t);
+		activeMealTypes = next;
+	}
+
+	const filteredRecipes = $derived(
+		data.recipes.filter((r) => {
+			if (search.trim() && !r.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
+			if (activeMealTypes.size > 0 && !activeMealTypes.has(r.mealType as MealType)) return false;
+			return true;
+		})
+	);
 	type PantryItem = PageData['pantryItems'][0];
 
 	// Toast
@@ -28,6 +47,7 @@
 	let sheetMode = $state<'add' | 'edit' | null>(null);
 	let editingRecipe = $state<Recipe | null>(null);
 	let nameInput = $state('');
+	let mealTypeInput = $state<MealType | ''>('');
 	let nameEl = $state<HTMLInputElement | undefined>(undefined);
 	let showNameSuggestions = $state(false);
 
@@ -41,7 +61,7 @@
 	);
 
 	// Ingredients in the sheet
-	type DraftItem = { pantryItemId: string | null; itemName: string; quantity: number };
+	type DraftItem = { pantryItemId: string | null; itemName: string; quantity: number; quantityType: 'estimate' | 'count' };
 	let draftItems = $state<DraftItem[]>([]);
 	let ingredientSearch = $state('');
 
@@ -65,6 +85,7 @@
 		sheetMode = 'add';
 		editingRecipe = null;
 		nameInput = '';
+		mealTypeInput = '';
 		draftItems = [];
 		ingredientSearch = '';
 		setTimeout(() => nameEl?.focus(), 50);
@@ -74,11 +95,16 @@
 		sheetMode = 'edit';
 		editingRecipe = recipe;
 		nameInput = recipe.name;
-		draftItems = recipe.items.map((i) => ({
-			pantryItemId: i.pantryItemId ?? null,
-			itemName: i.itemName,
-			quantity: i.defaultQuantity
-		}));
+		mealTypeInput = (recipe.mealType as MealType) ?? '';
+		draftItems = recipe.items.map((i) => {
+			const pantry = data.pantryItems.find((p) => p.id === i.pantryItemId);
+			return {
+				pantryItemId: i.pantryItemId ?? null,
+				itemName: i.itemName,
+				quantity: i.defaultQuantity,
+				quantityType: (pantry?.quantityType ?? 'estimate') as 'estimate' | 'count'
+			};
+		});
 		ingredientSearch = '';
 		setTimeout(() => nameEl?.focus(), 50);
 	}
@@ -89,12 +115,12 @@
 	}
 
 	function addIngredient(item: PantryItem) {
-		draftItems = [...draftItems, { pantryItemId: item.id, itemName: item.name, quantity: 1 }];
+		draftItems = [...draftItems, { pantryItemId: item.id, itemName: item.name, quantity: 1, quantityType: item.quantityType as 'estimate' | 'count' }];
 		ingredientSearch = '';
 	}
 
 	function addCustomIngredient(name: string) {
-		draftItems = [...draftItems, { pantryItemId: null, itemName: name, quantity: 1 }];
+		draftItems = [...draftItems, { pantryItemId: null, itemName: name, quantity: 1, quantityType: 'estimate' }];
 		ingredientSearch = '';
 	}
 
@@ -111,11 +137,33 @@
 	<PageHeader title="Recipes" />
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
-		{#if data.recipes.length === 0}
-			<EmptyState emoji="📋" heading="No recipes yet" detail="Save a recipe to pre-fill ingredients when logging meals." />
+		{#if data.recipes.length > 0}
+			<div class="mb-4 flex gap-2">
+				<input
+					type="text"
+					bind:value={search}
+					placeholder="Search recipes…"
+					autocomplete="off"
+					class="block flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+				/>
+			</div>
+			<div class="mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+				{#each MEAL_TYPES as t (t)}
+					<button type="button" onclick={() => toggleMealType(t)}
+						class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeMealTypes.has(t) ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+					>{MEAL_TYPE_LABELS[t]}</button>
+				{/each}
+			</div>
+		{/if}
+		{#if filteredRecipes.length === 0}
+			{#if search.trim() || activeMealTypes.size > 0}
+				<EmptyState emoji="🔍" heading="No matches" detail="Try a different search or filter." />
+			{:else}
+				<EmptyState emoji="📋" heading="No recipes yet" detail="Save a recipe to pre-fill ingredients when logging meals." />
+			{/if}
 		{:else}
 			<ul class="space-y-2">
-				{#each data.recipes as recipe (recipe.id)}
+				{#each filteredRecipes as recipe (recipe.id)}
 					<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs">
 						<button
 							type="button"
@@ -194,6 +242,22 @@
 			{/if}
 		</div>
 
+		<!-- Meal type -->
+		<div class="mt-3">
+			<label for="recipe-meal-type" class="mb-1 block text-xs font-medium text-stone-500">Meal type</label>
+			<select
+				id="recipe-meal-type"
+				name="mealType"
+				bind:value={mealTypeInput}
+				class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+			>
+				<option value="">Any</option>
+				{#each MEAL_TYPES as t (t)}
+					<option value={t}>{MEAL_TYPE_LABELS[t]}</option>
+				{/each}
+			</select>
+		</div>
+
 		<!-- Ingredient list -->
 		<p class="mt-4 mb-2 text-xs font-medium text-stone-500">Ingredients</p>
 
@@ -204,7 +268,16 @@
 						<input type="hidden" name="pantryItemId" value={item.pantryItemId ?? ''} />
 						<input type="hidden" name="itemName" value={item.itemName} />
 						<span class="min-w-0 flex-1 truncate text-sm font-medium text-stone-800">{item.itemName}</span>
-						<EstimatePicker bind:value={item.quantity} name="quantity" />
+						{#if item.quantityType === 'count'}
+							<div class="flex items-center gap-1">
+								<button type="button" onclick={() => (item.quantity = Math.max(0, item.quantity - 1))} class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100">−</button>
+								<span class="w-8 text-center text-sm font-medium text-stone-800">{item.quantity}</span>
+								<button type="button" onclick={() => item.quantity++} class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100">+</button>
+							</div>
+							<input type="hidden" name="quantity" value={item.quantity} />
+						{:else}
+							<SmallEstimatePicker bind:value={item.quantity} name="quantity" />
+						{/if}
 						<button
 							type="button"
 							onclick={() => removeIngredient(idx)}

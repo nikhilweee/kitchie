@@ -124,6 +124,7 @@ export const recipes = sqliteTable('recipes', {
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
 	name: text('name').notNull(),
+	mealType: text('meal_type').$type<MealType>(),
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.$defaultFn(() => new Date())
 		.notNull()

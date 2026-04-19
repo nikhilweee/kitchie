@@ -125,8 +125,6 @@
 		return { expiringSoon, runningLow, normal };
 	}
 
-	const groups = $derived(groupItems(data.items));
-
 	function expiryLabel(iso: string) {
 		const d = daysUntilExpiry(new Date(iso));
 		if (d < 0) return 'Expired';
@@ -143,6 +141,46 @@
 	}
 
 	const categories = Object.entries(CATEGORY_LABELS) as [PantryCategory, string][];
+
+	// ── Search + filter ───────────────────────────────────────────────────────
+	type StatusFilter = 'expiring' | 'low' | 'normal';
+	let search = $state('');
+	let activeStatuses = $state(new Set<StatusFilter>());
+	let activeCategories = $state(new Set<PantryCategory>());
+	let filterOpen = $state(false);
+
+	function toggleStatus(s: StatusFilter) {
+		const next = new Set(activeStatuses);
+		if (next.has(s)) next.delete(s); else next.add(s);
+		activeStatuses = next;
+	}
+
+	function toggleCategory(cat: PantryCategory) {
+		const next = new Set(activeCategories);
+		if (next.has(cat)) next.delete(cat); else next.add(cat);
+		activeCategories = next;
+	}
+
+	function itemStatus(item: Item): StatusFilter {
+		const days = daysUntilExpiry(new Date(item.expiryDate));
+		const isLow = item.quantityType === 'estimate' ? item.quantity <= 0.15 : item.quantity <= 1;
+		if (days <= 3) return 'expiring';
+		if (isLow) return 'low';
+		return 'normal';
+	}
+
+	const activeFilterCount = $derived(activeStatuses.size + activeCategories.size);
+
+	const filteredItems = $derived(
+		data.items.filter((i) => {
+			if (search.trim() && !i.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
+			if (activeStatuses.size > 0 && !activeStatuses.has(itemStatus(i))) return false;
+			if (activeCategories.size > 0 && !activeCategories.has(i.category as PantryCategory)) return false;
+			return true;
+		})
+	);
+
+	const groups = $derived(groupItems(filteredItems));
 </script>
 
 <svelte:head><title>Pantry — Kitchie</title></svelte:head>
@@ -156,6 +194,61 @@
 		{#if data.items.length === 0}
 			<EmptyState emoji="🧺" heading="Pantry is empty" detail="Add items after your next shopping trip." />
 		{:else}
+			{@const presentCategories = categories.filter(([cat]) => data.items.some((i) => i.category === cat))}
+			{@const hasExpiring = data.items.some((i) => itemStatus(i) === 'expiring')}
+			{@const hasLow = data.items.some((i) => itemStatus(i) === 'low')}
+			<!-- Search + filter -->
+			<div class="relative mb-4 flex gap-2" use:clickOutside={() => (filterOpen = false)}>
+				<input
+					type="text"
+					bind:value={search}
+					placeholder="Search pantry…"
+					autocomplete="off"
+					class="block flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+				/>
+				<button
+					type="button"
+					onclick={() => (filterOpen = !filterOpen)}
+					class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors {activeFilterCount > 0 ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 bg-white text-stone-500 hover:border-stone-400'}"
+					aria-label="Filters"
+				>
+					⊟
+					{#if activeFilterCount > 0}
+						<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">{activeFilterCount}</span>
+					{/if}
+				</button>
+				{#if filterOpen}
+					<div class="absolute top-full right-0 z-20 mt-1 w-56 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+						{#if hasExpiring || hasLow}
+							<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Status</div>
+							{#if hasExpiring}
+								<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
+									<input type="checkbox" checked={activeStatuses.has('expiring')} onchange={() => toggleStatus('expiring')} class="accent-orange-500" />
+									<span class="text-sm text-red-500">Expiring soon</span>
+								</label>
+							{/if}
+							{#if hasLow}
+								<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
+									<input type="checkbox" checked={activeStatuses.has('low')} onchange={() => toggleStatus('low')} class="accent-orange-500" />
+									<span class="text-sm text-orange-500">Running low</span>
+								</label>
+							{/if}
+						{/if}
+						{#if presentCategories.length > 0}
+							<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Category</div>
+							{#each presentCategories as [cat, label] (cat)}
+								<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
+									<input type="checkbox" checked={activeCategories.has(cat)} onchange={() => toggleCategory(cat)} class="accent-orange-500" />
+									<span class="text-sm text-stone-700">{label}</span>
+								</label>
+							{/each}
+						{/if}
+						<div class="border-t border-stone-100 p-2">
+							<button type="button" onclick={() => { activeStatuses = new Set(); activeCategories = new Set(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
+						</div>
+					</div>
+				{/if}
+			</div>
 			{#if groups.expiringSoon.length > 0}
 				<section class="mb-6">
 					<h2 class="mb-2 text-xs font-semibold tracking-wider text-red-500 uppercase">Expiring soon</h2>
@@ -192,14 +285,16 @@
 					<p class="truncate font-medium text-stone-900">{item.name}</p>
 					<p class="text-xs text-stone-400">{CATEGORY_LABELS[item.category as PantryCategory]}</p>
 				</button>
-				{#if item.quantityType === 'estimate'}
-					<EstimatePicker value={item.quantity} readonly />
-				{:else}
-					<span class="shrink-0 text-sm font-medium text-stone-600">
-						×{item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(1)}{item.unit && item.unit !== 'count' ? ' ' + item.unit : ''}
-					</span>
-				{/if}
-				<span class="shrink-0 text-xs font-medium {expiryColor(item.expiryDate)}">
+				<div class="flex w-16 shrink-0 justify-end">
+					{#if item.quantityType === 'estimate'}
+						<EstimatePicker value={item.quantity} readonly />
+					{:else}
+						<span class="text-sm font-medium text-stone-600">
+							×{item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(1)}{item.unit && item.unit !== 'count' ? ' ' + item.unit : ''}
+						</span>
+					{/if}
+				</div>
+				<span class="w-8 shrink-0 text-right text-xs font-medium {expiryColor(item.expiryDate)}">
 					{expiryLabel(item.expiryDate)}
 				</span>
 				<form method="POST" action="?/delete" use:enhance>
@@ -276,22 +371,48 @@
 			</div>
 
 			<div>
-				<p class="mb-1 text-xs font-medium text-stone-500">Quantity</p>
+				<div class="mb-1 flex items-center justify-between">
+					<p class="text-xs font-medium text-stone-500">Quantity</p>
+					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
+						<button
+							type="button"
+							onclick={() => { quantityType = 'estimate'; quantity = 1; }}
+							class="px-2.5 py-1 transition-colors {quantityType === 'estimate' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+						>Estimate</button>
+						<button
+							type="button"
+							onclick={() => { quantityType = 'count'; quantity = 1; }}
+							class="px-2.5 py-1 transition-colors {quantityType === 'count' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+						>Count</button>
+					</div>
+				</div>
 				<input type="hidden" name="quantityType" value={quantityType} />
 				{#if quantityType === 'count'}
-					<div class="flex gap-2">
-						<input
-							name="quantity"
-							type="number"
-							bind:value={quantity}
-							min="0"
-							step="1"
-							class="w-24 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-						/>
+					<div class="grid grid-cols-2 gap-2">
+						<div class="flex items-center overflow-hidden rounded-xl border border-stone-300 bg-stone-50">
+							<button
+								type="button"
+								onclick={() => (quantity = Math.max(0, quantity - 1))}
+								class="flex h-full w-10 shrink-0 items-center justify-center text-stone-500 hover:bg-stone-100"
+							>−</button>
+							<input
+								name="quantity"
+								type="number"
+								bind:value={quantity}
+								min="0"
+								step="1"
+								class="w-0 min-w-0 flex-1 bg-transparent text-center text-sm text-stone-900 focus:outline-none"
+							/>
+							<button
+								type="button"
+								onclick={() => quantity++}
+								class="flex h-full w-10 shrink-0 items-center justify-center text-stone-500 hover:bg-stone-100"
+							>+</button>
+						</div>
 						<select
 							name="unit"
 							bind:value={unit}
-							class="flex-1 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+							class="rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
 						>
 							{#each UNITS as u (u.value)}
 								<option value={u.value}>{u.label}</option>
