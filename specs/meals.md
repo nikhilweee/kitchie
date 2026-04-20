@@ -2,28 +2,28 @@
 
 ## MEAL-001
 **Requirement:** A user can log a meal with a name, datetime, and meal type.  
-**Test:** `playwright/flow.spec.ts` — "add meal + update pantry + save recipe"
+**Test:** `playwright/meals.spec.ts` — "MEAL-001: log a meal and verify it appears in the list"
 
 ## MEAL-002
 **Requirement:** When no meal type is selected, it is auto-inferred from the time of day.  
-**Test:** not yet covered
+**Test:** `playwright/meals.spec.ts` — "MEAL-002: meal type is shown after logging with default (inferred) type"
 
 ## MEAL-003
 **Requirement:** The meal name input shows autocomplete suggestions from past meals and saved recipes.  
-**Test:** not yet covered
+**Test:** `playwright/meals.spec.ts` — "MEAL-003: meal name autocomplete suggests previously logged meals"
 
 ## MEAL-004
 **Requirement:** When "Update pantry" is toggled on, logging a meal redirects to the pantry update step.  
-**Test:** `playwright/flow.spec.ts` — "add meal + update pantry + save recipe"
+**Test:** `playwright/meals.spec.ts` — "MEAL-004: \"Update pantry\" toggle redirects to /?update= after logging"
 
 ## MEAL-005
 **Requirement:** A user can edit a logged meal's name, datetime, and meal type.  
-**Test:** not yet covered
+**Test:** `playwright/meals.spec.ts` — "MEAL-005: edit a logged meal name"
 
 ## MEAL-006
 **Requirement:** A user can delete a logged meal.  
-**Test:** not yet covered
+**Test:** `playwright/meals.spec.ts` — "MEAL-006: delete a logged meal"
 
 ## MEAL-007
 **Requirement:** The meal log is displayed grouped by day, ordered most recent first.  
-**Test:** not yet covered
+**Test:** `playwright/meals.spec.ts` — "MEAL-007: meals are displayed grouped by day"
