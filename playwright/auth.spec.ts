@@ -1,39 +1,45 @@
 import { test, expect } from '@playwright/test';
-import { login, TEST_USER } from './helpers/auth';
+import { login, loginAs, TEST_USER } from './helpers/auth';
 
 // Covers: AUTH-001, AUTH-002, AUTH-003, AUTH-004, AUTH-005, AUTH-006, AUTH-007
 
-test('AUTH-001: valid credentials create session and redirect to /meals', async ({ page }) => {
-	await page.goto('/login');
-	await page.fill('input[name="username"]', TEST_USER.username);
-	await page.fill('input[name="password"]', TEST_USER.password);
-	await page.click('button[type="submit"]');
-	await expect(page).toHaveURL('/meals');
-});
+// AUTH-001–004 test the login/logout flow itself — must run without pre-loaded auth state
+// so that redirect and session-destruction behaviour is observable.
+test.describe('unauthenticated flows', () => {
+	test.use({ storageState: { cookies: [], origins: [] } });
 
-test('AUTH-002: invalid credentials show error and do not redirect', async ({ page }) => {
-	await page.goto('/login');
-	await page.fill('input[name="username"]', TEST_USER.username);
-	await page.fill('input[name="password"]', 'wrongpassword');
-	await page.click('button[type="submit"]');
-	await expect(page.locator('text=Invalid username or password.')).toBeVisible();
-	await expect(page).toHaveURL('/login');
-});
+	test('AUTH-001: valid credentials create session and redirect to /meals', async ({ page }) => {
+		await page.goto('/login');
+		await page.fill('input[name="username"]', TEST_USER.username);
+		await page.fill('input[name="password"]', TEST_USER.password);
+		await page.click('button[type="submit"]');
+		await expect(page).toHaveURL('/meals');
+	});
 
-test('AUTH-003: unauthenticated request to / redirects to /login', async ({ page }) => {
-	// Fresh context has no session cookie
-	await page.goto('/meals');
-	await expect(page).toHaveURL('/login');
-});
+	test('AUTH-002: invalid credentials show error and do not redirect', async ({ page }) => {
+		await page.goto('/login');
+		await page.fill('input[name="username"]', TEST_USER.username);
+		await page.fill('input[name="password"]', 'wrongpassword');
+		await page.click('button[type="submit"]');
+		await expect(page.locator('text=Invalid username or password.')).toBeVisible();
+		await expect(page).toHaveURL('/login');
+	});
 
-test('AUTH-004: logout deletes session and redirects to /login', async ({ page }) => {
-	await login(page);
-	await page.goto('/profile');
-	await page.click('button:has-text("Log out")');
-	await expect(page).toHaveURL('/login');
-	// Verify session is gone: navigating to / redirects back to /login
-	await page.goto('/meals');
-	await expect(page).toHaveURL('/login');
+	test('AUTH-003: unauthenticated request to / redirects to /login', async ({ page }) => {
+		await page.goto('/meals');
+		await expect(page).toHaveURL('/login');
+	});
+
+	test('AUTH-004: logout deletes session and redirects to /login', async ({ page }) => {
+		// Create a fresh session to destroy (can't use pre-loaded storageState here)
+		await loginAs(page, TEST_USER.username, TEST_USER.password);
+		await page.goto('/profile');
+		await page.click('button:has-text("Log out")');
+		await expect(page).toHaveURL('/login');
+		// Verify session is gone
+		await page.goto('/meals');
+		await expect(page).toHaveURL('/login');
+	});
 });
 
 test('AUTH-005: user can update display name', async ({ page }) => {

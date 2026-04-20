@@ -10,6 +10,8 @@ export async function loginAs(page: Page, username: string, password: string) {
 	await page.waitForURL('/meals');
 }
 
+// Auth state is pre-loaded via storageState in playwright.config.ts.
+// waitUntil: 'networkidle' ensures Svelte hydration completes before tests interact.
 export async function login(page: Page) {
-	return loginAs(page, TEST_USER.username, TEST_USER.password);
+	await page.goto('/meals', { waitUntil: 'networkidle' });
 }
