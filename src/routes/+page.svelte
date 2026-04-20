@@ -389,6 +389,13 @@
 		{#if data.recipeId}<input type="hidden" name="recipeId" value={data.recipeId} />{/if}
 		<input type="hidden" name="recipeAction" bind:value={recipeActionInput} />
 
+		<!-- Always-present hidden inputs so item data survives step 2→3 transition -->
+		{#each pantrySelected as sel (sel.itemName)}
+			<input type="hidden" name="itemId" value={sel.pantryItemId ?? ''} />
+			<input type="hidden" name="itemName" value={sel.itemName} />
+			<input type="hidden" name="newQuantity" value={sel.newQuantity} />
+		{/each}
+
 		{#if flowStep === 'pantryUpdate'}
 			<!-- Step 2: ingredient picker -->
 			<h2 class="text-base font-semibold text-stone-900">Update pantry</h2>
@@ -401,8 +408,6 @@
 					{#each pantrySelected as sel (sel.itemName)}
 						{@const stock = pantryStock(sel.pantryItemId)}
 						<li class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5">
-							<input type="hidden" name="itemId" value={sel.pantryItemId ?? ''} />
-							<input type="hidden" name="itemName" value={sel.itemName} />
 							<div class="flex items-center gap-2">
 								<div class="min-w-0 flex-1">
 									<span class="truncate text-sm font-medium text-stone-800">{sel.itemName}</span>
@@ -424,9 +429,8 @@
 											class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100"
 										>+</button>
 									</div>
-									<input type="hidden" name="newQuantity" value={sel.newQuantity} />
 								{:else}
-									<SmallEstimatePicker bind:value={sel.newQuantity} name="newQuantity" />
+									<SmallEstimatePicker bind:value={sel.newQuantity} />
 								{/if}
 								<button
 									type="button"
