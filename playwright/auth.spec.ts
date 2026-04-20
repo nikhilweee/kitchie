@@ -63,18 +63,18 @@ test('AUTH-006: username change succeeds; username must be unique', async ({ pag
 
 test('AUTH-007: password change requires current password, match, and min 8 chars', async ({ page }) => {
 	await login(page);
-	await page.goto('/profile');
+	await page.goto('/profile/password');
 
 	// Wrong current password → error
 	await page.fill('input[name="currentPassword"]', 'wrongpass');
 	await page.fill('input[name="newPassword"]', 'newpass123');
 	await page.fill('input[name="confirmPassword"]', 'newpass123');
-	await page.click('button:has-text("Save changes")');
+	await page.click('button:has-text("Change password")');
 	await expect(page.locator('text=Current password is incorrect.')).toBeVisible();
 
-	// Mismatch → save button stays disabled (client-side)
+	// Mismatch → submit button stays disabled (client-side)
 	await page.fill('input[name="currentPassword"]', TEST_USER.password);
 	await page.fill('input[name="newPassword"]', 'newpass123');
 	await page.fill('input[name="confirmPassword"]', 'differentpass');
-	await expect(page.locator('button:has-text("Save changes")')).toBeDisabled();
+	await expect(page.locator('button:has-text("Change password")')).toBeDisabled();
 });

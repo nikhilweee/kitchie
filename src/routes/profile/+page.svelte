@@ -8,14 +8,7 @@
 
 	let nameInput = $state(untrack(() => data.user.name ?? ''));
 	let usernameInput = $state(untrack(() => data.user.username));
-	let currentPassword = $state('');
-	let newPassword = $state('');
-	let confirmPassword = $state('');
 	let saved = $state(false);
-
-	const passwordMismatch = $derived(
-		newPassword.length > 0 && confirmPassword.length > 0 && newPassword !== confirmPassword
-	);
 </script>
 
 <svelte:head><title>Profile — Kitchie</title></svelte:head>
@@ -32,9 +25,6 @@
 				await update({ reset: false });
 				if (result.type === 'success') {
 					saved = true;
-					currentPassword = '';
-					newPassword = '';
-					confirmPassword = '';
 					setTimeout(() => (saved = false), 2500);
 				}
 			}}
@@ -73,56 +63,31 @@
 				/>
 			</div>
 
-			<div class="rounded-xl border border-stone-200 bg-white p-4 space-y-3">
-				<p class="text-xs font-medium text-stone-500">Change password <span class="font-normal">(leave blank to keep current)</span></p>
-				<input
-					name="currentPassword"
-					type="password"
-					bind:value={currentPassword}
-					placeholder="Current password"
-					autocomplete="current-password"
-					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm focus:border-orange-500 focus:outline-none"
-				/>
-				<input
-					name="newPassword"
-					type="password"
-					bind:value={newPassword}
-					placeholder="New password (min 8 chars)"
-					autocomplete="new-password"
-					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm focus:border-orange-500 focus:outline-none"
-				/>
-				<div>
-					<input
-						name="confirmPassword"
-						type="password"
-						bind:value={confirmPassword}
-						placeholder="Confirm new password"
-						autocomplete="new-password"
-						class="block w-full rounded-xl border px-4 py-3 text-sm focus:outline-none {passwordMismatch ? 'border-red-400 bg-red-50 focus:border-red-400' : 'border-stone-300 bg-stone-50 focus:border-orange-500'}"
-					/>
-					{#if passwordMismatch}
-						<p class="mt-1 text-xs text-red-500">Passwords don't match.</p>
-					{/if}
-				</div>
-			</div>
-
 			<button
 				type="submit"
-				disabled={passwordMismatch}
-				class="w-full rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40"
+				class="w-full rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600"
 			>
 				Save changes
 			</button>
 		</form>
 
-		<!-- Logout -->
-		<form method="POST" action="?/logout" use:enhance class="mt-6">
-			<button
-				type="submit"
-				class="w-full rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600 hover:bg-stone-100"
+		<div class="mt-4 space-y-3">
+			<a
+				href="/profile/password"
+				class="block w-full rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-100"
 			>
-				Log out
-			</button>
-		</form>
+				Change password
+			</a>
+
+			<!-- Logout -->
+			<form method="POST" action="?/logout" use:enhance>
+				<button
+					type="submit"
+					class="w-full rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600 hover:bg-stone-100"
+				>
+					Log out
+				</button>
+			</form>
+		</div>
 	</main>
 </div>
