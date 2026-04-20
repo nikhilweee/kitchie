@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Full flow: add meal → update pantry → save recipe
-// Verifies both recipe and pantry rows are written correctly.
+// Covers: MEAL-001, MEAL-004, PANT-001, PANT-009, RECP-001
 test('add meal + update pantry + save recipe', async ({ page }) => {
 	await login(page);
 

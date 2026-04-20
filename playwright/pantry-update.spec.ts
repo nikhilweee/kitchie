@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Verify that when a pantry item is added to the update-pantry step,
-// the quantity picker is initialised with the item's current pantry quantity.
-// Uses timestamped unique names to avoid autocomplete suggestions from prior runs.
+// Covers: PANT-008
 
 test('count item shows correct quantity in update-pantry step', async ({ page }) => {
 	await login(page);
