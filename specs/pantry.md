@@ -30,7 +30,7 @@
 
 ## PANT-008
 **Requirement:** In the pantry update step, selecting an existing pantry item initialises its quantity picker to the item's current stock value.  
-**Test:** `playwright/pantry-update.spec.ts` — "count item shows correct quantity in update-pantry step", "estimate item shows correct zone in update-pantry step"
+**Test:** `playwright/pantry.spec.ts` — "PANT-008: count item shows correct quantity in update-pantry step", "PANT-008: estimate item shows correct zone in update-pantry step"
 
 ## PANT-009
 **Requirement:** Finalising the pantry update step writes updated quantities to all selected pantry items and logs them as meal ingredients in a single action.  
