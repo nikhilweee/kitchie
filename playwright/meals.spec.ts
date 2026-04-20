@@ -10,13 +10,13 @@ async function addMeal(page: import('@playwright/test').Page, name: string) {
 	await dialog.getByPlaceholder('What did you eat?').fill(name);
 	await dialog.getByRole('button', { name: 'Log meal' }).click();
 	// Navigate to / — the meal is logged regardless of updatePantry redirect
-	await page.goto('/');
+	await page.goto('/meals');
 }
 
 test('MEAL-001: log a meal and verify it appears in the list', async ({ page }) => {
 	await login(page);
 	const name = `Meal-${Date.now()}`;
-	await page.goto('/');
+	await page.goto('/meals');
 	await addMeal(page, name);
 	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
 });
@@ -24,7 +24,7 @@ test('MEAL-001: log a meal and verify it appears in the list', async ({ page }) 
 test('MEAL-002: meal type is shown after logging with default (inferred) type', async ({ page }) => {
 	await login(page);
 	const name = `Meal-${Date.now()}`;
-	await page.goto('/');
+	await page.goto('/meals');
 	await addMeal(page, name);
 	// The meal entry should show one of the 4 valid meal type labels
 	const mealRow = page.locator('li', { hasText: name }).first();
@@ -36,7 +36,7 @@ test('MEAL-002: meal type is shown after logging with default (inferred) type', 
 test('MEAL-003: meal name autocomplete suggests previously logged meals', async ({ page }) => {
 	await login(page);
 	const name = `AutoMeal-${Date.now()}`;
-	await page.goto('/');
+	await page.goto('/meals');
 
 	// Log it once
 	await addMeal(page, name);
@@ -53,7 +53,7 @@ test('MEAL-003: meal name autocomplete suggests previously logged meals', async 
 
 test('MEAL-004: "Update pantry" toggle redirects to /?update= after logging', async ({ page }) => {
 	await login(page);
-	await page.goto('/');
+	await page.goto('/meals');
 	await page.click('button:has-text("Add Meal")');
 	const dialog = page.locator('[role="dialog"]');
 	await dialog.waitFor();
@@ -69,7 +69,7 @@ test('MEAL-005: edit a logged meal name', async ({ page }) => {
 	await login(page);
 	const original = `Meal-${Date.now()}`;
 	const updated = `Edited-${Date.now()}`;
-	await page.goto('/');
+	await page.goto('/meals');
 	await addMeal(page, original);
 
 	// Click the meal row to open edit sheet
@@ -86,7 +86,7 @@ test('MEAL-005: edit a logged meal name', async ({ page }) => {
 test('MEAL-006: delete a logged meal', async ({ page }) => {
 	await login(page);
 	const name = `Meal-${Date.now()}`;
-	await page.goto('/');
+	await page.goto('/meals');
 	await addMeal(page, name);
 	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
 
@@ -100,7 +100,7 @@ test('MEAL-006: delete a logged meal', async ({ page }) => {
 test('MEAL-007: meals are displayed grouped by day', async ({ page }) => {
 	await login(page);
 	const name = `Meal-${Date.now()}`;
-	await page.goto('/');
+	await page.goto('/meals');
 	await addMeal(page, name);
 	// A day heading (e.g., "Today") should be visible
 	await expect(page.locator('h2', { hasText: 'Today' })).toBeVisible();

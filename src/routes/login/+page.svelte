@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>Sign in — Kitchie</title>
+	<title>Kitchie | Sign in</title>
 </svelte:head>
 
 <div class="flex min-h-svh items-center justify-center bg-stone-50 px-4">

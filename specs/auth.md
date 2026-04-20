@@ -1,7 +1,7 @@
 # Auth specs
 
 ## AUTH-001
-**Requirement:** Submitting valid credentials creates a session and redirects to `/`.  
+**Requirement:** Submitting valid credentials creates a session and redirects to `/meals`.  
 **Test:** `playwright/auth.spec.ts` — "AUTH-001: valid credentials create session and redirect to /"
 
 ## AUTH-002

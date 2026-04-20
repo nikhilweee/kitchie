@@ -11,10 +11,10 @@
 	let saved = $state(false);
 </script>
 
-<svelte:head><title>Profile — Kitchie</title></svelte:head>
+<svelte:head><title>Kitchie | Profile</title></svelte:head>
 
 <div class="flex min-h-svh flex-col bg-stone-50">
-	<PageHeader title="Profile" />
+	<PageHeader title="Profile" back={true} />
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-6 pb-28">
 		<!-- Edit profile -->

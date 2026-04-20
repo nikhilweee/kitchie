@@ -7,7 +7,7 @@ export async function loginAs(page: Page, username: string, password: string) {
 	await page.fill('input[name="username"]', username);
 	await page.fill('input[name="password"]', password);
 	await page.click('button[type="submit"]');
-	await page.waitForURL('/');
+	await page.waitForURL('/meals');
 }
 
 export async function login(page: Page) {

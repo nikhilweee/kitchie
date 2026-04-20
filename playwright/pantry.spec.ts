@@ -133,7 +133,7 @@ test('PANT-009: finalizing pantry update step writes updated quantities', async 
 	await addPantryItem(page, itemName);
 
 	// Log a meal with updatePantry ON
-	await page.goto('/');
+	await page.goto('/meals');
 	await page.click('button:has-text("Add Meal")');
 	const mealDialog = page.locator('[role="dialog"]');
 	await mealDialog.waitFor();
@@ -156,7 +156,7 @@ test('PANT-009: finalizing pantry update step writes updated quantities', async 
 	// Next → Skip recipe
 	await flowDialog.getByRole('button', { name: 'Next' }).click();
 	await flowDialog.getByRole('button', { name: 'Skip' }).click();
-	await page.waitForURL('/');
+	await page.waitForURL('/meals');
 
 	// Verify pantry item now shows half (zone 2 lit, zone 3 unlit)
 	await page.goto('/pantry');
@@ -174,7 +174,7 @@ test('PANT-010: free-text ingredient in pantry update step creates a new pantry 
 	const mealName = `Meal-${ts}`;
 
 	// Log a meal with updatePantry ON
-	await page.goto('/');
+	await page.goto('/meals');
 	await page.click('button:has-text("Add Meal")');
 	const mealDialog = page.locator('[role="dialog"]');
 	await mealDialog.waitFor();
@@ -194,7 +194,7 @@ test('PANT-010: free-text ingredient in pantry update step creates a new pantry 
 	// Next → Skip recipe
 	await flowDialog.getByRole('button', { name: 'Next' }).click();
 	await flowDialog.getByRole('button', { name: 'Skip' }).click();
-	await page.waitForURL('/');
+	await page.waitForURL('/meals');
 
 	// Verify the new item was created in pantry
 	await page.goto('/pantry');
@@ -221,7 +221,7 @@ test('PANT-008: count item shows correct quantity in update-pantry step', async 
 	await expect(page.locator('li', { hasText: itemName }).first()).toBeVisible();
 
 	// 2. Log a meal
-	await page.goto('/');
+	await page.goto('/meals');
 	await page.click('button:has-text("Add Meal")');
 	const mealDialog = page.locator('[role="dialog"]');
 	await mealDialog.waitFor();
@@ -262,7 +262,7 @@ test('PANT-008: estimate item shows correct zone in update-pantry step', async (
 	await expect(page.locator('li', { hasText: itemName }).first()).toBeVisible();
 
 	// 2. Log a meal
-	await page.goto('/');
+	await page.goto('/meals');
 	await page.click('button:has-text("Add Meal")');
 	const mealDialog = page.locator('[role="dialog"]');
 	await mealDialog.waitFor();

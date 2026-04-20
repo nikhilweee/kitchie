@@ -129,7 +129,7 @@
 	}
 </script>
 
-<svelte:head><title>Recipes — Kitchie</title></svelte:head>
+<svelte:head><title>Kitchie | Recipes</title></svelte:head>
 
 <Toast message={toast} />
 

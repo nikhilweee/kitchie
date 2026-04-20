@@ -183,7 +183,7 @@
 	const groups = $derived(groupItems(filteredItems));
 </script>
 
-<svelte:head><title>Pantry — Kitchie</title></svelte:head>
+<svelte:head><title>Kitchie | Pantry</title></svelte:head>
 
 <Toast message={toast} />
 

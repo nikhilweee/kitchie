@@ -11,7 +11,7 @@ import {
 } from '$lib/server/auth';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	if (locals.user) redirect(302, '/');
+	if (locals.user) redirect(302, '/meals');
 };
 
 export const actions: Actions = {
@@ -42,6 +42,6 @@ export const actions: Actions = {
 		const session = await createSession(user.id);
 		cookies.set(SESSION_COOKIE, session.id, sessionCookieOptions(session.expiresAt));
 
-		redirect(302, '/');
+		redirect(302, '/meals');
 	}
 };

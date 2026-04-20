@@ -3,12 +3,12 @@ import { login, TEST_USER } from './helpers/auth';
 
 // Covers: AUTH-001, AUTH-002, AUTH-003, AUTH-004, AUTH-005, AUTH-006, AUTH-007
 
-test('AUTH-001: valid credentials create session and redirect to /', async ({ page }) => {
+test('AUTH-001: valid credentials create session and redirect to /meals', async ({ page }) => {
 	await page.goto('/login');
 	await page.fill('input[name="username"]', TEST_USER.username);
 	await page.fill('input[name="password"]', TEST_USER.password);
 	await page.click('button[type="submit"]');
-	await expect(page).toHaveURL('/');
+	await expect(page).toHaveURL('/meals');
 });
 
 test('AUTH-002: invalid credentials show error and do not redirect', async ({ page }) => {
@@ -22,7 +22,7 @@ test('AUTH-002: invalid credentials show error and do not redirect', async ({ pa
 
 test('AUTH-003: unauthenticated request to / redirects to /login', async ({ page }) => {
 	// Fresh context has no session cookie
-	await page.goto('/');
+	await page.goto('/meals');
 	await expect(page).toHaveURL('/login');
 });
 
@@ -32,7 +32,7 @@ test('AUTH-004: logout deletes session and redirects to /login', async ({ page }
 	await page.click('button:has-text("Log out")');
 	await expect(page).toHaveURL('/login');
 	// Verify session is gone: navigating to / redirects back to /login
-	await page.goto('/');
+	await page.goto('/meals');
 	await expect(page).toHaveURL('/login');
 });
 

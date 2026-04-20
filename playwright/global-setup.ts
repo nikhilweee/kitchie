@@ -12,9 +12,9 @@ export default async function globalSetup() {
 	await page.fill('input[name="username"]', 'testuser');
 	await page.fill('input[name="password"]', 'testpass123');
 	await page.click('button[type="submit"]');
-	await page.waitForURL('http://localhost:5173/');
+	await page.waitForURL('http://localhost:5173/meals');
 
-	for (const url of ['http://localhost:5173/', 'http://localhost:5173/pantry', 'http://localhost:5173/recipes', 'http://localhost:5173/profile']) {
+	for (const url of ['http://localhost:5173/meals', 'http://localhost:5173/pantry', 'http://localhost:5173/recipes', 'http://localhost:5173/profile']) {
 		await page.goto(url, { waitUntil: 'networkidle' }).catch(() => {});
 	}
 
