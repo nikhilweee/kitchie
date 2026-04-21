@@ -85,6 +85,13 @@
       "when": 1776746390065,
       "tag": "0011_user_categories_cuisines",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1776786185568,
+      "tag": "0012_lucky_expediter",
+      "breakpoints": true
     }
   ]
 }

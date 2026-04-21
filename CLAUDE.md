@@ -7,6 +7,10 @@
 - Look for correct solutions, not workarounds — if the architecture is wrong, fix the architecture.
 - Write code that minimizes redundancy and encourages reuse.
 
+## Database migrations
+- **Always use `npx drizzle-kit generate`** to create migrations — never write SQL files or edit `drizzle/meta/_journal.json` by hand.
+- `drizzle-kit generate` diffs the schema and produces both the SQL file and the journal entry atomically. Hand-written SQL files will be silently skipped at runtime because they are absent from the journal.
+
 ## Specs
 - `specs/` is the living source of truth for what the app currently does.
 - **A requirement may only exist in `specs/` if a passing Playwright test references it by ID** (e.g. `PANT-008`). No test = no spec.
