@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Covers: RECP-001, RECP-002, RECP-003, RECP-004, RECP-005, RECP-006, RECP-007, RECP-008
+// Covers: RECP-001, RECP-002, RECP-003, RECP-004, RECP-005, RECP-006, RECP-007, RECP-008, RECP-009
 
 // Add a recipe through the manual sheet on /recipes.
 // If ingredientName is given, it must already exist as a pantry item.
 async function addRecipe(
 	page: import('@playwright/test').Page,
 	name: string,
-	opts?: { ingredientName?: string; mealType?: string }
+	opts?: { ingredientName?: string; mealType?: string; cuisine?: string }
 ) {
 	await page.click('button:has-text("Add Recipe")');
 	const dialog = page.locator('[role="dialog"]');
@@ -16,6 +16,9 @@ async function addRecipe(
 	await dialog.getByPlaceholder('Recipe name').fill(name);
 	if (opts?.mealType) {
 		await dialog.locator('#recipe-meal-type').selectOption(opts.mealType);
+	}
+	if (opts?.cuisine) {
+		await dialog.locator('#recipe-cuisine').selectOption(opts.cuisine);
 	}
 	if (opts?.ingredientName) {
 		await dialog.getByPlaceholder('Search or type an ingredient…').fill(opts.ingredientName);
@@ -250,4 +253,26 @@ test('RECP-008: recipe suggestion pre-populates pantry update with recipe ingred
 
 	// pantryItemName should be pre-selected from the recipe
 	await expect(flowDialog.locator('li', { hasText: pantryItemName }).first()).toBeVisible();
+});
+
+test('RECP-009: recipe cuisine saved and filtered', async ({ page }) => {
+	await login(page);
+	const ts = Date.now();
+	const indianRecipe = `RecpIndian-${ts}`;
+	const italianRecipe = `RecpItalian-${ts}`;
+
+	await page.goto('/recipes');
+	await addRecipe(page, indianRecipe, { cuisine: 'indian' });
+	await addRecipe(page, italianRecipe, { cuisine: 'italian' });
+
+	// Open filter, select Indian → only Indian recipe visible
+	await page.getByRole('button', { name: 'Filters' }).click();
+	await page.locator('label', { hasText: 'Indian' }).click();
+	await expect(page.locator('li', { hasText: indianRecipe }).first()).toBeVisible();
+	await expect(page.locator('li', { hasText: italianRecipe })).toHaveCount(0);
+
+	// Add Italian too → both visible
+	await page.locator('label', { hasText: 'Italian' }).click();
+	await expect(page.locator('li', { hasText: indianRecipe }).first()).toBeVisible();
+	await expect(page.locator('li', { hasText: italianRecipe }).first()).toBeVisible();
 });

@@ -11,6 +11,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import { MEAL_TYPE_LABELS, MEAL_TYPES } from '$lib/meal-type';
 	import type { MealType } from '$lib/server/db/schema';
+	import { CUISINE_LABELS, CUISINES, type Cuisine } from '$lib/cuisine';
 
 	let { data }: { data: PageData } = $props();
 
@@ -18,6 +19,8 @@
 
 	let search = $state('');
 	let activeMealTypes = $state<Set<MealType>>(new Set());
+	let activeCuisines = $state<Set<Cuisine>>(new Set());
+	let filterOpen = $state(false);
 
 	function toggleMealType(t: MealType) {
 		const next = new Set(activeMealTypes);
@@ -25,10 +28,23 @@
 		activeMealTypes = next;
 	}
 
+	function toggleCuisine(c: Cuisine) {
+		const next = new Set(activeCuisines);
+		if (next.has(c)) next.delete(c); else next.add(c);
+		activeCuisines = next;
+	}
+
+	const activeFilterCount = $derived(activeCuisines.size);
+
+	// Use derived (not data.recipes.length) so the search bar appears reactively
+	// after the first recipe is added via form enhance, without a full page reload.
+	const anyRecipes = $derived(data.recipes.length > 0);
+
 	const filteredRecipes = $derived(
 		data.recipes.filter((r) => {
 			if (search.trim() && !r.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
 			if (activeMealTypes.size > 0 && !activeMealTypes.has(r.mealType as MealType)) return false;
+			if (activeCuisines.size > 0 && !activeCuisines.has(r.cuisine as Cuisine)) return false;
 			return true;
 		})
 	);
@@ -48,6 +64,7 @@
 	let editingRecipe = $state<Recipe | null>(null);
 	let nameInput = $state('');
 	let mealTypeInput = $state<MealType | ''>('');
+	let cuisineInput = $state<Cuisine | ''>('');
 	let nameEl = $state<HTMLInputElement | undefined>(undefined);
 	let showNameSuggestions = $state(false);
 
@@ -86,6 +103,7 @@
 		editingRecipe = null;
 		nameInput = '';
 		mealTypeInput = '';
+		cuisineInput = '';
 		draftItems = [];
 		ingredientSearch = '';
 		setTimeout(() => nameEl?.focus(), 50);
@@ -96,6 +114,7 @@
 		editingRecipe = recipe;
 		nameInput = recipe.name;
 		mealTypeInput = (recipe.mealType as MealType) ?? '';
+		cuisineInput = (recipe.cuisine as Cuisine) ?? '';
 		draftItems = recipe.items.map((i) => {
 			const pantry = data.pantryItems.find((p) => p.id === i.pantryItemId);
 			return {
@@ -137,8 +156,8 @@
 	<PageHeader title="Recipes" />
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
-		{#if data.recipes.length > 0}
-			<div class="mb-4 flex gap-2">
+		{#if anyRecipes}
+			<div class="relative mb-4 flex gap-2" use:clickOutside={() => (filterOpen = false)}>
 				<input
 					type="text"
 					bind:value={search}
@@ -146,6 +165,33 @@
 					autocomplete="off"
 					class="block flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
 				/>
+				<button
+					type="button"
+					onclick={() => (filterOpen = !filterOpen)}
+					class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors {activeFilterCount > 0 ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 bg-white text-stone-500 hover:border-stone-400'}"
+					aria-label="Filters"
+				>
+					⊟
+					{#if activeFilterCount > 0}
+						<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">{activeFilterCount}</span>
+					{/if}
+				</button>
+				{#if filterOpen}
+					<div class="absolute top-full right-0 z-20 mt-1 w-64 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+						<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Cuisine</div>
+						<div class="max-h-48 overflow-y-auto">
+							{#each CUISINES as c (c)}
+								<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
+									<input type="checkbox" checked={activeCuisines.has(c)} onchange={() => toggleCuisine(c)} class="accent-orange-500" />
+									<span class="text-sm text-stone-700">{CUISINE_LABELS[c]}</span>
+								</label>
+							{/each}
+						</div>
+						<div class="border-t border-stone-100 p-2">
+							<button type="button" onclick={() => { activeCuisines = new Set(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
+						</div>
+					</div>
+				{/if}
 			</div>
 			<div class="mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
 				{#each MEAL_TYPES as t (t)}
@@ -156,7 +202,7 @@
 			</div>
 		{/if}
 		{#if filteredRecipes.length === 0}
-			{#if search.trim() || activeMealTypes.size > 0}
+			{#if search.trim() || activeMealTypes.size > 0 || activeCuisines.size > 0}
 				<EmptyState emoji="🔍" heading="No matches" detail="Try a different search or filter." />
 			{:else}
 				<EmptyState emoji="📋" heading="No recipes yet" detail="Save a recipe to pre-fill ingredients when logging meals." />
@@ -242,20 +288,36 @@
 			{/if}
 		</div>
 
-		<!-- Meal type -->
-		<div class="mt-3">
-			<label for="recipe-meal-type" class="mb-1 block text-xs font-medium text-stone-500">Meal type</label>
-			<select
-				id="recipe-meal-type"
-				name="mealType"
-				bind:value={mealTypeInput}
-				class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-			>
-				<option value="">Any</option>
-				{#each MEAL_TYPES as t (t)}
-					<option value={t}>{MEAL_TYPE_LABELS[t]}</option>
-				{/each}
-			</select>
+		<!-- Meal type + Cuisine -->
+		<div class="mt-3 flex gap-3">
+			<div class="flex-1">
+				<label for="recipe-meal-type" class="mb-1 block text-xs font-medium text-stone-500">Meal type</label>
+				<select
+					id="recipe-meal-type"
+					name="mealType"
+					bind:value={mealTypeInput}
+					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+				>
+					<option value="">Any</option>
+					{#each MEAL_TYPES as t (t)}
+						<option value={t}>{MEAL_TYPE_LABELS[t]}</option>
+					{/each}
+				</select>
+			</div>
+			<div class="flex-1">
+				<label for="recipe-cuisine" class="mb-1 block text-xs font-medium text-stone-500">Cuisine</label>
+				<select
+					id="recipe-cuisine"
+					name="cuisine"
+					bind:value={cuisineInput}
+					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+				>
+					<option value="">Any</option>
+					{#each CUISINES as c (c)}
+						<option value={c}>{CUISINE_LABELS[c]}</option>
+					{/each}
+				</select>
+			</div>
 		</div>
 
 		<!-- Ingredient list -->

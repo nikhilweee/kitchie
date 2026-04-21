@@ -31,3 +31,7 @@
 ## RECP-008
 **Requirement:** Selecting a recipe suggestion when logging a meal pre-populates the pantry update step with that recipe's ingredients.  
 **Test:** `playwright/recipes.spec.ts` — "RECP-008: recipe suggestion pre-populates pantry update with recipe ingredients"
+
+## RECP-009
+**Requirement:** Each recipe has an optional cuisine field. The recipe list can be filtered by cuisine.  
+**Test:** `playwright/recipes.spec.ts` — "RECP-009: recipe cuisine saved and filtered"

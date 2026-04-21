@@ -5,6 +5,7 @@ import { recipes, recipeItems, pantryItems } from '$lib/server/db/schema';
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { getString, getStrings, getNumbers } from '$lib/server/form-data';
 import type { MealType } from '$lib/server/db/schema';
+import { CUISINES, type Cuisine } from '$lib/cuisine';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
@@ -47,6 +48,8 @@ export const actions: Actions = {
 		const mealType = (['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).includes(mealTypeRaw as MealType)
 			? (mealTypeRaw as MealType)
 			: null;
+		const cuisineRaw = getString(data, 'cuisine');
+		const cuisine = (CUISINES as string[]).includes(cuisineRaw) ? (cuisineRaw as Cuisine) : null;
 		const pantryIds = getStrings(data, 'pantryItemId');
 		const itemNames = getStrings(data, 'itemName');
 		const quantities = getNumbers(data, 'quantity');
@@ -62,11 +65,11 @@ export const actions: Actions = {
 				.where(and(eq(recipes.id, id), eq(recipes.userId, userId)))
 				.get();
 			if (!existing) return fail(404, {});
-			await db.update(recipes).set({ name, mealType }).where(eq(recipes.id, id));
+			await db.update(recipes).set({ name, mealType, cuisine }).where(eq(recipes.id, id));
 			await db.delete(recipeItems).where(eq(recipeItems.recipeId, id));
 			recipeId = id;
 		} else {
-			const [recipe] = await db.insert(recipes).values({ userId, name, mealType }).returning();
+			const [recipe] = await db.insert(recipes).values({ userId, name, mealType, cuisine }).returning();
 			recipeId = recipe.id;
 		}
 
