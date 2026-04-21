@@ -35,9 +35,7 @@
 	let editingEntry = $state<Entry | null>(null);
 
 	let mealInput = $state('');
-	let mealDate = $state(currentDateTimeStr().slice(0, 10));
-	let mealTime = $state(currentDateTimeStr().slice(11, 16));
-	const mealDateTimeISO = $derived(mealDate && mealTime ? new Date(`${mealDate}T${mealTime}`).toISOString() : '');
+	let mealDateTime = $state(currentDateTimeStr());
 	let mealType = $state<MealType>('snack');
 	let updatePantryToggle = $state(true);
 
@@ -51,9 +49,7 @@
 		sheetMode = 'add';
 		editingEntry = null;
 		mealInput = '';
-		const now = currentDateTimeStr();
-		mealDate = now.slice(0, 10);
-		mealTime = now.slice(11, 16);
+		mealDateTime = currentDateTimeStr();
 		mealType = guessMealType(new Date().getHours());
 		suggestions = [];
 		selectedRecipeId = null;
@@ -66,9 +62,7 @@
 		sheetMode = 'edit';
 		editingEntry = entry;
 		mealInput = entry.name;
-		const dt = toDateTimeLocalStr(entry.loggedAt);
-		mealDate = dt.slice(0, 10);
-		mealTime = dt.slice(11, 16);
+		mealDateTime = toDateTimeLocalStr(entry.loggedAt);
 		mealType = entry.mealType as MealType;
 	}
 
@@ -96,6 +90,14 @@
 
 	// Close the add-meal sheet when the pantry flow takes over
 	$effect(() => { if (data.updateMeal) sheetMode = null; });
+
+	// Deep-link: ?edit=<id> opens the edit sheet for that meal
+	$effect(() => {
+		if (data.editId) {
+			const entry = data.entries.find((e) => e.id === data.editId);
+			if (entry) openEdit(entry);
+		}
+	});
 
 	// ── Pantry update + recipe flow (client state machine) ───────────────────
 	type PantrySelection = {
@@ -251,12 +253,7 @@
 									class="min-w-0 flex-1 text-left"
 								>
 									<p class="truncate font-medium text-stone-900">{entry.name}</p>
-									<p class="text-xs text-stone-400">
-										{MEAL_TYPE_LABELS[entry.mealType as MealType]}
-										{#if entry.ingredients.length > 0}
-											· {entry.ingredients.join(', ')}
-										{/if}
-									</p>
+									<p class="text-xs text-stone-400">{MEAL_TYPE_LABELS[entry.mealType as MealType]}</p>
 								</button>
 								<span class="shrink-0 text-xs text-stone-400">{formatTime(entry.loggedAt)}</span>
 								<form method="POST" action="?/deleteMeal" use:enhance>
@@ -337,22 +334,14 @@
 		<div class="mt-3 space-y-2">
 			<div class="grid grid-cols-2 gap-2">
 				<div>
-					<label for="meal-date" class="mb-1 block text-xs font-medium text-stone-500">Date & time</label>
-					<div class="flex gap-1">
-						<input
-							id="meal-date"
-							type="date"
-							bind:value={mealDate}
-							class="min-w-0 flex-1 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-						/>
-						<input
-							type="time"
-							step="900"
-							bind:value={mealTime}
-							class="w-24 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-						/>
-					</div>
-					<input type="hidden" name="datetime" value={mealDateTimeISO} />
+					<label for="meal-datetime" class="mb-1 block text-xs font-medium text-stone-500">Date & time</label>
+					<input
+						id="meal-datetime"
+						type="datetime-local"
+						bind:value={mealDateTime}
+						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+					/>
+					<input type="hidden" name="datetime" value={mealDateTime ? new Date(mealDateTime).toISOString() : ''} />
 				</div>
 				<div>
 					<label for="meal-type" class="mb-1 block text-xs font-medium text-stone-500">Meal type</label>
@@ -369,6 +358,12 @@
 				</div>
 			</div>
 		</div>
+
+		{#if sheetMode === 'edit' && editingEntry?.recipeId}
+			<a href="/recipes?edit={editingEntry.recipeId}" class="mt-3 flex items-center gap-1 text-sm font-medium text-orange-500 hover:underline">
+				Edit recipe →
+			</a>
+		{/if}
 
 		{#if sheetMode === 'add'}
 			<!-- Update pantry toggle -->

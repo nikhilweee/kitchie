@@ -37,7 +37,7 @@ async function getOrSeedCategories(userId: string) {
 	return cats;
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const userId = locals.user!.id;
 
 	const [items, categories] = await Promise.all([
@@ -52,7 +52,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			expiryDate: i.expiryDate.toISOString(),
 			createdAt: i.createdAt.toISOString()
 		})),
-		categories
+		categories,
+		editId: url.searchParams.get('edit')
 	};
 };
 

@@ -36,7 +36,7 @@ async function getOrSeedCuisines(userId: string) {
 	return cuisines;
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const userId = locals.user!.id;
 
 	const [allRecipes, cuisines, pantryAll] = await Promise.all([
@@ -58,7 +58,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			items: allItems.filter((i) => i.recipeId === r.id)
 		})),
 		cuisines,
-		pantryItems: pantryAll
+		pantryItems: pantryAll,
+		editId: url.searchParams.get('edit')
 	};
 };
 

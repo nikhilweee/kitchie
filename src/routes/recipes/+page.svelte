@@ -153,6 +153,14 @@
 		editingRecipe = null;
 	}
 
+	// Deep-link: ?edit=<id> opens the edit sheet for that recipe
+	$effect(() => {
+		if (data.editId) {
+			const recipe = data.recipes.find((r) => r.id === data.editId);
+			if (recipe) openEdit(recipe);
+		}
+	});
+
 	function addIngredient(item: PantryItem) {
 		draftItems = [...draftItems, { pantryItemId: item.id, itemName: item.name, quantity: '' }];
 		ingredientSearch = '';

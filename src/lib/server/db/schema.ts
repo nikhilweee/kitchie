@@ -92,7 +92,8 @@ export const mealEntries = sqliteTable('meal_entries', {
 	mealType: text('meal_type').$type<MealType>().notNull().default('snack'),
 	loggedAt: integer('logged_at', { mode: 'timestamp' })
 		.$defaultFn(() => new Date())
-		.notNull()
+		.notNull(),
+	recipeId: text('recipe_id')
 });
 
 // Created in step 2 of meal logging (pantry update). Absent if user skips.
@@ -170,7 +171,8 @@ export const usersRelations = relations(users, ({ many }) => ({
 
 export const mealEntriesRelations = relations(mealEntries, ({ one, many }) => ({
 	user: one(users, { fields: [mealEntries.userId], references: [users.id] }),
-	ingredients: many(mealIngredients)
+	ingredients: many(mealIngredients),
+	recipe: one(recipes, { fields: [mealEntries.recipeId], references: [recipes.id] })
 }));
 
 export const mealIngredientsRelations = relations(mealIngredients, ({ one }) => ({

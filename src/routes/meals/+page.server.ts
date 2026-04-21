@@ -3,7 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { mealEntries, mealIngredients, pantryItems, recipes, recipeItems, userCategories } from '$lib/server/db/schema';
 import type { MealType } from '$lib/server/db/schema';
-import { eq, desc, and, inArray } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { guessMealType } from '$lib/meal-type';
 import { calcExpiry } from '$lib/expiry';
 import { getString, getStrings, getNumbers } from '$lib/server/form-data';
@@ -19,18 +19,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		.orderBy(desc(mealEntries.loggedAt))
 		.limit(100);
 
-	const entryIds = entries.map((e) => e.id);
-	const ingredients =
-		entryIds.length > 0
-			? await db
-					.select()
-					.from(mealIngredients)
-					.where(inArray(mealIngredients.mealEntryId, entryIds))
-			: [];
-
 	// ?update=<mealId>[&recipe=<recipeId>] — open pantry update flow
+	// ?edit=<mealId> — open edit sheet for a specific meal
 	const updateMealId = url.searchParams.get('update');
 	const recipeId = url.searchParams.get('recipe');
+	const editId = url.searchParams.get('edit');
 	let updateMeal: (typeof entries)[0] | null = null;
 	let pantrySuggestions: Array<{ item: typeof pantryItems.$inferSelect; suggested: boolean }> = [];
 	let originalRecipeItems: Array<{ itemName: string; pantryItemId: string | null }> = [];
@@ -74,9 +67,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	return {
 		entries: entries.map((e) => ({
 			...e,
-			loggedAt: e.loggedAt.toISOString(),
-			ingredients: ingredients.filter((i) => i.mealEntryId === e.id).map((i) => i.itemName)
+			loggedAt: e.loggedAt.toISOString()
 		})),
+		editId,
 		updateMeal: updateMeal ? { ...updateMeal, loggedAt: updateMeal.loggedAt.toISOString() } : null,
 		recipeId,
 		originalRecipeItems,
@@ -112,7 +105,7 @@ export const actions: Actions = {
 
 		const [meal] = await db
 			.insert(mealEntries)
-			.values({ userId, name, mealType: resolvedMealType, loggedAt })
+			.values({ userId, name, mealType: resolvedMealType, loggedAt, recipeId: recipeId || null })
 			.returning();
 
 		if (updatePantry) {
@@ -272,6 +265,7 @@ export const actions: Actions = {
 						defaultQuantity: ing.quantityUsed
 					});
 				}
+				await db.update(mealEntries).set({ recipeId: recipe.id }).where(eq(mealEntries.id, mealId));
 			}
 		} else if (recipeAction === 'update' && recipeId) {
 			// Replace recipe items with what was just logged
@@ -296,6 +290,7 @@ export const actions: Actions = {
 						}))
 					);
 				}
+				await db.update(mealEntries).set({ recipeId }).where(eq(mealEntries.id, mealId));
 			}
 		}
 

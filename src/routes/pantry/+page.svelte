@@ -109,6 +109,14 @@
 		editingItem = null;
 	}
 
+	// Deep-link: ?edit=<id> opens the edit sheet for that pantry item
+	$effect(() => {
+		if (data.editId) {
+			const item = data.items.find((i) => i.id === data.editId);
+			if (item) openEdit(item);
+		}
+	});
+
 	function onNameInput() {
 		if (!categoryLocked) {
 			const inferredName = guessCategory(nameInput);
