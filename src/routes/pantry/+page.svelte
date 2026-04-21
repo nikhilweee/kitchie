@@ -144,16 +144,18 @@
 
 	function expiryLabel(iso: string) {
 		const d = daysUntilExpiry(new Date(iso));
-		if (d < 0) return 'Expired';
-		if (d === 0) return 'Today';
-		if (d === 1) return 'Tomorrow';
-		return `${d}d`;
+		const abs = Math.abs(d);
+		let value: number, unit: string;
+		if (abs < 30)       { value = abs;                    unit = 'd'; }
+		else if (abs < 365) { value = Math.round(abs / 30);   unit = 'm'; }
+		else                { value = Math.round(abs / 365);  unit = 'y'; }
+		return d < 0 ? `-${value}${unit}` : `${value}${unit}`;
 	}
 
 	function expiryColor(iso: string) {
 		const d = daysUntilExpiry(new Date(iso));
-		if (d <= 0) return 'text-red-600';
-		if (d <= 3) return 'text-orange-500';
+		if (d < 0)  return 'text-red-500';
+		if (d <= 3) return 'text-yellow-500';
 		return 'text-stone-400';
 	}
 
@@ -333,7 +335,7 @@
 					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'expiring' ? 'border-red-600 bg-red-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>Expiring Soon</button>
 				<button type="button" onclick={() => toggleStatus('low')}
-					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'low' ? 'border-orange-500 bg-orange-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'low' ? 'border-yellow-500 bg-yellow-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>Running Low</button>
 			</div>
 			{#if filteredItems.length === 0}
