@@ -2,8 +2,8 @@
 	let { open, onclose }: { open: boolean; onclose: () => void } = $props();
 
 	const shortcuts = [
-		{ label: 'Save / confirm', keys: ['⌘', '↵'] },
-		{ label: 'Trash / delete', keys: ['⌘', '⌫'] },
+		{ label: 'Save / Confirm', keys: ['⌘', '↵'] },
+		{ label: 'Trash / Delete', keys: ['⌘', '⌫'] },
 		{ label: 'Close sheet',    keys: ['Esc'] },
 		{ label: 'Keyboard shortcuts', keys: ['?'] },
 	];
@@ -12,17 +12,18 @@
 <svelte:window onkeydown={(e) => { if (open && e.key === 'Escape') onclose(); }} />
 
 {#if open}
-	<div
+	<button
+		type="button"
 		class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40"
-		role="presentation"
 		onclick={onclose}
+		aria-label="Close keyboard shortcuts"
 	>
 		<div
 			class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
 			role="dialog"
 			aria-modal="true"
 			aria-label="Keyboard shortcuts"
-			onclick={(e) => e.stopPropagation()}
+			tabindex="-1"
 		>
 			<h2 class="mb-4 text-sm font-semibold text-stone-700">Keyboard shortcuts</h2>
 			<dl class="space-y-3">
@@ -38,5 +39,5 @@
 				{/each}
 			</dl>
 		</div>
-	</div>
+	</button>
 {/if}
