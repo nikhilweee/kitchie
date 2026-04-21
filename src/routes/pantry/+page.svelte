@@ -570,14 +570,14 @@
 				}}
 			>
 				<input type="hidden" name="id" value={editingItem.id} />
-				<button type="submit"
+				<button type="submit" data-shortcut="delete"
 					class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-200 text-red-400 hover:bg-red-50 transition-colors text-sm font-medium">
 					<Trash2 class="h-4 w-4" />
 					Trash
 				</button>
 			</form>
 		{/if}
-		<button type="submit" form="pantry-item-form" disabled={!nameInput.trim()}
+		<button type="submit" form="pantry-item-form" data-shortcut="primary" disabled={!nameInput.trim()}
 			class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40 transition-colors">
 			{sheetMode === 'edit' ? 'Save' : 'Add item'}
 		</button>

@@ -5,6 +5,7 @@
 	import type { LayoutData } from './$types';
 	import { Utensils, ChefHat, ShoppingBasket } from 'lucide-svelte';
 	import type { Component } from 'svelte';
+	import KeyboardShortcutsModal from '$lib/components/KeyboardShortcutsModal.svelte';
 
 	let { children, data }: { children: any; data: LayoutData } = $props();
 
@@ -13,9 +14,20 @@
 		{ href: '/recipes', label: 'Recipes', icon: ChefHat },
 		{ href: '/pantry', label: 'Pantry', icon: ShoppingBasket }
 	];
+
+	let shortcutsOpen = $state(false);
 </script>
 
+<svelte:window onkeydown={(e) => {
+	if (e.key !== '?') return;
+	const active = document.activeElement;
+	if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
+	shortcutsOpen = true;
+}} />
+
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
+
+<KeyboardShortcutsModal open={shortcutsOpen} onclose={() => (shortcutsOpen = false)} />
 
 {@render children()}
 

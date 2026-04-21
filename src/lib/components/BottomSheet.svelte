@@ -15,13 +15,35 @@
 	} = $props();
 </script>
 
+<svelte:window onkeydown={(e) => {
+	if (!open) return;
+	const meta = e.metaKey || e.ctrlKey;
+	const active = document.activeElement as HTMLElement | null;
+	const inputFocused = !!active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT');
+
+	if (e.key === 'Escape') {
+		if (inputFocused) { active.blur(); e.preventDefault(); }
+		else { onclose(); }
+		return;
+	}
+
+	if (meta && e.key === 'Enter') {
+		e.preventDefault();
+		document.querySelector<HTMLElement>('[role="dialog"] [data-shortcut="primary"]')?.click();
+		return;
+	}
+
+	if (meta && (e.key === 'Delete' || e.key === 'Backspace')) {
+		e.preventDefault();
+		document.querySelector<HTMLElement>('[role="dialog"] [data-shortcut="delete"]')?.click();
+	}
+}} />
+
 {#if open}
 	<div
 		class="fixed inset-0 z-50 overflow-y-auto bg-white px-4 pt-3 pb-10"
 		role="dialog"
 		aria-modal="true"
-		tabindex="-1"
-		onkeydown={(e) => e.key === 'Escape' && onclose()}
 	>
 		<div class="mx-auto max-w-lg">
 			<!-- Header: back button left, handle center, close button right -->
