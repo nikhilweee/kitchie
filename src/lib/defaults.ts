@@ -1,16 +1,16 @@
 // Category definitions include old slug for one-time data migration
 const CATEGORY_DEFS = [
-	{ slug: 'fresh_produce',    name: 'Produce',    ttlDays: 6,   sortOrder: 1  },
-	{ slug: 'fresh_meat_fish',  name: 'Meat',       ttlDays: 2,   sortOrder: 2  },
-	{ slug: 'dairy',            name: 'Dairy',      ttlDays: 10,  sortOrder: 3  },
-	{ slug: 'cooked_leftovers', name: 'Leftovers',  ttlDays: 4,   sortOrder: 4  },
-	{ slug: 'bread_bakery',     name: 'Bakery',     ttlDays: 6,   sortOrder: 5  },
-	{ slug: 'frozen',           name: 'Frozen',     ttlDays: 90,  sortOrder: 6  },
-	{ slug: 'dry_goods',        name: 'Dry',        ttlDays: 365, sortOrder: 7  },
-	{ slug: 'canned_goods',     name: 'Canned',     ttlDays: 730, sortOrder: 8  },
-	{ slug: 'condiments',       name: 'Condiments', ttlDays: 180, sortOrder: 9  },
-	{ slug: 'packaged_snacks',  name: 'Snacks',     ttlDays: 90,  sortOrder: 10 },
-	{ slug: 'other',            name: 'Other',      ttlDays: 30,  sortOrder: 11 },
+	{ slug: 'produce',    name: 'Produce',    ttlDays: 7,   sortOrder: 1  },
+	{ slug: 'meat',       name: 'Meat',       ttlDays: 7,   sortOrder: 2  },
+	{ slug: 'dairy',      name: 'Dairy',      ttlDays: 14,  sortOrder: 3  },
+	{ slug: 'leftovers',  name: 'Leftovers',  ttlDays: 3,   sortOrder: 4  },
+	{ slug: 'bakery',     name: 'Bakery',     ttlDays: 7,   sortOrder: 5  },
+	{ slug: 'frozen',     name: 'Frozen',     ttlDays: 90,  sortOrder: 6  },
+	{ slug: 'dry',        name: 'Dry',        ttlDays: 365, sortOrder: 7  },
+	{ slug: 'canned',     name: 'Canned',     ttlDays: 730, sortOrder: 8  },
+	{ slug: 'condiments', name: 'Condiments', ttlDays: 180, sortOrder: 9  },
+	{ slug: 'snacks',     name: 'Snacks',     ttlDays: 90,  sortOrder: 10 },
+	{ slug: 'other',      name: 'Other',      ttlDays: 30,  sortOrder: 11 },
 ];
 
 export const DEFAULT_CATEGORIES = CATEGORY_DEFS.map((c) => ({
