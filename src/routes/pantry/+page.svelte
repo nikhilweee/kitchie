@@ -169,7 +169,7 @@
 		return 'normal';
 	}
 
-	const activeFilterCount = $derived(activeStatuses.size + activeCategories.size);
+	const activeFilterCount = $derived(activeCategories.size);
 
 	const filteredItems = $derived(
 		data.items.filter((i) => {
@@ -219,21 +219,6 @@
 				</button>
 				{#if filterOpen}
 					<div class="absolute top-full right-0 z-20 mt-1 w-56 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
-						{#if hasExpiring || hasLow}
-							<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Status</div>
-							{#if hasExpiring}
-								<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
-									<input type="checkbox" checked={activeStatuses.has('expiring')} onchange={() => toggleStatus('expiring')} class="accent-orange-500" />
-									<span class="text-sm text-red-500">Expiring soon</span>
-								</label>
-							{/if}
-							{#if hasLow}
-								<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
-									<input type="checkbox" checked={activeStatuses.has('low')} onchange={() => toggleStatus('low')} class="accent-orange-500" />
-									<span class="text-sm text-orange-500">Running low</span>
-								</label>
-							{/if}
-						{/if}
 						{#if presentCategories.length > 0}
 							<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Category</div>
 							{#each presentCategories as [cat, label] (cat)}
@@ -249,6 +234,20 @@
 					</div>
 				{/if}
 			</div>
+			{#if hasExpiring || hasLow}
+				<div class="mb-4 flex gap-2">
+					{#if hasExpiring}
+						<button type="button" onclick={() => toggleStatus('expiring')}
+							class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors {activeStatuses.has('expiring') ? 'border-red-600 bg-red-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+						>Expiring soon</button>
+					{/if}
+					{#if hasLow}
+						<button type="button" onclick={() => toggleStatus('low')}
+							class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors {activeStatuses.has('low') ? 'border-orange-500 bg-orange-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+						>Running low</button>
+					{/if}
+				</div>
+			{/if}
 			{#if groups.expiringSoon.length > 0}
 				<section class="mb-6">
 					<h2 class="mb-2 text-xs font-semibold tracking-wider text-red-500 uppercase">Expiring soon</h2>

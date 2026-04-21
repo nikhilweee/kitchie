@@ -25,7 +25,7 @@
 **Test:** `playwright/pantry.spec.ts` — "PANT-006: pantry list filtered by text search on item name"
 
 ## PANT-007
-**Requirement:** The pantry list can be filtered by status (expiring soon, low stock) and by category.  
+**Requirement:** The pantry list can be filtered by status chips (Expiring soon, Running low) and by category via the filter dropdown.  
 **Test:** `playwright/pantry.spec.ts` — "PANT-007: pantry list filtered by category"
 
 ## PANT-008
