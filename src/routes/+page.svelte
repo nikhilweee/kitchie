@@ -14,8 +14,11 @@
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
 	import { X, Utensils } from 'lucide-svelte';
+	import Sidebar from '$lib/components/Sidebar.svelte';
 
 	let { data }: { data: PageData } = $props();
+
+	let sidebarOpen = $state(false);
 
 	// Toast
 	let toast = $state<string | null>(null);
@@ -222,7 +225,7 @@
 <Toast message={toast} />
 
 <div class="flex min-h-svh flex-col bg-stone-50">
-	<PageHeader title="Kitchie" />
+	<PageHeader title="Kitchie" onhamburger={() => (sidebarOpen = true)} />
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
 		{#if data.entries.length === 0}

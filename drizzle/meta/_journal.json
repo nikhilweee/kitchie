@@ -78,6 +78,13 @@
       "when": 1776744545591,
       "tag": "0010_recipe_course",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1776746390065,
+      "tag": "0011_user_categories_cuisines",
+      "breakpoints": true
     }
   ]
 }

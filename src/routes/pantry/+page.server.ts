@@ -1,21 +1,49 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { pantryItems } from '$lib/server/db/schema';
-import type { PantryCategory } from '$lib/server/db/schema';
+import { pantryItems, userCategories } from '$lib/server/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { calcExpiry } from '$lib/expiry';
 import { getString, getNumber } from '$lib/server/form-data';
 import { inferItemDefaults } from '$lib/server/infer-item';
+import { DEFAULT_CATEGORIES, SLUG_TO_CATEGORY_NAME } from '$lib/defaults';
+
+async function getOrSeedCategories(userId: string) {
+	let cats = await db
+		.select()
+		.from(userCategories)
+		.where(eq(userCategories.userId, userId))
+		.orderBy(userCategories.sortOrder);
+
+	if (cats.length === 0) {
+		cats = await db
+			.insert(userCategories)
+			.values(DEFAULT_CATEGORIES.map((c) => ({ ...c, userId })))
+			.returning();
+		cats.sort((a, b) => a.sortOrder - b.sortOrder);
+
+		// Migrate existing pantry items from old slug values to new category IDs
+		for (const [slug, name] of Object.entries(SLUG_TO_CATEGORY_NAME)) {
+			const cat = cats.find((c) => c.name === name);
+			if (cat) {
+				await db
+					.update(pantryItems)
+					.set({ category: cat.id })
+					.where(and(eq(pantryItems.userId, userId), eq(pantryItems.category, slug)));
+			}
+		}
+	}
+
+	return cats;
+}
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
 
-	const items = await db
-		.select()
-		.from(pantryItems)
-		.where(eq(pantryItems.userId, userId))
-		.orderBy(pantryItems.expiryDate);
+	const [items, categories] = await Promise.all([
+		db.select().from(pantryItems).where(eq(pantryItems.userId, userId)).orderBy(pantryItems.expiryDate),
+		getOrSeedCategories(userId)
+	]);
 
 	return {
 		items: items.map((i) => ({
@@ -23,9 +51,27 @@ export const load: PageServerLoad = async ({ locals }) => {
 			purchaseDate: i.purchaseDate.toISOString(),
 			expiryDate: i.expiryDate.toISOString(),
 			createdAt: i.createdAt.toISOString()
-		}))
+		})),
+		categories
 	};
 };
+
+async function resolveCategory(userId: string, submittedId: string, inferredName: string) {
+	const cats = await db
+		.select()
+		.from(userCategories)
+		.where(eq(userCategories.userId, userId))
+		.orderBy(userCategories.sortOrder);
+
+	if (submittedId) {
+		const found = cats.find((c) => c.id === submittedId);
+		if (found) return found;
+	}
+
+	// Fall back to inference
+	const byName = cats.find((c) => c.name === inferredName);
+	return byName ?? cats.find((c) => c.name === 'Other') ?? cats[0];
+}
 
 export const actions: Actions = {
 	add: async ({ request, locals }) => {
@@ -38,20 +84,20 @@ export const actions: Actions = {
 		const purchaseDateStr = getString(data, 'purchaseDate');
 		const purchaseDate = purchaseDateStr ? new Date(purchaseDateStr) : new Date();
 
-		const submittedCategory = getString(data, 'category') as PantryCategory;
+		const submittedCategoryId = getString(data, 'category');
 		const submittedQType = getString(data, 'quantityType') as 'count' | 'estimate';
 		const inferred = inferItemDefaults(name);
-		const category = submittedCategory || inferred.category;
+		const cat = await resolveCategory(userId, submittedCategoryId, inferred.category);
 		const quantityType = submittedQType || inferred.quantityType;
 		const quantity = getNumber(data, 'quantity', 1);
 		const unit = quantityType === 'count' ? (getString(data, 'unit') || 'count') : null;
 
 		const expiryDateStr = getString(data, 'expiryDate');
-		const expiryDate = expiryDateStr ? new Date(expiryDateStr) : calcExpiry(category, purchaseDate);
+		const expiryDate = expiryDateStr ? new Date(expiryDateStr) : calcExpiry(cat.ttlDays, purchaseDate);
 		const expiryOverridden = !!expiryDateStr;
 
 		await db.insert(pantryItems).values({
-			userId, name, category, quantityType, quantity, unit, purchaseDate, expiryDate, expiryOverridden
+			userId, name, category: cat.id, quantityType, quantity, unit, purchaseDate, expiryDate, expiryOverridden
 		});
 
 		return { success: true };
@@ -67,21 +113,21 @@ export const actions: Actions = {
 
 		const purchaseDateStr = getString(data, 'purchaseDate');
 		const purchaseDate = purchaseDateStr ? new Date(purchaseDateStr) : new Date();
-		const submittedCategory = getString(data, 'category') as PantryCategory;
+		const submittedCategoryId = getString(data, 'category');
 		const submittedQType = getString(data, 'quantityType') as 'count' | 'estimate';
 		const inferred = inferItemDefaults(name);
-		const category = submittedCategory || inferred.category;
+		const cat = await resolveCategory(userId, submittedCategoryId, inferred.category);
 		const quantityType = submittedQType || inferred.quantityType;
 		const quantity = getNumber(data, 'quantity', 1);
 		const unit = quantityType === 'count' ? (getString(data, 'unit') || 'count') : null;
 
 		const expiryDateStr = getString(data, 'expiryDate');
-		const expiryDate = expiryDateStr ? new Date(expiryDateStr) : calcExpiry(category, purchaseDate);
+		const expiryDate = expiryDateStr ? new Date(expiryDateStr) : calcExpiry(cat.ttlDays, purchaseDate);
 		const expiryOverridden = !!expiryDateStr;
 
 		await db
 			.update(pantryItems)
-			.set({ name, category, quantityType, quantity, unit, purchaseDate, expiryDate, expiryOverridden })
+			.set({ name, category: cat.id, quantityType, quantity, unit, purchaseDate, expiryDate, expiryOverridden })
 			.where(and(eq(pantryItems.id, id), eq(pantryItems.userId, userId)));
 
 		return { success: true };

@@ -1,20 +1,49 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { recipes, recipeItems, pantryItems } from '$lib/server/db/schema';
+import { recipes, recipeItems, pantryItems, userCuisines } from '$lib/server/db/schema';
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { getString, getStrings } from '$lib/server/form-data';
 import { RECIPE_COURSES, type RecipeCourse } from '$lib/recipe-course';
-import { CUISINES, type Cuisine } from '$lib/cuisine';
+import { DEFAULT_CUISINES, SLUG_TO_CUISINE_NAME } from '$lib/defaults';
+
+async function getOrSeedCuisines(userId: string) {
+	let cuisines = await db
+		.select()
+		.from(userCuisines)
+		.where(eq(userCuisines.userId, userId))
+		.orderBy(userCuisines.sortOrder);
+
+	if (cuisines.length === 0) {
+		cuisines = await db
+			.insert(userCuisines)
+			.values(DEFAULT_CUISINES.map((name, i) => ({ name, sortOrder: i + 1, userId })))
+			.returning();
+		cuisines.sort((a, b) => a.sortOrder - b.sortOrder);
+
+		// Migrate existing recipes from old slug values to new cuisine IDs
+		for (const [slug, name] of Object.entries(SLUG_TO_CUISINE_NAME)) {
+			const cuisine = cuisines.find((c) => c.name === name);
+			if (cuisine) {
+				await db
+					.update(recipes)
+					.set({ cuisine: cuisine.id })
+					.where(and(eq(recipes.userId, userId), eq(recipes.cuisine, slug)));
+			}
+		}
+	}
+
+	return cuisines;
+}
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;
 
-	const allRecipes = await db
-		.select()
-		.from(recipes)
-		.where(eq(recipes.userId, userId))
-		.orderBy(desc(recipes.createdAt));
+	const [allRecipes, cuisines, pantryAll] = await Promise.all([
+		db.select().from(recipes).where(eq(recipes.userId, userId)).orderBy(desc(recipes.createdAt)),
+		getOrSeedCuisines(userId),
+		db.select().from(pantryItems).where(eq(pantryItems.userId, userId)).orderBy(pantryItems.name)
+	]);
 
 	const recipeIds = allRecipes.map((r) => r.id);
 	const allItems =
@@ -22,18 +51,13 @@ export const load: PageServerLoad = async ({ locals }) => {
 			? await db.select().from(recipeItems).where(inArray(recipeItems.recipeId, recipeIds))
 			: [];
 
-	const pantryAll = await db
-		.select()
-		.from(pantryItems)
-		.where(eq(pantryItems.userId, userId))
-		.orderBy(pantryItems.name);
-
 	return {
 		recipes: allRecipes.map((r) => ({
 			...r,
 			createdAt: r.createdAt.toISOString(),
 			items: allItems.filter((i) => i.recipeId === r.id)
 		})),
+		cuisines,
 		pantryItems: pantryAll
 	};
 };
@@ -49,7 +73,12 @@ export const actions: Actions = {
 			? (mealTypeRaw as RecipeCourse)
 			: null;
 		const cuisineRaw = getString(data, 'cuisine');
-		const cuisine = (CUISINES as string[]).includes(cuisineRaw) ? (cuisineRaw as Cuisine) : null;
+		// Validate submitted cuisine ID belongs to this user
+		const userCuisineList = await db
+			.select()
+			.from(userCuisines)
+			.where(eq(userCuisines.userId, userId));
+		const cuisine = userCuisineList.some((c) => c.id === cuisineRaw) ? cuisineRaw : null;
 		const prepTimeRaw = parseInt(getString(data, 'prepTime'), 10);
 		const prepTime = [1, 2, 3, 4].includes(prepTimeRaw) ? prepTimeRaw : null;
 		const pantryIds = getStrings(data, 'pantryItemId');

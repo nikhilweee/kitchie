@@ -5,22 +5,24 @@
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import BottomSheet from '$lib/components/BottomSheet.svelte';
 	import FormActions from '$lib/components/FormActions.svelte';
+	import Sidebar from '$lib/components/Sidebar.svelte';
 	import type { PageData } from './$types';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
 	import { RECIPE_COURSE_LABELS, RECIPE_COURSES, type RecipeCourse } from '$lib/recipe-course';
-	import { CUISINE_LABELS, CUISINES, type Cuisine } from '$lib/cuisine';
 	import PrepTimePicker, { PREP_TIME_LABELS } from '$lib/components/PrepTimePicker.svelte';
 	import { X, ListFilter, Search, ChefHat } from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	type Recipe = PageData['recipes'][0];
+	type Cuisine = PageData['cuisines'][0];
 
 	let search = $state('');
 	let activeMealTypes = $state<Set<RecipeCourse>>(new Set());
-	let activeCuisines = $state<Set<Cuisine>>(new Set());
+	let activeCuisines = $state<Set<string>>(new Set());
 	let filterOpen = $state(false);
+	let sidebarOpen = $state(false);
 
 	function toggleMealType(t: RecipeCourse) {
 		const next = new Set(activeMealTypes);
@@ -28,10 +30,14 @@
 		activeMealTypes = next;
 	}
 
-	function toggleCuisine(c: Cuisine) {
+	function toggleCuisine(id: string) {
 		const next = new Set(activeCuisines);
-		if (next.has(c)) next.delete(c); else next.add(c);
+		if (next.has(id)) next.delete(id); else next.add(id);
 		activeCuisines = next;
+	}
+
+	function cuisineLabel(id: string): string {
+		return data.cuisines.find((c) => c.id === id)?.name ?? '';
 	}
 
 	type SortKey = 'name-asc' | 'name-desc' | 'prep-asc' | 'prep-desc';
@@ -45,16 +51,13 @@
 	];
 
 	const activeFilterCount = $derived(activeCuisines.size + (sort !== null ? 1 : 0));
-
-	// Use derived (not data.recipes.length) so the search bar appears reactively
-	// after the first recipe is added via form enhance, without a full page reload.
 	const anyRecipes = $derived(data.recipes.length > 0);
 
 	const filteredBase = $derived(
 		data.recipes.filter((r) => {
 			if (search.trim() && !r.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
 			if (activeMealTypes.size > 0 && !activeMealTypes.has(r.mealType as RecipeCourse)) return false;
-			if (activeCuisines.size > 0 && !activeCuisines.has(r.cuisine as Cuisine)) return false;
+			if (activeCuisines.size > 0 && !activeCuisines.has(r.cuisine ?? '')) return false;
 			return true;
 		})
 	);
@@ -67,6 +70,7 @@
 			return sort === 'prep-asc' ? pa - pb : pb - pa;
 		})
 	);
+
 	type PantryItem = PageData['pantryItems'][0];
 
 	// Toast
@@ -83,12 +87,11 @@
 	let editingRecipe = $state<Recipe | null>(null);
 	let nameInput = $state('');
 	let mealTypeInput = $state<RecipeCourse | ''>('');
-	let cuisineInput = $state<Cuisine | ''>('');
+	let cuisineInput = $state<string>('');
 	let prepTimeInput = $state<number | null>(null);
 	let nameEl = $state<HTMLInputElement | undefined>(undefined);
 	let showNameSuggestions = $state(false);
 
-	// Suggest existing recipes when typing in add mode
 	const nameSuggestions = $derived(
 		sheetMode === 'add' && nameInput.trim().length > 0
 			? data.recipes.filter((r) =>
@@ -97,7 +100,6 @@
 			: []
 	);
 
-	// Ingredients in the sheet
 	type DraftItem = { pantryItemId: string | null; itemName: string; quantity: string };
 	let draftItems = $state<DraftItem[]>([]);
 	let ingredientSearch = $state('');
@@ -135,7 +137,7 @@
 		editingRecipe = recipe;
 		nameInput = recipe.name;
 		mealTypeInput = (recipe.mealType as RecipeCourse) ?? '';
-		cuisineInput = (recipe.cuisine as Cuisine) ?? '';
+		cuisineInput = recipe.cuisine ?? '';
 		prepTimeInput = recipe.prepTime ?? null;
 		draftItems = recipe.items.map((i) => ({
 			pantryItemId: i.pantryItemId ?? null,
@@ -169,9 +171,10 @@
 <svelte:head><title>Kitchie | Recipes</title></svelte:head>
 
 <Toast message={toast} />
+<Sidebar open={sidebarOpen} onclose={() => (sidebarOpen = false)} />
 
 <div class="flex min-h-svh flex-col bg-stone-50">
-	<PageHeader title="Recipes" />
+	<PageHeader title="Recipes" onhamburger={() => (sidebarOpen = true)} />
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
 		{#if anyRecipes}
@@ -205,10 +208,10 @@
 						{/each}
 						<div class="border-t border-stone-100 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Cuisine</div>
 						<div class="max-h-48 overflow-y-auto">
-							{#each CUISINES as c (c)}
+							{#each data.cuisines as c (c.id)}
 								<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
-									<input type="checkbox" checked={activeCuisines.has(c)} onchange={() => toggleCuisine(c)} class="accent-orange-500" />
-									<span class="text-sm text-stone-700">{CUISINE_LABELS[c]}</span>
+									<input type="checkbox" checked={activeCuisines.has(c.id)} onchange={() => toggleCuisine(c.id)} class="accent-orange-500" />
+									<span class="text-sm text-stone-700">{c.name}</span>
 								</label>
 							{/each}
 						</div>
@@ -284,7 +287,6 @@
 			<input type="hidden" name="id" value={editingRecipe.id} />
 		{/if}
 
-		<!-- Recipe name -->
 		<div class="relative" use:clickOutside={() => (showNameSuggestions = false)}>
 			<input
 				bind:this={nameEl}
@@ -316,7 +318,6 @@
 			{/if}
 		</div>
 
-		<!-- Meal type + Cuisine -->
 		<div class="mt-3 flex gap-3">
 			<div class="flex-1">
 				<label for="recipe-meal-type" class="mb-1 block text-xs font-medium text-stone-500">Course</label>
@@ -341,20 +342,18 @@
 					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
 				>
 					<option value="">Any</option>
-					{#each CUISINES as c (c)}
-						<option value={c}>{CUISINE_LABELS[c]}</option>
+					{#each data.cuisines as c (c.id)}
+						<option value={c.id}>{c.name}</option>
 					{/each}
 				</select>
 			</div>
 		</div>
 
-		<!-- Prep time -->
 		<div class="mt-3">
 			<p class="mb-1 text-xs font-medium text-stone-500">Prep time</p>
 			<PrepTimePicker bind:value={prepTimeInput} name="prepTime" />
 		</div>
 
-		<!-- Ingredient list -->
 		<p class="mt-4 mb-2 text-xs font-medium text-stone-500">Ingredients</p>
 
 		{#if draftItems.length > 0}
@@ -384,7 +383,6 @@
 			</ul>
 		{/if}
 
-		<!-- Search pantry items to add (or type a custom ingredient) -->
 		<div class="relative" use:clickOutside={() => (ingredientSearch = '')}>
 			<input
 				type="text"

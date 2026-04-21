@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { PageData } from './$types';
-	import { CATEGORY_LABELS, daysUntilExpiry, calcExpiry } from '$lib/expiry';
+	import { daysUntilExpiry, calcExpiry } from '$lib/expiry';
 	import { guessQuantityType } from '$lib/quantity';
 	import EstimatePicker from '$lib/components/EstimatePicker.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
@@ -9,27 +9,30 @@
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import BottomSheet from '$lib/components/BottomSheet.svelte';
 	import FormActions from '$lib/components/FormActions.svelte';
+	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { guessCategory } from '$lib/infer';
 	import { UNITS, guessUnit } from '$lib/units';
 	import { toDateStr } from '$lib/date-format';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
 	import { X, ListFilter, ShoppingBasket, Search } from 'lucide-svelte';
-	import type { PantryCategory, QuantityType } from '$lib/server/db/schema';
+	import type { QuantityType } from '$lib/server/db/schema';
 
 	let { data }: { data: PageData } = $props();
 
 	type Item = PageData['items'][0];
+	type Category = PageData['categories'][0];
 
 	// ── Sheet mode: 'add' | 'edit' | null ────────────────────────────────────
 	let sheetMode = $state<'add' | 'edit' | null>(null);
 	let editingItem = $state<Item | null>(null);
+	let sidebarOpen = $state(false);
 
 	// Shared form state
 	let nameInput = $state('');
 	let nameEl = $state<HTMLInputElement | undefined>(undefined);
 	let showNameSuggestions = $state(false);
-	let category = $state<PantryCategory>('other');
+	let categoryId = $state('');
 	let quantityType = $state<QuantityType>('estimate');
 	let quantity = $state(1);
 	let unit = $state('count');
@@ -60,11 +63,23 @@
 		return new Date().toISOString().split('T')[0];
 	}
 
+	function defaultCategoryId() {
+		return data.categories.find((c) => c.name === 'Other')?.id ?? data.categories[0]?.id ?? '';
+	}
+
+	function categoryById(id: string): Category | undefined {
+		return data.categories.find((c) => c.id === id);
+	}
+
+	function categoryLabel(id: string): string {
+		return categoryById(id)?.name ?? id;
+	}
+
 	function openAdd() {
 		sheetMode = 'add';
 		editingItem = null;
 		nameInput = '';
-		category = 'other';
+		categoryId = defaultCategoryId();
 		quantityType = 'estimate';
 		quantity = 1;
 		unit = 'count';
@@ -78,7 +93,7 @@
 		sheetMode = 'edit';
 		editingItem = item;
 		nameInput = item.name;
-		category = item.category as PantryCategory;
+		categoryId = item.category;
 		quantityType = item.quantityType as QuantityType;
 		quantity = item.quantity;
 		unit = item.unit ?? 'count';
@@ -95,12 +110,18 @@
 	}
 
 	function onNameInput() {
-		if (!categoryLocked) category = guessCategory(nameInput);
+		if (!categoryLocked) {
+			const inferredName = guessCategory(nameInput);
+			const matched = data.categories.find((c) => c.name === inferredName);
+			categoryId = matched?.id ?? defaultCategoryId();
+		}
 		quantityType = guessQuantityType(nameInput);
 		unit = guessUnit(nameInput);
 		if (!expiryLocked) {
+			const cat = categoryById(categoryId);
+			const ttlDays = cat?.ttlDays ?? 30;
 			const pd = purchaseDate ? new Date(purchaseDate) : new Date();
-			expiryDate = calcExpiry(category, pd).toISOString().split('T')[0];
+			expiryDate = calcExpiry(ttlDays, pd).toISOString().split('T')[0];
 		}
 		if (sheetMode === 'add') quantity = 1;
 	}
@@ -126,13 +147,11 @@
 		return 'text-stone-400';
 	}
 
-	const categories = Object.entries(CATEGORY_LABELS) as [PantryCategory, string][];
-
 	// ── Search + filter ───────────────────────────────────────────────────────
 	type StatusFilter = 'expiring' | 'low' | 'normal';
 	let search = $state('');
 	let activeStatus = $state<StatusFilter | null>(null);
-	let activeCategories = $state(new Set<PantryCategory>());
+	let activeCategories = $state(new Set<string>());
 	let filterOpen = $state(false);
 	type SortKey = 'name-asc' | 'name-desc' | 'expiry-asc' | 'expiry-desc';
 	let sort = $state<SortKey | null>(null);
@@ -141,9 +160,9 @@
 		activeStatus = activeStatus === s ? null : s;
 	}
 
-	function toggleCategory(cat: PantryCategory) {
+	function toggleCategory(id: string) {
 		const next = new Set(activeCategories);
-		if (next.has(cat)) next.delete(cat); else next.add(cat);
+		if (next.has(id)) next.delete(id); else next.add(id);
 		activeCategories = next;
 	}
 
@@ -178,24 +197,29 @@
 		sortItems(data.items.filter((i) => {
 			if (search.trim() && !i.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
 			if (activeStatus !== null && itemStatus(i) !== activeStatus) return false;
-			if (activeCategories.size > 0 && !activeCategories.has(i.category as PantryCategory)) return false;
+			if (activeCategories.size > 0 && !activeCategories.has(i.category)) return false;
 			return true;
 		}))
+	);
+
+	// Only show categories that have at least one item
+	const presentCategories = $derived(
+		data.categories.filter((cat) => data.items.some((i) => i.category === cat.id))
 	);
 </script>
 
 <svelte:head><title>Kitchie | Pantry</title></svelte:head>
 
 <Toast message={toast} />
+<Sidebar open={sidebarOpen} onclose={() => (sidebarOpen = false)} />
 
 <div class="flex min-h-svh flex-col bg-stone-50">
-	<PageHeader title="Pantry" />
+	<PageHeader title="Pantry" onhamburger={() => (sidebarOpen = true)} />
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
 		{#if data.items.length === 0}
 			<EmptyState icon={ShoppingBasket} heading="Pantry is empty" detail="Add items after your next shopping trip." />
 		{:else}
-			{@const presentCategories = categories.filter(([cat]) => data.items.some((i) => i.category === cat))}
 			<!-- Search + filter -->
 			<div class="relative mb-4 flex gap-2" use:clickOutside={() => (filterOpen = false)}>
 				<input
@@ -227,10 +251,10 @@
 						{/each}
 						{#if presentCategories.length > 0}
 							<div class="border-t border-stone-100 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Category</div>
-							{#each presentCategories as [cat, label] (cat)}
+							{#each presentCategories as cat (cat.id)}
 								<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
-									<input type="checkbox" checked={activeCategories.has(cat)} onchange={() => toggleCategory(cat)} class="accent-orange-500" />
-									<span class="text-sm text-stone-700">{label}</span>
+									<input type="checkbox" checked={activeCategories.has(cat.id)} onchange={() => toggleCategory(cat.id)} class="accent-orange-500" />
+									<span class="text-sm text-stone-700">{cat.name}</span>
 								</label>
 							{/each}
 						{/if}
@@ -272,7 +296,7 @@
 					class="min-w-0 flex-1 text-left"
 				>
 					<p class="truncate font-medium text-stone-900">{item.name}</p>
-					<p class="text-xs text-stone-400">{CATEGORY_LABELS[item.category as PantryCategory]}</p>
+					<p class="text-xs text-stone-400">{categoryLabel(item.category)}</p>
 				</button>
 				<div class="flex w-16 shrink-0 justify-end">
 					{#if item.quantityType === 'estimate'}
@@ -335,7 +359,7 @@
 								class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
 							>
 								<span class="flex-1 font-medium">{item.name}</span>
-								<span class="shrink-0 text-xs text-stone-400">{CATEGORY_LABELS[item.category as PantryCategory]} · already in pantry</span>
+								<span class="shrink-0 text-xs text-stone-400">{categoryLabel(item.category)} · already in pantry</span>
 							</button>
 						</li>
 					{/each}
@@ -349,12 +373,12 @@
 				<select
 					id="sheet-category"
 					name="category"
-					bind:value={category}
+					bind:value={categoryId}
 					onchange={() => (categoryLocked = true)}
 					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
 				>
-					{#each categories as [val, label] (val)}
-						<option value={val}>{label}</option>
+					{#each data.categories as cat (cat.id)}
+						<option value={cat.id}>{cat.name}</option>
 					{/each}
 				</select>
 			</div>

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { ChevronLeft } from 'lucide-svelte';
+	import { ChevronLeft, Menu } from 'lucide-svelte';
 
-	let { title, back }: { title: string; back?: string | true } = $props();
+	let { title, back, onhamburger }: { title: string; back?: string | true; onhamburger?: () => void } = $props();
 
 	function initials(user: { name: string | null; username: string }) {
 		const src = user.name ?? user.username;
@@ -22,6 +22,8 @@
 				<button type="button" onclick={() => history.back()} aria-label="Go back" class="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800"><ChevronLeft class="h-4 w-4" /></button>
 			{:else if back}
 				<a href={back} aria-label="Go back" class="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800"><ChevronLeft class="h-4 w-4" /></a>
+			{:else if onhamburger}
+				<button type="button" onclick={onhamburger} aria-label="Open menu" class="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800"><Menu class="h-5 w-5" /></button>
 			{/if}
 		</div>
 
