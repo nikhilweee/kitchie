@@ -16,16 +16,12 @@ export function guessMealType(hour: number): MealType {
 	return 'snack';
 }
 
-// Returns current datetime as "YYYY-MM-DDTHH:MM" for <input type="datetime-local">
+// Returns current datetime as "YYYY-MM-DDTHH:MM" rounded to nearest 15 min
 export function currentDateTimeStr(): string {
 	const now = new Date();
-	return (
-		`${now.getFullYear()}-` +
-		`${String(now.getMonth() + 1).padStart(2, '0')}-` +
-		`${String(now.getDate()).padStart(2, '0')}T` +
-		`${String(now.getHours()).padStart(2, '0')}:` +
-		`${String(now.getMinutes()).padStart(2, '0')}`
-	);
+	now.setMinutes(Math.round(now.getMinutes() / 15) * 15, 0, 0);
+	const pad = (n: number) => String(n).padStart(2, '0');
+	return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
 // Combines today's date with a HH:MM time string into a Date

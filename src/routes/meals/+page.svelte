@@ -334,11 +334,12 @@
 					<label for="meal-datetime" class="mb-1 block text-xs font-medium text-stone-500">Date & time</label>
 					<input
 						id="meal-datetime"
-						name="datetime"
 						type="datetime-local"
+						step="900"
 						bind:value={mealDateTime}
 						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
 					/>
+					<input type="hidden" name="datetime" value={mealDateTime ? new Date(mealDateTime).toISOString() : ''} />
 				</div>
 				<div>
 					<label for="meal-type" class="mb-1 block text-xs font-medium text-stone-500">Meal type</label>
