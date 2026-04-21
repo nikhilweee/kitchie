@@ -35,7 +35,9 @@
 	let editingEntry = $state<Entry | null>(null);
 
 	let mealInput = $state('');
-	let mealDateTime = $state(currentDateTimeStr());
+	let mealDate = $state(currentDateTimeStr().slice(0, 10));
+	let mealTime = $state(currentDateTimeStr().slice(11, 16));
+	const mealDateTimeISO = $derived(mealDate && mealTime ? new Date(`${mealDate}T${mealTime}`).toISOString() : '');
 	let mealType = $state<MealType>('snack');
 	let updatePantryToggle = $state(true);
 
@@ -49,7 +51,9 @@
 		sheetMode = 'add';
 		editingEntry = null;
 		mealInput = '';
-		mealDateTime = currentDateTimeStr();
+		const now = currentDateTimeStr();
+		mealDate = now.slice(0, 10);
+		mealTime = now.slice(11, 16);
 		mealType = guessMealType(new Date().getHours());
 		suggestions = [];
 		selectedRecipeId = null;
@@ -62,7 +66,9 @@
 		sheetMode = 'edit';
 		editingEntry = entry;
 		mealInput = entry.name;
-		mealDateTime = toDateTimeLocalStr(entry.loggedAt);
+		const dt = toDateTimeLocalStr(entry.loggedAt);
+		mealDate = dt.slice(0, 10);
+		mealTime = dt.slice(11, 16);
 		mealType = entry.mealType as MealType;
 	}
 
@@ -331,15 +337,22 @@
 		<div class="mt-3 space-y-2">
 			<div class="grid grid-cols-2 gap-2">
 				<div>
-					<label for="meal-datetime" class="mb-1 block text-xs font-medium text-stone-500">Date & time</label>
-					<input
-						id="meal-datetime"
-						type="datetime-local"
-						step="900"
-						bind:value={mealDateTime}
-						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-					/>
-					<input type="hidden" name="datetime" value={mealDateTime ? new Date(mealDateTime).toISOString() : ''} />
+					<label for="meal-date" class="mb-1 block text-xs font-medium text-stone-500">Date & time</label>
+					<div class="flex gap-1">
+						<input
+							id="meal-date"
+							type="date"
+							bind:value={mealDate}
+							class="min-w-0 flex-1 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+						/>
+						<input
+							type="time"
+							step="900"
+							bind:value={mealTime}
+							class="w-24 rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+						/>
+					</div>
+					<input type="hidden" name="datetime" value={mealDateTimeISO} />
 				</div>
 				<div>
 					<label for="meal-type" class="mb-1 block text-xs font-medium text-stone-500">Meal type</label>
