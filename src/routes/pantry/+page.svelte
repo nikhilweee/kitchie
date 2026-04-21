@@ -8,14 +8,13 @@
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import BottomSheet from '$lib/components/BottomSheet.svelte';
-	import FormActions from '$lib/components/FormActions.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { guessCategory } from '$lib/infer';
 	import { UNITS, guessUnit } from '$lib/units';
 	import { toDateStr } from '$lib/date-format';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
-	import { X, ListFilter, ShoppingBasket, Search } from 'lucide-svelte';
+	import { ListFilter, ShoppingBasket, Search, Trash2 } from 'lucide-svelte';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 	import type { QuantityType } from '$lib/server/db/schema';
 
@@ -28,6 +27,7 @@
 	let sheetMode = $state<'add' | 'edit' | null>(null);
 	let editingItem = $state<Item | null>(null);
 	let sidebarOpen = $state(false);
+	let confirmingDelete = $state(false);
 
 	// Shared form state
 	let nameInput = $state('');
@@ -93,6 +93,7 @@
 	function openEdit(item: Item) {
 		sheetMode = 'edit';
 		editingItem = item;
+		confirmingDelete = false;
 		nameInput = item.name;
 		categoryId = item.category;
 		quantityType = item.quantityType as QuantityType;
@@ -109,6 +110,7 @@
 	function closeSheet() {
 		sheetMode = null;
 		editingItem = null;
+		confirmingDelete = false;
 		history.replaceState(history.state, '', location.pathname);
 	}
 
@@ -337,7 +339,7 @@
 			</div>
 			<div class="mb-4 flex gap-2 overflow-x-auto pb-0.5">
 				<button type="button" onclick={() => toggleStatus('normal')}
-					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'normal' ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'normal' ? 'border-green-600 bg-green-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>In Stock</button>
 				<button type="button" onclick={() => toggleStatus('expiring')}
 					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'expiring' ? 'border-red-600 bg-red-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
@@ -395,10 +397,6 @@
 						{expiryLabel(item.expiryDate)}
 					</span>
 				{/if}
-				<form method="POST" action="?/delete" use:enhance>
-					<input type="hidden" name="id" value={item.id} />
-					<button type="submit" aria-label="Delete {item.name}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400"><X class="h-3.5 w-3.5" /></button>
-				</form>
 			</li>
 		{/each}
 	</ul>
@@ -407,6 +405,7 @@
 <!-- ── Add / Edit sheet ───────────────────────────────────────────────────── -->
 <BottomSheet open={!!sheetMode} onclose={closeSheet}>
 	<form
+		id="pantry-item-form"
 		method="POST"
 		action={sheetMode === 'add' ? '?/add' : '?/update'}
 		use:enhance={() => async ({ result, update }) => {
@@ -553,30 +552,61 @@
 			</p>
 		{/if}
 
-		<FormActions
-			isEditing={sheetMode === 'edit'}
-			saveLabel={sheetMode === 'edit' ? 'Save' : 'Add item'}
-			deleteAction="?/delete"
-			disabled={!nameInput.trim()}
-			oncancel={closeSheet}
-		/>
 	</form>
 
-	{#if sheetMode === 'edit' && editingItem?.status === 'active'}
-		<form
-			method="POST"
-			action="?/discard"
-			class="mt-2"
-			use:enhance={() => async ({ result, update }) => {
-				await update({ reset: false });
-				if (result.type === 'success') { closeSheet(); showToast('Tossed'); }
-			}}
-		>
-			<input type="hidden" name="id" value={editingItem.id} />
-			<button
-				type="submit"
-				class="w-full rounded-2xl border border-red-200 py-3 text-sm font-medium text-red-400 hover:bg-red-50 transition-colors"
-			>Toss</button>
-		</form>
+	<!-- Primary action row (outside main form to allow sibling Toss form) -->
+	<div class="mt-4 flex gap-2">
+		{#if sheetMode === 'add'}
+			<button type="button" onclick={closeSheet}
+				class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors">
+				Cancel
+			</button>
+		{/if}
+		{#if sheetMode === 'edit' && editingItem && editingItem.status === 'active'}
+			<form method="POST" action="?/discard"
+				use:enhance={() => async ({ result, update }) => {
+					await update({ reset: false });
+					if (result.type === 'success') { closeSheet(); showToast('Tossed'); }
+				}}
+			>
+				<input type="hidden" name="id" value={editingItem.id} />
+				<button type="submit" aria-label="Toss item"
+					class="flex h-12 w-12 items-center justify-center rounded-xl border border-red-200 text-red-400 hover:bg-red-50 transition-colors">
+					<Trash2 class="h-4 w-4" />
+				</button>
+			</form>
+		{/if}
+		<button type="submit" form="pantry-item-form" disabled={!nameInput.trim()}
+			class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40 transition-colors">
+			{sheetMode === 'edit' ? 'Save' : 'Add item'}
+		</button>
+	</div>
+
+	<!-- Danger zone: delete permanently (edit mode only, two-tap) -->
+	{#if sheetMode === 'edit' && editingItem}
+		{#if !confirmingDelete}
+			<button type="button" onclick={() => (confirmingDelete = true)}
+				class="mt-2 w-full py-2 text-xs text-stone-400 hover:text-red-400 transition-colors">
+				Delete permanently
+			</button>
+		{:else}
+			<div class="mt-2 flex gap-2">
+				<button type="button" onclick={() => (confirmingDelete = false)}
+					class="flex-1 rounded-xl border border-stone-300 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors">
+					Cancel
+				</button>
+				<form method="POST" action="?/delete" class="flex-1"
+					use:enhance={() => async ({ result, update }) => {
+						await update({ reset: false });
+						if (result.type === 'success') { closeSheet(); showToast('Item deleted'); }
+					}}
+				>
+					<input type="hidden" name="id" value={editingItem.id} />
+					<button type="submit" class="w-full rounded-xl bg-red-500 py-2.5 text-sm font-medium text-white hover:bg-red-600 transition-colors">
+						Yes, delete
+					</button>
+				</form>
+			</div>
+		{/if}
 	{/if}
 </BottomSheet>
