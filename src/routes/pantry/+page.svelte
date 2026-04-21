@@ -517,7 +517,8 @@
 						</select>
 					</div>
 				{:else}
-					<EstimatePicker bind:value={quantity} name="quantity" />
+					<EstimatePicker bind:value={quantity} />
+					<input type="hidden" name="quantity" value={quantity} />
 				{/if}
 			</div>
 

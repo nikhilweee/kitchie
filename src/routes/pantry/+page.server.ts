@@ -112,8 +112,6 @@ export const actions: Actions = {
 		const name = getString(data, 'name');
 		if (!id || !name) return fail(400, { addError: 'Invalid request.' });
 
-		const purchaseDateStr = getString(data, 'purchaseDate');
-		const purchaseDate = purchaseDateStr ? new Date(purchaseDateStr) : new Date();
 		const submittedCategoryId = getString(data, 'category');
 		const submittedQType = getString(data, 'quantityType') as 'count' | 'estimate';
 		const inferred = inferItemDefaults(name);
@@ -122,12 +120,19 @@ export const actions: Actions = {
 		const quantity = getNumber(data, 'quantity', 1);
 		const unit = quantityType === 'count' ? (getString(data, 'unit') || 'count') : null;
 
-		const expiryDateStr = getString(data, 'expiryDate');
-		const expiryDate = expiryDateStr ? new Date(expiryDateStr) : calcExpiry(cat.ttlDays, purchaseDate);
-		const expiryOverridden = !!expiryDateStr;
-
 		const status = quantity === 0 ? 'consumed' : 'active';
 		const finishedAt = quantity === 0 ? new Date() : null;
+
+		// When restoring a consumed/discarded item, check current status and reset dates
+		const [current] = await db.select({ status: pantryItems.status }).from(pantryItems)
+			.where(and(eq(pantryItems.id, id), eq(pantryItems.userId, userId)));
+		const isRestoring = current && current.status !== 'active' && status === 'active';
+
+		const purchaseDateStr = getString(data, 'purchaseDate');
+		const purchaseDate = isRestoring ? new Date() : (purchaseDateStr ? new Date(purchaseDateStr) : new Date());
+		const expiryDateStr = getString(data, 'expiryDate');
+		const expiryDate = isRestoring ? calcExpiry(cat.ttlDays, purchaseDate) : (expiryDateStr ? new Date(expiryDateStr) : calcExpiry(cat.ttlDays, purchaseDate));
+		const expiryOverridden = isRestoring ? false : !!expiryDateStr;
 
 		await db
 			.update(pantryItems)

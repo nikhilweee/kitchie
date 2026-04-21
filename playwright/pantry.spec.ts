@@ -371,6 +371,23 @@ test('PANT-014 + PANT-015: qty=0 auto-consumes; qty>0 restores to active', async
 	// Switch back to default view (no filter) → item reappears
 	await page.getByRole('button', { name: 'Out of Stock' }).click(); // deselect
 	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
+
+	// PANT-014 (estimate path): Milk infers as estimate type
+	const milkName = `Milk-${Date.now()}`;
+	await addPantryItem(page, milkName);
+
+	// Open edit → picker starts at Full (3 zones lit) → tap Low (zone 1) → tap Low again → empty (0)
+	await openEdit(page, milkName);
+	await dialog.getByRole('button', { name: 'Low' }).click(); // Full → Low
+	await dialog.getByRole('button', { name: 'Low' }).click(); // Low → empty (value=0)
+	await dialog.getByRole('button', { name: 'Save' }).click();
+	await expect(dialog).not.toBeVisible();
+	await expect(page.locator('li', { hasText: milkName })).toHaveCount(0);
+
+	// Out of Stock → estimate item appears
+	await page.getByRole('button', { name: 'Out of Stock' }).click();
+	await expect(page.locator('li', { hasText: milkName }).first()).toBeVisible();
+	await page.getByRole('button', { name: 'Out of Stock' }).click(); // deselect
 });
 
 test('PANT-016: Out of Stock filter chip shows consumed and discarded items with badge', async ({ page }) => {

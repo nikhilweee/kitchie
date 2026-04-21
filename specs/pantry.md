@@ -53,7 +53,7 @@
 **Test:** `playwright/pantry.spec.ts` — "PANT-013: sorting by expiry groups items into time buckets"
 
 ## PANT-014
-**Requirement:** Setting a pantry item's quantity to 0 automatically marks it as consumed; it disappears from the default (active) list.  
+**Requirement:** Setting a pantry item's quantity to 0 (count stepper or estimate picker set to empty) automatically marks it as consumed; it disappears from the default (active) list and appears under "Out of Stock".  
 **Test:** `playwright/pantry.spec.ts` — "PANT-014 + PANT-015: qty=0 auto-consumes; qty>0 restores to active"
 
 ## PANT-015
