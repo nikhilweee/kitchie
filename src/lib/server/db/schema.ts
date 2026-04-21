@@ -57,6 +57,9 @@ export const pantryItems = sqliteTable('pantry_items', {
 	purchaseDate: integer('purchase_date', { mode: 'timestamp' }).notNull(),
 	expiryDate: integer('expiry_date', { mode: 'timestamp' }).notNull(),
 	expiryOverridden: integer('expiry_overridden', { mode: 'boolean' }).notNull().default(false),
+	// Lifecycle tracking: active → consumed (qty hits 0) or discarded (user tosses)
+	status: text('status').$type<'active' | 'consumed' | 'discarded'>().notNull().default('active'),
+	finishedAt: integer('finished_at', { mode: 'timestamp' }),
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.$defaultFn(() => new Date())
 		.notNull()

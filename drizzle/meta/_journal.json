@@ -92,6 +92,13 @@
       "when": 1776786185568,
       "tag": "0012_lucky_expediter",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1776791881617,
+      "tag": "0013_optimal_madelyne_pryor",
+      "breakpoints": true
     }
   ]
 }

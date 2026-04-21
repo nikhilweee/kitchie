@@ -126,9 +126,27 @@ export const actions: Actions = {
 		const expiryDate = expiryDateStr ? new Date(expiryDateStr) : calcExpiry(cat.ttlDays, purchaseDate);
 		const expiryOverridden = !!expiryDateStr;
 
+		const status = quantity === 0 ? 'consumed' : 'active';
+		const finishedAt = quantity === 0 ? new Date() : null;
+
 		await db
 			.update(pantryItems)
-			.set({ name, category: cat.id, quantityType, quantity, unit, purchaseDate, expiryDate, expiryOverridden })
+			.set({ name, category: cat.id, quantityType, quantity, unit, purchaseDate, expiryDate, expiryOverridden, status, finishedAt })
+			.where(and(eq(pantryItems.id, id), eq(pantryItems.userId, userId)));
+
+		return { success: true };
+	},
+
+	discard: async ({ request, locals }) => {
+		const userId = locals.user!.id;
+		const data = await request.formData();
+		const id = getString(data, 'id');
+
+		if (!id) return fail(400, {});
+
+		await db
+			.update(pantryItems)
+			.set({ status: 'discarded', finishedAt: new Date() })
 			.where(and(eq(pantryItems.id, id), eq(pantryItems.userId, userId)));
 
 		return { success: true };

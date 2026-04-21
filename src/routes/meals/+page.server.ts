@@ -203,9 +203,14 @@ export const actions: Actions = {
 					.get();
 				if (item) {
 					used = Math.max(0, item.quantity - newQty);
+					const finalQty = Math.max(0, newQty);
 					await db
 						.update(pantryItems)
-						.set({ quantity: Math.max(0, newQty) })
+						.set({
+							quantity: finalQty,
+							status: finalQty === 0 ? 'consumed' : 'active',
+							finishedAt: finalQty === 0 ? new Date() : null
+						})
 						.where(eq(pantryItems.id, pantryItemId));
 				}
 			} else {
@@ -217,7 +222,12 @@ export const actions: Actions = {
 					.get();
 				if (existing) {
 					pantryItemId = existing.id;
-					await db.update(pantryItems).set({ quantity: Math.max(0, newQty) }).where(eq(pantryItems.id, pantryItemId));
+					const finalQty = Math.max(0, newQty);
+					await db.update(pantryItems).set({
+						quantity: finalQty,
+						status: finalQty === 0 ? 'consumed' : 'active',
+						finishedAt: finalQty === 0 ? new Date() : null
+					}).where(eq(pantryItems.id, pantryItemId));
 				} else {
 					const { category: categoryName, quantityType, unit } = inferItemDefaults(itemName);
 					const purchaseDate = new Date();
@@ -256,13 +266,12 @@ export const actions: Actions = {
 					.select()
 					.from(mealIngredients)
 					.where(eq(mealIngredients.mealEntryId, mealId));
-				const [recipe] = await db.insert(recipes).values({ userId, name: meal.name, mealType: meal.mealType }).returning();
+				const [recipe] = await db.insert(recipes).values({ userId, name: meal.name }).returning();
 				for (const ing of logged) {
 					await db.insert(recipeItems).values({
 						recipeId: recipe.id,
 						pantryItemId: ing.pantryItemId,
-						itemName: ing.itemName,
-						defaultQuantity: ing.quantityUsed
+						itemName: ing.itemName
 					});
 				}
 				await db.update(mealEntries).set({ recipeId: recipe.id }).where(eq(mealEntries.id, mealId));
@@ -285,8 +294,7 @@ export const actions: Actions = {
 						logged.map((ing) => ({
 							recipeId,
 							pantryItemId: ing.pantryItemId,
-							itemName: ing.itemName,
-							defaultQuantity: 1
+							itemName: ing.itemName
 						}))
 					);
 				}

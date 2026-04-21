@@ -16,6 +16,7 @@
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
 	import { X, ListFilter, ShoppingBasket, Search } from 'lucide-svelte';
+	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 	import type { QuantityType } from '$lib/server/db/schema';
 
 	let { data }: { data: PageData } = $props();
@@ -160,10 +161,10 @@
 	}
 
 	// ── Search + filter ───────────────────────────────────────────────────────
-	type StatusFilter = 'expiring' | 'low' | 'normal';
+	type StatusFilter = 'expiring' | 'low' | 'normal' | 'done';
 	let search = $state('');
 	let activeStatus = $state<StatusFilter | null>(null);
-	let activeCategories = $state(new Set<string>());
+	let activeCategories = $state(new SvelteSet<string>());
 	let filterOpen = $state(false);
 	type SortKey = 'name-asc' | 'name-desc' | 'category-asc' | 'category-desc' | 'expiry-asc' | 'expiry-desc';
 	let sort = $state<SortKey | null>(null);
@@ -173,7 +174,7 @@
 	}
 
 	function toggleCategory(id: string) {
-		const next = new Set(activeCategories);
+		const next = new SvelteSet(activeCategories);
 		if (next.has(id)) next.delete(id); else next.add(id);
 		activeCategories = next;
 	}
@@ -219,7 +220,7 @@
 		if (!sort) return [{ label: '', items }];
 
 		if (sort === 'name-asc' || sort === 'name-desc') {
-			const map = new Map<string, Item[]>();
+			const map = new SvelteMap<string, Item[]>();
 			for (const item of items) {
 				const letter = item.name[0]?.toUpperCase() ?? '#';
 				if (!map.has(letter)) map.set(letter, []);
@@ -229,7 +230,7 @@
 		}
 
 		if (sort === 'category-asc' || sort === 'category-desc') {
-			const map = new Map<string, Item[]>();
+			const map = new SvelteMap<string, Item[]>();
 			for (const item of items) {
 				const label = categoryLabel(item.category);
 				if (!map.has(label)) map.set(label, []);
@@ -247,7 +248,7 @@
 			if (days <= 14) return 'Next 14 days';
 			return 'More than 14 days';
 		};
-		const map = new Map<string, Item[]>(BUCKET_ORDER.map((b) => [b, []]));
+		const map = new SvelteMap<string, Item[]>(BUCKET_ORDER.map((b) => [b, []]));
 		for (const item of items) map.get(bucketFor(item))!.push(item);
 		let groups = [...map.entries()]
 			.filter(([, items]) => items.length > 0)
@@ -259,7 +260,14 @@
 	const filteredItems = $derived(
 		sortItems(data.items.filter((i) => {
 			if (search.trim() && !i.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
-			if (activeStatus !== null && itemStatus(i) !== activeStatus) return false;
+			if (activeStatus === 'done') {
+				// Out of Stock: show non-active items only
+				if (i.status === 'active') return false;
+			} else {
+				// All other views: active items only
+				if (i.status !== 'active') return false;
+				if (activeStatus !== null && itemStatus(i) !== activeStatus) return false;
+			}
 			if (activeCategories.size > 0 && !activeCategories.has(i.category)) return false;
 			return true;
 		}))
@@ -322,12 +330,12 @@
 							{/each}
 						{/if}
 						<div class="border-t border-stone-100 p-2">
-							<button type="button" onclick={() => { sort = null; activeCategories = new Set(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
+							<button type="button" onclick={() => { sort = null; activeCategories = new SvelteSet(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
 						</div>
 					</div>
 				{/if}
 			</div>
-			<div class="mb-4 flex gap-2">
+			<div class="mb-4 flex gap-2 overflow-x-auto pb-0.5">
 				<button type="button" onclick={() => toggleStatus('normal')}
 					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'normal' ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>In Stock</button>
@@ -337,6 +345,9 @@
 				<button type="button" onclick={() => toggleStatus('low')}
 					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'low' ? 'border-yellow-500 bg-yellow-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>Running Low</button>
+				<button type="button" onclick={() => toggleStatus('done')}
+					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'done' ? 'border-stone-500 bg-stone-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+				>Out of Stock</button>
 			</div>
 			{#if filteredItems.length === 0}
 				<EmptyState icon={Search} heading="No matches" detail="Try a different search or filter." />
@@ -375,9 +386,15 @@
 						</span>
 					{/if}
 				</div>
-				<span class="w-8 shrink-0 text-right text-xs font-medium {expiryColor(item.expiryDate)}">
-					{expiryLabel(item.expiryDate)}
-				</span>
+				{#if item.status !== 'active'}
+					<span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {item.status === 'consumed' ? 'bg-stone-100 text-stone-400' : 'bg-red-50 text-red-400'}">
+						{item.status}
+					</span>
+				{:else}
+					<span class="w-8 shrink-0 text-right text-xs font-medium {expiryColor(item.expiryDate)}">
+						{expiryLabel(item.expiryDate)}
+					</span>
+				{/if}
 				<form method="POST" action="?/delete" use:enhance>
 					<input type="hidden" name="id" value={item.id} />
 					<button type="submit" aria-label="Delete {item.name}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400"><X class="h-3.5 w-3.5" /></button>
@@ -530,6 +547,12 @@
 			</div>
 		</div>
 
+		{#if sheetMode === 'edit' && editingItem && editingItem.status !== 'active'}
+			<p class="mt-3 rounded-xl bg-stone-100 px-4 py-2.5 text-center text-xs text-stone-500">
+				Set a quantity and save to restore this item to your pantry.
+			</p>
+		{/if}
+
 		<FormActions
 			isEditing={sheetMode === 'edit'}
 			saveLabel={sheetMode === 'edit' ? 'Save' : 'Add item'}
@@ -538,4 +561,22 @@
 			oncancel={closeSheet}
 		/>
 	</form>
+
+	{#if sheetMode === 'edit' && editingItem?.status === 'active'}
+		<form
+			method="POST"
+			action="?/discard"
+			class="mt-2"
+			use:enhance={() => async ({ result, update }) => {
+				await update({ reset: false });
+				if (result.type === 'success') { closeSheet(); showToast('Tossed'); }
+			}}
+		>
+			<input type="hidden" name="id" value={editingItem.id} />
+			<button
+				type="submit"
+				class="w-full rounded-2xl border border-red-200 py-3 text-sm font-medium text-red-400 hover:bg-red-50 transition-colors"
+			>Toss</button>
+		</form>
+	{/if}
 </BottomSheet>
