@@ -13,7 +13,7 @@
 	import type { MealType } from '$lib/server/db/schema';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
-	import { X, Utensils } from 'lucide-svelte';
+	import { X, Utensils, ChefHat, ChevronRight } from 'lucide-svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 
 	let { data }: { data: PageData } = $props();
@@ -360,8 +360,12 @@
 		</div>
 
 		{#if sheetMode === 'edit' && editingEntry?.recipeId}
-			<a href="/recipes?edit={editingEntry.recipeId}" class="mt-3 flex items-center gap-1 text-sm font-medium text-orange-500 hover:underline">
-				Edit recipe →
+			<a href="/recipes?edit={editingEntry.recipeId}"
+				class="mt-3 flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3 transition-colors hover:bg-stone-50">
+				<ChefHat class="h-4 w-4 shrink-0 text-stone-400" />
+				<span class="flex-1 text-sm font-medium text-stone-700">Recipe</span>
+				<span class="max-w-[40%] truncate text-sm text-stone-400">{editingEntry.name}</span>
+				<ChevronRight class="h-4 w-4 shrink-0 text-stone-300" />
 			</a>
 		{/if}
 
