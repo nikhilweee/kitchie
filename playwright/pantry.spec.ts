@@ -301,7 +301,7 @@ test('PANT-011: sorting by name groups items by first letter', async ({ page }) 
 	await addPantryItem(page, `Banana-${ts}`);
 
 	await page.getByRole('button', { name: 'Filters' }).click();
-	await page.locator('label', { hasText: 'Name A → Z' }).click();
+	await page.getByRole('button', { name: 'Name' }).click();
 	await page.keyboard.press('Escape');
 
 	await expect(page.locator('h2', { hasText: 'A' }).first()).toBeVisible();
@@ -316,7 +316,7 @@ test('PANT-012: sorting by category groups items by category name', async ({ pag
 	await addPantryItem(page, `Apple-${ts}`);  // infers Produce
 
 	await page.getByRole('button', { name: 'Filters' }).click();
-	await page.locator('label', { hasText: 'Category A → Z' }).click();
+	await page.getByRole('button', { name: 'Category' }).click();
 	await page.keyboard.press('Escape');
 
 	await expect(page.locator('h2', { hasText: 'Dairy' }).first()).toBeVisible();
@@ -328,10 +328,7 @@ test('PANT-013: sorting by expiry groups items into time buckets', async ({ page
 	await page.goto('/pantry');
 	await addPantryItem(page, `ExpiryItem-${Date.now()}`);
 
-	await page.getByRole('button', { name: 'Filters' }).click();
-	await page.locator('label', { hasText: 'Expiry soonest' }).click();
-	await page.keyboard.press('Escape');
-
+	// Expiry is the default sort — no need to switch
 	const buckets = ['Expired', 'Next 7 days', 'Next 14 days', 'More than 14 days'];
 	const visible = await Promise.all(
 		buckets.map((b) => page.locator('h2', { hasText: b }).isVisible())

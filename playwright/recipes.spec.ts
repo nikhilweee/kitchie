@@ -293,9 +293,9 @@ test('RECP-011: recipe prep time saved and sort by prep time works', async ({ pa
 
 	await addRecipe(page, longRecipe, { prepTime: 'Long' });
 
-	// Sort: prep time quick first → quickRecipe appears before longRecipe
+	// Sort: prep time asc (quick first) → quickRecipe appears before longRecipe
 	await page.getByRole('button', { name: 'Filters' }).click();
-	await page.locator('label', { hasText: 'Prep time (quick first)' }).click();
+	await page.getByRole('button', { name: 'Prep time' }).click();
 	await page.keyboard.press('Escape');
 
 	const allItems = page.locator('ul > li');

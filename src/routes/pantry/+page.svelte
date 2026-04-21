@@ -168,8 +168,23 @@
 	let activeStatus = $state<StatusFilter | null>(null);
 	let activeCategories = $state(new SvelteSet<string>());
 	let filterOpen = $state(false);
-	type SortKey = 'name-asc' | 'name-desc' | 'category-asc' | 'category-desc' | 'expiry-asc' | 'expiry-desc';
-	let sort = $state<SortKey | null>(null);
+	type SortField = 'name' | 'category' | 'expiry';
+	type SortDir = 'asc' | 'desc';
+	type SortKey = `${SortField}-${SortDir}`;
+	let sortBy = $state<SortField>('expiry');
+	let sortDir = $state<SortDir>('asc');
+	const sort = $derived<SortKey>(`${sortBy}-${sortDir}`);
+
+	function toggleSort(field: SortField) {
+		if (sortBy === field) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+		else { sortBy = field; sortDir = 'asc'; }
+	}
+
+	const SORT_FIELDS: { field: SortField; label: string }[] = [
+		{ field: 'name', label: 'Name' },
+		{ field: 'category', label: 'Category' },
+		{ field: 'expiry', label: 'Expiry' },
+	];
 
 	function toggleStatus(s: StatusFilter) {
 		activeStatus = activeStatus === s ? null : s;
@@ -189,16 +204,8 @@
 		return 'normal';
 	}
 
-	const activeFilterCount = $derived(activeCategories.size + (sort !== null ? 1 : 0));
+	const activeFilterCount = $derived(activeCategories.size);
 
-	const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-		{ key: 'name-asc', label: 'Name A → Z' },
-		{ key: 'name-desc', label: 'Name Z → A' },
-		{ key: 'category-asc', label: 'Category A → Z' },
-		{ key: 'category-desc', label: 'Category Z → A' },
-		{ key: 'expiry-asc', label: 'Expiry soonest' },
-		{ key: 'expiry-desc', label: 'Expiry latest' },
-	];
 
 	function sortItems(items: Item[]): Item[] {
 		if (!sort) return items;
@@ -314,13 +321,16 @@
 					{/if}
 				</button>
 				{#if filterOpen}
-					<div class="absolute top-full right-0 z-20 mt-1 w-56 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+					<div class="absolute top-full right-0 z-20 mt-1 w-64 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
 						<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Sort</div>
-						{#each SORT_OPTIONS as opt (opt.key)}
-							<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
-								<input type="radio" name="pantry-sort" value={opt.key} checked={sort === opt.key} onchange={() => (sort = opt.key)} class="accent-orange-500" />
-								<span class="text-sm text-stone-700">{opt.label}</span>
-							</label>
+						{#each SORT_FIELDS as f (f.field)}
+							<button type="button" onclick={() => toggleSort(f.field)}
+								class="flex w-full items-center gap-2 px-3 py-2 hover:bg-stone-50">
+								<span class="flex h-4 w-4 shrink-0 items-center justify-center text-xs {sortBy === f.field ? 'text-orange-500' : 'text-stone-300'}">
+									{sortBy === f.field ? (sortDir === 'asc' ? '↑' : '↓') : '•'}
+								</span>
+								<span class="text-sm {sortBy === f.field ? 'font-medium text-stone-900' : 'text-stone-700'}">{f.label}</span>
+							</button>
 						{/each}
 						{#if presentCategories.length > 0}
 							<div class="border-t border-stone-100 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Category</div>
@@ -332,7 +342,7 @@
 							{/each}
 						{/if}
 						<div class="border-t border-stone-100 p-2">
-							<button type="button" onclick={() => { sort = null; activeCategories = new SvelteSet(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
+							<button type="button" onclick={() => { sortBy = 'expiry'; sortDir = 'asc'; activeCategories = new SvelteSet(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
 						</div>
 					</div>
 				{/if}

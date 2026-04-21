@@ -40,17 +40,25 @@
 		return data.cuisines.find((c) => c.id === id)?.name ?? '';
 	}
 
-	type SortKey = 'name-asc' | 'name-desc' | 'prep-asc' | 'prep-desc';
-	let sort = $state<SortKey | null>(null);
+	type SortField = 'name' | 'prep' | 'recent';
+	type SortDir = 'asc' | 'desc';
+	type SortKey = `${SortField}-${SortDir}`;
+	let sortBy = $state<SortField>('recent');
+	let sortDir = $state<SortDir>('desc');
+	const sort = $derived<SortKey>(`${sortBy}-${sortDir}`);
 
-	const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-		{ key: 'name-asc', label: 'Name A → Z' },
-		{ key: 'name-desc', label: 'Name Z → A' },
-		{ key: 'prep-asc', label: 'Prep time (quick first)' },
-		{ key: 'prep-desc', label: 'Prep time (long first)' },
+	function toggleSort(field: SortField) {
+		if (sortBy === field) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+		else { sortBy = field; sortDir = field === 'recent' ? 'desc' : 'asc'; }
+	}
+
+	const SORT_FIELDS: { field: SortField; label: string }[] = [
+		{ field: 'name', label: 'Name' },
+		{ field: 'prep', label: 'Prep time' },
+		{ field: 'recent', label: 'Recent' },
 	];
 
-	const activeFilterCount = $derived(activeCuisines.size + (sort !== null ? 1 : 0));
+	const activeFilterCount = $derived(activeCuisines.size);
 	const anyRecipes = $derived(data.recipes.length > 0);
 
 	const filteredBase = $derived(
@@ -63,9 +71,11 @@
 	);
 
 	const filteredRecipes = $derived(
-		sort === null ? filteredBase : [...filteredBase].sort((a, b) => {
+		[...filteredBase].sort((a, b) => {
 			if (sort === 'name-asc') return a.name.localeCompare(b.name);
 			if (sort === 'name-desc') return b.name.localeCompare(a.name);
+			if (sort === 'recent-asc') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+			if (sort === 'recent-desc') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 			const pa = a.prepTime ?? 999, pb = b.prepTime ?? 999;
 			return sort === 'prep-asc' ? pa - pb : pb - pa;
 		})
@@ -210,11 +220,14 @@
 				{#if filterOpen}
 					<div class="absolute top-full right-0 z-20 mt-1 w-64 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
 						<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Sort</div>
-						{#each SORT_OPTIONS as opt (opt.key)}
-							<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
-								<input type="radio" name="recipe-sort" value={opt.key} checked={sort === opt.key} onchange={() => (sort = opt.key)} class="accent-orange-500" />
-								<span class="text-sm text-stone-700">{opt.label}</span>
-							</label>
+						{#each SORT_FIELDS as f (f.field)}
+							<button type="button" onclick={() => toggleSort(f.field)}
+								class="flex w-full items-center gap-2 px-3 py-2 hover:bg-stone-50">
+								<span class="flex h-4 w-4 shrink-0 items-center justify-center text-xs {sortBy === f.field ? 'text-orange-500' : 'text-stone-300'}">
+									{sortBy === f.field ? (sortDir === 'asc' ? '↑' : '↓') : '•'}
+								</span>
+								<span class="text-sm {sortBy === f.field ? 'font-medium text-stone-900' : 'text-stone-700'}">{f.label}</span>
+							</button>
 						{/each}
 						<div class="border-t border-stone-100 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Cuisine</div>
 						<div class="max-h-48 overflow-y-auto">
@@ -226,7 +239,7 @@
 							{/each}
 						</div>
 						<div class="border-t border-stone-100 p-2">
-							<button type="button" onclick={() => { sort = null; activeCuisines = new Set(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
+							<button type="button" onclick={() => { sortBy = 'recent'; sortDir = 'desc'; activeCuisines = new Set(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
 						</div>
 					</div>
 				{/if}
