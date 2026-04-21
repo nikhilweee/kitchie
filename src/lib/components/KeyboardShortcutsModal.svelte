@@ -4,7 +4,7 @@
 	const shortcuts = [
 		{ label: 'Save / Confirm', keys: ['⌘', '↵'] },
 		{ label: 'Trash / Delete', keys: ['⌘', '⌫'] },
-		{ label: 'Close sheet',    keys: ['Esc'] },
+		{ label: 'Close',          keys: ['Esc'] },
 		{ label: 'Keyboard shortcuts', keys: ['?'] },
 	];
 </script>

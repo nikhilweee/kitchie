@@ -17,8 +17,8 @@
 **Test:** `playwright/pantry.spec.ts` — "PANT-004: edit an existing pantry item"
 
 ## PANT-005
-**Requirement:** A user can delete a pantry item.  
-**Test:** `playwright/pantry.spec.ts` — "PANT-005: delete a pantry item"
+**Requirement:** A user can permanently delete a pantry item via the danger zone in the edit sheet (two-tap confirmation required).  
+**Test:** `playwright/pantry.spec.ts` — "PANT-005: delete a pantry item permanently via danger zone"
 
 ## PANT-006
 **Requirement:** The pantry list can be filtered by a text search on item name.  
@@ -51,3 +51,27 @@
 ## PANT-013
 **Requirement:** Sorting the pantry by expiry groups items into time-bucket headers: Expired, Next 7 days, Next 14 days, More than 14 days.  
 **Test:** `playwright/pantry.spec.ts` — "PANT-013: sorting by expiry groups items into time buckets"
+
+## PANT-014
+**Requirement:** Setting a pantry item's quantity to 0 automatically marks it as consumed; it disappears from the default (active) list.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-014 + PANT-015: qty=0 auto-consumes; qty>0 restores to active"
+
+## PANT-015
+**Requirement:** Setting a consumed pantry item's quantity to a value greater than 0 restores it to active status.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-014 + PANT-015: qty=0 auto-consumes; qty>0 restores to active"
+
+## PANT-016
+**Requirement:** The "Out of Stock" filter chip shows only consumed and discarded items, each with a status badge.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-016: Out of Stock filter chip shows consumed and discarded items with badge"
+
+## PANT-017
+**Requirement:** The Trash button in the edit sheet discards an active pantry item (soft delete; preserved for history).  
+**Test:** `playwright/pantry.spec.ts` — "PANT-017: Trash button discards an active item"
+
+## PANT-018
+**Requirement:** The "Delete permanently" action requires two taps: a first tap reveals a confirmation row; a second tap on "Yes, delete" performs the deletion. Cancelling after the first tap reverts to the normal state.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-018: Delete permanently requires two-tap confirmation"
+
+## PANT-019
+**Requirement:** Navigating to `/pantry?edit=<id>` opens the edit sheet for that pantry item directly.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-019: ?edit=<id> deep-link opens pantry item edit sheet"

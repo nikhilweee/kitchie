@@ -3,7 +3,8 @@ export function getString(d: FormData, key: string): string {
 }
 
 export function getNumber(d: FormData, key: string, fallback = 0): number {
-	return parseFloat(String(d.get(key) ?? '')) || fallback;
+	const v = parseFloat(String(d.get(key) ?? ''));
+	return isNaN(v) ? fallback : v;
 }
 
 export function getStrings(d: FormData, key: string): string[] {

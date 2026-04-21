@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013
+// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013, PANT-014, PANT-015, PANT-016, PANT-017, PANT-018, PANT-019
 
 async function addPantryItem(page: import('@playwright/test').Page, name: string) {
 	await page.click('button:has-text("Add to Pantry")');
@@ -10,6 +10,11 @@ async function addPantryItem(page: import('@playwright/test').Page, name: string
 	await dialog.getByPlaceholder('What did you buy?').fill(name);
 	await dialog.getByRole('button', { name: 'Add item' }).click();
 	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
+}
+
+async function openEdit(page: import('@playwright/test').Page, name: string) {
+	await page.locator('li', { hasText: name }).first().locator('button').first().click();
+	await page.locator('[role="dialog"]').waitFor();
 }
 
 test('PANT-001: add a pantry item and verify it appears in the list', async ({ page }) => {
@@ -77,14 +82,16 @@ test('PANT-004: edit an existing pantry item', async ({ page }) => {
 	await expect(page.locator('li', { hasText: original })).toHaveCount(0);
 });
 
-test('PANT-005: delete a pantry item', async ({ page }) => {
+test('PANT-005: delete a pantry item permanently via danger zone', async ({ page }) => {
 	await login(page);
 	const name = `PantDel-${Date.now()}`;
 	await page.goto('/pantry');
 	await addPantryItem(page, name);
 
-	await page.locator('li', { hasText: name }).first()
-		.locator(`button[aria-label="Delete ${name}"]`).click();
+	await openEdit(page, name);
+	const dialog = page.locator('[role="dialog"]');
+	await dialog.getByRole('button', { name: 'Delete permanently' }).click();
+	await dialog.getByRole('button', { name: 'Yes, delete' }).click();
 
 	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
 });
@@ -330,4 +337,118 @@ test('PANT-013: sorting by expiry groups items into time buckets', async ({ page
 		buckets.map((b) => page.locator('h2', { hasText: b }).isVisible())
 	);
 	expect(visible.some(Boolean)).toBe(true);
+});
+
+test('PANT-014 + PANT-015: qty=0 auto-consumes; qty>0 restores to active', async ({ page }) => {
+	await login(page);
+	const name = `Apple-${Date.now()}`; // count type
+	await page.goto('/pantry');
+
+	// Add with qty 1
+	await page.click('button:has-text("Add to Pantry")');
+	const addDialog = page.locator('[role="dialog"]');
+	await addDialog.waitFor();
+	await addDialog.getByPlaceholder('What did you buy?').fill(name);
+	await addDialog.getByRole('button', { name: 'Add item' }).click();
+	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
+
+	// PANT-014: set quantity to 0 via stepper → item disappears from active list
+	await openEdit(page, name);
+	const dialog = page.locator('[role="dialog"]');
+	await dialog.locator('button:has-text("−")').click(); // 1 → 0
+	await dialog.getByRole('button', { name: 'Save' }).click();
+	await expect(dialog).not.toBeVisible();
+	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
+
+	// PANT-015: open Out of Stock → item visible → restore qty=1 → back in active list
+	await page.getByRole('button', { name: 'Out of Stock' }).click();
+	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
+
+	await openEdit(page, name);
+	await dialog.locator('input[name="quantity"]').fill('1');
+	await dialog.getByRole('button', { name: 'Save' }).click();
+
+	// Switch back to default view (no filter) → item reappears
+	await page.getByRole('button', { name: 'Out of Stock' }).click(); // deselect
+	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
+});
+
+test('PANT-016: Out of Stock filter chip shows consumed and discarded items with badge', async ({ page }) => {
+	await login(page);
+	const name = `PantOOS-${Date.now()}`;
+	await page.goto('/pantry');
+	await addPantryItem(page, name);
+
+	// Trash the item (discard)
+	await openEdit(page, name);
+	await page.locator('[role="dialog"]').getByRole('button', { name: 'Trash' }).click();
+
+	// Default view: item gone
+	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
+
+	// Out of Stock filter: item visible with discarded badge
+	await page.getByRole('button', { name: 'Out of Stock' }).click();
+	const row = page.locator('li', { hasText: name }).first();
+	await expect(row).toBeVisible();
+	await expect(row.getByText('discarded', { exact: true })).toBeVisible();
+});
+
+test('PANT-017: Trash button discards an active item', async ({ page }) => {
+	await login(page);
+	const name = `PantTrash-${Date.now()}`;
+	await page.goto('/pantry');
+	await addPantryItem(page, name);
+
+	await openEdit(page, name);
+	await page.locator('[role="dialog"]').getByRole('button', { name: 'Trash' }).click();
+
+	// Toast confirms and item is gone from active list
+	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
+});
+
+test('PANT-018: Delete permanently requires two-tap confirmation', async ({ page }) => {
+	await login(page);
+	const name = `PantConfDel-${Date.now()}`;
+	await page.goto('/pantry');
+	await addPantryItem(page, name);
+
+	await openEdit(page, name);
+	const dialog = page.locator('[role="dialog"]');
+
+	// First tap: confirmation row appears, item NOT yet deleted
+	await dialog.getByRole('button', { name: 'Delete permanently' }).click();
+	await expect(dialog.getByRole('button', { name: 'Yes, delete' })).toBeVisible();
+	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
+
+	// Cancel reverts
+	await dialog.getByRole('button', { name: 'Cancel' }).last().click();
+	await expect(dialog.getByRole('button', { name: 'Yes, delete' })).toHaveCount(0);
+
+	// Second attempt: confirm → deleted
+	await dialog.getByRole('button', { name: 'Delete permanently' }).click();
+	await dialog.getByRole('button', { name: 'Yes, delete' }).click();
+	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
+});
+
+test('PANT-019: ?edit=<id> deep-link opens pantry item edit sheet', async ({ page }) => {
+	await login(page);
+	const name = `PantLink-${Date.now()}`;
+	await page.goto('/pantry');
+	await addPantryItem(page, name);
+
+	// Open edit sheet via click — URL updates to ?edit=<id>
+	await openEdit(page, name);
+	const url = page.url();
+	const editId = new URL(url).searchParams.get('edit');
+	expect(editId).toBeTruthy();
+
+	// Close sheet, navigate away, then deep-link back
+	await page.keyboard.press('Escape');
+	await page.goto('/meals');
+	await page.goto(`/pantry?edit=${editId}`);
+
+	// Edit sheet should open for that item
+	const dialog = page.locator('[role="dialog"]');
+	await dialog.waitFor();
+	await expect(dialog.getByPlaceholder('What did you buy?')).toHaveValue(name);
 });

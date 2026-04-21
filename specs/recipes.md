@@ -36,6 +36,10 @@
 **Requirement:** Each recipe has an optional cuisine field. The recipe list can be filtered by cuisine.  
 **Test:** `playwright/recipes.spec.ts` — "RECP-009: recipe cuisine saved and filtered"
 
+## RECP-010
+**Requirement:** Navigating to `/recipes?edit=<id>` opens the edit sheet for that recipe directly.  
+**Test:** `playwright/recipes.spec.ts` — "RECP-010: ?edit=<id> deep-link opens recipe edit sheet"
+
 ## RECP-011
 **Requirement:** Each recipe has an optional prep time (1–4: Quick, Easy, Medium, Long). The recipe list can be sorted by prep time (quick first or long first) and by name (A→Z or Z→A).  
 **Test:** `playwright/recipes.spec.ts` — "RECP-011: recipe prep time saved and sort by prep time works"

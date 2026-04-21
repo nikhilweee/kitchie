@@ -27,3 +27,11 @@
 ## MEAL-007
 **Requirement:** The meal log is displayed grouped by day, ordered most recent first.  
 **Test:** `playwright/meals.spec.ts` — "MEAL-007: meals are displayed grouped by day"
+
+## MEAL-008
+**Requirement:** Navigating to `/meals?edit=<id>` opens the edit sheet for that meal directly.  
+**Test:** `playwright/meals.spec.ts` — "MEAL-008: ?edit=<id> deep-link opens meal edit sheet"
+
+## MEAL-009
+**Requirement:** When a meal has an associated recipe, the meal edit sheet displays a tappable recipe link that navigates to `/recipes?edit=<recipeId>`.  
+**Test:** `playwright/meals.spec.ts` — "MEAL-009: meal edit sheet shows recipe link when recipeId is set"

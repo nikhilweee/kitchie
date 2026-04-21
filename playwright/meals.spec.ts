@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Covers: MEAL-001, MEAL-002, MEAL-003, MEAL-004, MEAL-005, MEAL-006, MEAL-007
+// Covers: MEAL-001, MEAL-002, MEAL-003, MEAL-004, MEAL-005, MEAL-006, MEAL-007, MEAL-008, MEAL-009
 
 async function addMeal(page: import('@playwright/test').Page, name: string) {
 	await page.click('button:has-text("Add Meal")');
@@ -104,4 +104,72 @@ test('MEAL-007: meals are displayed grouped by day', async ({ page }) => {
 	await addMeal(page, name);
 	// A day heading (e.g., "Today") should be visible
 	await expect(page.locator('h2', { hasText: 'Today' })).toBeVisible();
+});
+
+test('MEAL-008: ?edit=<id> deep-link opens meal edit sheet', async ({ page }) => {
+	await login(page);
+	const name = `MealLink-${Date.now()}`;
+	await page.goto('/meals');
+	await addMeal(page, name);
+
+	// Open edit sheet via click — URL updates to ?edit=<id>
+	await page.locator('li', { hasText: name }).first().locator('button').first().click();
+	await page.locator('[role="dialog"]').waitFor();
+	const url = page.url();
+	const editId = new URL(url).searchParams.get('edit');
+	expect(editId).toBeTruthy();
+
+	// Navigate away then deep-link back
+	await page.keyboard.press('Escape');
+	await page.goto('/pantry');
+	await page.goto(`/meals?edit=${editId}`);
+
+	const dialog = page.locator('[role="dialog"]');
+	await dialog.waitFor();
+	await expect(dialog.getByPlaceholder('What did you eat?')).toHaveValue(name);
+});
+
+test('MEAL-009: meal edit sheet shows recipe link when recipeId is set', async ({ page }) => {
+	await login(page);
+	const ts = Date.now();
+	const itemName = `RecpItem-${ts}`;
+	const mealName = `RecpMeal-${ts}`;
+
+	// Add pantry item
+	await page.goto('/pantry');
+	await page.click('button:has-text("Add to Pantry")');
+	const pantryDialog = page.locator('[role="dialog"]');
+	await pantryDialog.waitFor();
+	await pantryDialog.getByPlaceholder('What did you buy?').fill(itemName);
+	await pantryDialog.getByRole('button', { name: 'Add item' }).click();
+
+	// Log meal + pantry update + save recipe
+	await page.goto('/meals');
+	await page.click('button:has-text("Add Meal")');
+	const mealDialog = page.locator('[role="dialog"]');
+	await mealDialog.waitFor();
+	await mealDialog.getByPlaceholder('What did you eat?').fill(mealName);
+	await mealDialog.locator('input[name="updatePantry"]').setChecked(true, { force: true });
+	await mealDialog.getByRole('button', { name: 'Log meal' }).click();
+
+	await page.waitForURL(/\?update=/);
+	const flowDialog = page.locator('[role="dialog"]');
+	await flowDialog.getByRole('heading', { name: 'Update pantry' }).waitFor();
+	await flowDialog.getByPlaceholder('Search or type an ingredient…').fill(itemName);
+	await flowDialog.locator('ul button', { hasText: itemName }).click();
+	await flowDialog.getByRole('button', { name: 'Next' }).click();
+	await flowDialog.getByRole('button', { name: 'Save recipe' }).click();
+	await page.waitForURL('/meals');
+
+	// Open the meal edit sheet — recipe link should be visible
+	await page.locator('li', { hasText: mealName }).first().locator('button').first().click();
+	const editDialog = page.locator('[role="dialog"]');
+	await editDialog.waitFor();
+	const recipeLink = editDialog.locator('a', { hasText: 'Recipe' });
+	await expect(recipeLink).toBeVisible();
+
+	// Clicking navigates to /recipes?edit=<recipeId>
+	await recipeLink.click();
+	await expect(page).toHaveURL(/\/recipes\?edit=/);
+	await page.locator('[role="dialog"]').waitFor();
 });

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Covers: RECP-001, RECP-002, RECP-003, RECP-004, RECP-005, RECP-006, RECP-007, RECP-008, RECP-009, RECP-011
+// Covers: RECP-001, RECP-002, RECP-003, RECP-004, RECP-005, RECP-006, RECP-007, RECP-008, RECP-009, RECP-010, RECP-011
 
 // Add a recipe through the manual sheet on /recipes.
 // If ingredientName is given, it must already exist as a pantry item.
@@ -304,4 +304,27 @@ test('RECP-011: recipe prep time saved and sort by prep time works', async ({ pa
 	const longIdx = await allItems.evaluateAll((els, long) =>
 		els.findIndex((el) => el.textContent?.includes(long)), longRecipe);
 	expect(quickIdx).toBeLessThan(longIdx);
+});
+
+test('RECP-010: ?edit=<id> deep-link opens recipe edit sheet', async ({ page }) => {
+	await login(page);
+	const name = `RecpLink-${Date.now()}`;
+	await page.goto('/recipes');
+	await addRecipe(page, name);
+
+	// Open edit sheet via click — URL updates to ?edit=<id>
+	await page.locator('li', { hasText: name }).first().locator('button').first().click();
+	await page.locator('[role="dialog"]').waitFor();
+	const url = page.url();
+	const editId = new URL(url).searchParams.get('edit');
+	expect(editId).toBeTruthy();
+
+	// Navigate away then deep-link back
+	await page.keyboard.press('Escape');
+	await page.goto('/meals');
+	await page.goto(`/recipes?edit=${editId}`);
+
+	const dialog = page.locator('[role="dialog"]');
+	await dialog.waitFor();
+	await expect(dialog.getByPlaceholder('Recipe name')).toHaveValue(name);
 });
