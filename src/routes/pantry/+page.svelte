@@ -153,7 +153,7 @@
 	let activeStatus = $state<StatusFilter | null>(null);
 	let activeCategories = $state(new Set<string>());
 	let filterOpen = $state(false);
-	type SortKey = 'name-asc' | 'name-desc' | 'expiry-asc' | 'expiry-desc';
+	type SortKey = 'name-asc' | 'name-desc' | 'category-asc' | 'category-desc' | 'expiry-asc' | 'expiry-desc';
 	let sort = $state<SortKey | null>(null);
 
 	function toggleStatus(s: StatusFilter) {
@@ -179,6 +179,8 @@
 	const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 		{ key: 'name-asc', label: 'Name A → Z' },
 		{ key: 'name-desc', label: 'Name Z → A' },
+		{ key: 'category-asc', label: 'Category A → Z' },
+		{ key: 'category-desc', label: 'Category Z → A' },
 		{ key: 'expiry-asc', label: 'Expiry soonest' },
 		{ key: 'expiry-desc', label: 'Expiry latest' },
 	];
@@ -188,10 +190,59 @@
 		return [...items].sort((a, b) => {
 			if (sort === 'name-asc') return a.name.localeCompare(b.name);
 			if (sort === 'name-desc') return b.name.localeCompare(a.name);
+			if (sort === 'category-asc' || sort === 'category-desc') {
+				const catCmp = categoryLabel(a.category).localeCompare(categoryLabel(b.category));
+				const dir = sort === 'category-asc' ? 1 : -1;
+				return catCmp !== 0 ? catCmp * dir : a.name.localeCompare(b.name) * dir;
+			}
 			if (sort === 'expiry-asc') return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
 			return new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime();
 		});
 	}
+
+	type Group = { label: string; items: Item[] };
+
+	const groupedItems = $derived.by((): Group[] => {
+		const items = filteredItems;
+		if (!sort) return [{ label: '', items }];
+
+		if (sort === 'name-asc' || sort === 'name-desc') {
+			const map = new Map<string, Item[]>();
+			for (const item of items) {
+				const letter = item.name[0]?.toUpperCase() ?? '#';
+				if (!map.has(letter)) map.set(letter, []);
+				map.get(letter)!.push(item);
+			}
+			return [...map.entries()].map(([label, items]) => ({ label, items }));
+		}
+
+		if (sort === 'category-asc' || sort === 'category-desc') {
+			const map = new Map<string, Item[]>();
+			for (const item of items) {
+				const label = categoryLabel(item.category);
+				if (!map.has(label)) map.set(label, []);
+				map.get(label)!.push(item);
+			}
+			return [...map.entries()].map(([label, items]) => ({ label, items }));
+		}
+
+		// expiry-asc or expiry-desc
+		const BUCKET_ORDER = ['Expired', 'Next 7 days', 'Next 14 days', 'More than 14 days'];
+		const bucketFor = (item: Item) => {
+			const days = daysUntilExpiry(new Date(item.expiryDate));
+			if (days <= 0) return 'Expired';
+			if (days <= 7) return 'Next 7 days';
+			if (days <= 14) return 'Next 14 days';
+			return 'More than 14 days';
+		};
+		const map = new Map<string, Item[]>(BUCKET_ORDER.map((b) => [b, []]));
+		for (const item of items) map.get(bucketFor(item))!.push(item);
+		let groups = [...map.entries()]
+			.filter(([, items]) => items.length > 0)
+			.map(([label, items]) => ({ label, items }));
+		if (sort === 'expiry-desc') groups = groups.reverse();
+		return groups;
+	});
 
 	const filteredItems = $derived(
 		sortItems(data.items.filter((i) => {
@@ -278,7 +329,12 @@
 			{#if filteredItems.length === 0}
 				<EmptyState icon={Search} heading="No matches" detail="Try a different search or filter." />
 			{:else}
-				{@render itemList(filteredItems)}
+				{#each groupedItems as group (group.label)}
+					{#if groupedItems.length > 1}
+						<h2 class="mt-4 mb-1 px-1 text-xs font-semibold uppercase tracking-wider text-stone-400">{group.label}</h2>
+					{/if}
+					{@render itemList(group.items)}
+				{/each}
 			{/if}
 		{/if}
 	</main>
