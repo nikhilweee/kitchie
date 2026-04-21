@@ -1,7 +1,7 @@
 import { redirect, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { mealEntries, mealIngredients, pantryItems, recipes, recipeItems } from '$lib/server/db/schema';
+import { mealEntries, mealIngredients, pantryItems, recipes, recipeItems, userCategories } from '$lib/server/db/schema';
 import type { MealType } from '$lib/server/db/schema';
 import { eq, desc, and, inArray } from 'drizzle-orm';
 import { guessMealType } from '$lib/meal-type';
@@ -226,12 +226,17 @@ export const actions: Actions = {
 					pantryItemId = existing.id;
 					await db.update(pantryItems).set({ quantity: Math.max(0, newQty) }).where(eq(pantryItems.id, pantryItemId));
 				} else {
-					const { category, quantityType, unit } = inferItemDefaults(itemName);
+					const { category: categoryName, quantityType, unit } = inferItemDefaults(itemName);
 					const purchaseDate = new Date();
-					const expiryDate = calcExpiry(category, purchaseDate);
+					// Look up user's category by name to get ID and TTL
+					const allCats = await db.select().from(userCategories).where(eq(userCategories.userId, userId));
+					const cat = allCats.find((c) => c.name === categoryName) ?? allCats.find((c) => c.name === 'Other') ?? allCats[0];
+					const categoryId = cat?.id ?? categoryName;
+					const ttlDays = cat?.ttlDays ?? 30;
+					const expiryDate = calcExpiry(ttlDays, purchaseDate);
 					const [created] = await db
 						.insert(pantryItems)
-						.values({ userId, name: itemName, category, quantityType, quantity: Math.max(0, newQty), unit, purchaseDate, expiryDate, expiryOverridden: false })
+						.values({ userId, name: itemName, category: categoryId, quantityType, quantity: Math.max(0, newQty), unit, purchaseDate, expiryDate, expiryOverridden: false })
 						.returning();
 					pantryItemId = created.id;
 				}

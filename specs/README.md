@@ -61,3 +61,4 @@ These entries are tracked but do not count as verified. Add a test before relyin
 | `MEAL` | Meal logging and history |
 | `PANT` | Pantry management and update flow |
 | `RECP` | Recipes |
+| `SETT` | Settings: categories and cuisines |

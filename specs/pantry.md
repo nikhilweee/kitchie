@@ -39,3 +39,15 @@
 ## PANT-010
 **Requirement:** A free-text ingredient typed in the pantry update step creates a new pantry item if no existing item with that name is found.  
 **Test:** `playwright/pantry.spec.ts` — "PANT-010: free-text ingredient in pantry update step creates a new pantry item"
+
+## PANT-011
+**Requirement:** Sorting the pantry by name groups items under letter headers (A, B, C…).  
+**Test:** `playwright/pantry.spec.ts` — "PANT-011: sorting by name groups items by first letter"
+
+## PANT-012
+**Requirement:** Sorting the pantry by category groups items under their category name as a header.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-012: sorting by category groups items by category name"
+
+## PANT-013
+**Requirement:** Sorting the pantry by expiry groups items into time-bucket headers: Expired, Next 7 days, Next 14 days, More than 14 days.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-013: sorting by expiry groups items into time buckets"

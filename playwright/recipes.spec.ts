@@ -18,7 +18,7 @@ async function addRecipe(
 		await dialog.locator('#recipe-meal-type').selectOption(opts.mealType);
 	}
 	if (opts?.cuisine) {
-		await dialog.locator('#recipe-cuisine').selectOption(opts.cuisine);
+		await dialog.locator('#recipe-cuisine').selectOption({ label: opts.cuisine });
 	}
 	if (opts?.prepTime) {
 		await dialog.getByRole('group', { name: 'Prep time' }).getByRole('button', { name: opts.prepTime }).click();
@@ -182,18 +182,18 @@ test('RECP-004: recipe list filtered by name search', async ({ page }) => {
 	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
 });
 
-test('RECP-005: recipe list filtered by meal type chip', async ({ page }) => {
+test('RECP-005: recipe list filtered by course chip', async ({ page }) => {
 	await login(page);
-	const name = `RecpLunch-${Date.now()}`;
+	const name = `RecpMain-${Date.now()}`;
 	await page.goto('/recipes');
-	await addRecipe(page, name, { mealType: 'lunch' });
+	await addRecipe(page, name, { mealType: 'main' });
 
-	// "Breakfast" chip → lunch recipe hidden
+	// "Breakfast" chip → main course recipe hidden
 	await page.getByRole('button', { name: 'Breakfast' }).click();
 	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
 
-	// "Lunch" chip added → recipe visible again
-	await page.getByRole('button', { name: 'Lunch' }).click();
+	// "Main Course" chip added → recipe visible again
+	await page.getByRole('button', { name: 'Main Course' }).click();
 	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
 });
 
@@ -265,8 +265,8 @@ test('RECP-009: recipe cuisine saved and filtered', async ({ page }) => {
 	const italianRecipe = `RecpItalian-${ts}`;
 
 	await page.goto('/recipes');
-	await addRecipe(page, indianRecipe, { cuisine: 'indian' });
-	await addRecipe(page, italianRecipe, { cuisine: 'italian' });
+	await addRecipe(page, indianRecipe, { cuisine: 'Indian' });
+	await addRecipe(page, italianRecipe, { cuisine: 'Italian' });
 
 	// Open filter, select Indian → only Indian recipe visible
 	await page.getByRole('button', { name: 'Filters' }).click();

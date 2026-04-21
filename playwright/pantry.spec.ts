@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010
+// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013
 
 async function addPantryItem(page: import('@playwright/test').Page, name: string) {
 	await page.click('button:has-text("Add to Pantry")');
@@ -29,7 +29,7 @@ test('PANT-002: category and quantity type inferred from name; user can override
 
 	// "Eggs-{ts}" → count type inferred
 	await dialog.getByPlaceholder('What did you buy?').fill(`Eggs-${Date.now()}`);
-	await expect(dialog.getByRole('button', { name: 'Count' })).toHaveClass(/bg-stone-800/);
+	await expect(dialog.getByRole('button', { name: 'Quantity' })).toHaveClass(/bg-stone-800/);
 
 	// Override to estimate
 	await dialog.getByRole('button', { name: 'Estimate' }).click();
@@ -284,4 +284,50 @@ test('PANT-008: estimate item shows correct zone in update-pantry step', async (
 		.locator('[aria-label="Quantity level"]');
 	await expect(itemPicker.locator('button[aria-label="Half"]')).not.toHaveClass(/bg-stone-200/);
 	await expect(itemPicker.locator('button[aria-label="Full"]')).toHaveClass(/bg-stone-200/);
+});
+
+test('PANT-011: sorting by name groups items by first letter', async ({ page }) => {
+	await login(page);
+	const ts = Date.now();
+	await page.goto('/pantry');
+	await addPantryItem(page, `Apple-${ts}`);
+	await addPantryItem(page, `Banana-${ts}`);
+
+	await page.getByRole('button', { name: 'Filters' }).click();
+	await page.locator('label', { hasText: 'Name A → Z' }).click();
+	await page.keyboard.press('Escape');
+
+	await expect(page.locator('h2', { hasText: 'A' }).first()).toBeVisible();
+	await expect(page.locator('h2', { hasText: 'B' }).first()).toBeVisible();
+});
+
+test('PANT-012: sorting by category groups items by category name', async ({ page }) => {
+	await login(page);
+	const ts = Date.now();
+	await page.goto('/pantry');
+	await addPantryItem(page, `Milk-${ts}`);   // infers Dairy
+	await addPantryItem(page, `Apple-${ts}`);  // infers Produce
+
+	await page.getByRole('button', { name: 'Filters' }).click();
+	await page.locator('label', { hasText: 'Category A → Z' }).click();
+	await page.keyboard.press('Escape');
+
+	await expect(page.locator('h2', { hasText: 'Dairy' }).first()).toBeVisible();
+	await expect(page.locator('h2', { hasText: 'Produce' }).first()).toBeVisible();
+});
+
+test('PANT-013: sorting by expiry groups items into time buckets', async ({ page }) => {
+	await login(page);
+	await page.goto('/pantry');
+	await addPantryItem(page, `ExpiryItem-${Date.now()}`);
+
+	await page.getByRole('button', { name: 'Filters' }).click();
+	await page.locator('label', { hasText: 'Expiry soonest' }).click();
+	await page.keyboard.press('Escape');
+
+	const buckets = ['Expired', 'Next 7 days', 'Next 14 days', 'More than 14 days'];
+	const visible = await Promise.all(
+		buckets.map((b) => page.locator('h2', { hasText: b }).isVisible())
+	);
+	expect(visible.some(Boolean)).toBe(true);
 });

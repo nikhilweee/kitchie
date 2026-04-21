@@ -17,8 +17,8 @@
 **Test:** `playwright/recipes.spec.ts` — "RECP-004: recipe list filtered by name search"
 
 ## RECP-005
-**Requirement:** The recipe list can be filtered by meal type (breakfast, lunch, dinner, snack).  
-**Test:** `playwright/recipes.spec.ts` — "RECP-005: recipe list filtered by meal type chip"
+**Requirement:** The recipe list can be filtered by course (Breakfast, Main Course, Snack, Dessert).  
+**Test:** `playwright/recipes.spec.ts` — "RECP-005: recipe list filtered by course chip"
 
 ## RECP-006
 **Requirement:** A user can manually edit a recipe's name, meal type, and ingredient list.  
