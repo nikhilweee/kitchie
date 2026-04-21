@@ -101,12 +101,14 @@
 		expiryDate = toDateStr(item.expiryDate);
 		categoryLocked = true;
 		expiryLocked = item.expiryOverridden;
+		history.replaceState(history.state, '', `?edit=${item.id}`);
 		setTimeout(() => nameEl?.focus(), 50);
 	}
 
 	function closeSheet() {
 		sheetMode = null;
 		editingItem = null;
+		history.replaceState(history.state, '', location.pathname);
 	}
 
 	// Deep-link: ?edit=<id> opens the edit sheet for that pantry item

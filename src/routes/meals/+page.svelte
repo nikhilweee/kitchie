@@ -64,12 +64,14 @@
 		mealInput = entry.name;
 		mealDateTime = toDateTimeLocalStr(entry.loggedAt);
 		mealType = entry.mealType as MealType;
+		history.replaceState(history.state, '', `?edit=${entry.id}`);
 	}
 
 	function closeSheet() {
 		sheetMode = null;
 		editingEntry = null;
 		suggestions = [];
+		history.replaceState(history.state, '', location.pathname);
 	}
 
 	async function fetchSuggestions(q: string) {

@@ -145,12 +145,14 @@
 			quantity: i.quantity ?? ''
 		}));
 		ingredientSearch = '';
+		history.replaceState(history.state, '', `?edit=${recipe.id}`);
 		setTimeout(() => nameEl?.focus(), 50);
 	}
 
 	function closeSheet() {
 		sheetMode = null;
 		editingRecipe = null;
+		history.replaceState(history.state, '', location.pathname);
 	}
 
 	// Deep-link: ?edit=<id> opens the edit sheet for that recipe
