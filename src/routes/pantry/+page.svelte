@@ -14,6 +14,7 @@
 	import { toDateStr } from '$lib/date-format';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
+	import { X, ListFilter } from 'lucide-svelte';
 	import type { PantryCategory, QuantityType } from '$lib/server/db/schema';
 
 	let { data }: { data: PageData } = $props();
@@ -210,9 +211,7 @@
 					class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors {activeFilterCount > 0 ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 bg-white text-stone-500 hover:border-stone-400'}"
 					aria-label="Filters"
 				>
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
-						<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-					</svg>
+					<ListFilter class="h-4 w-4" />
 					{#if activeFilterCount > 0}
 						<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">{activeFilterCount}</span>
 					{/if}
@@ -289,7 +288,7 @@
 				</span>
 				<form method="POST" action="?/delete" use:enhance>
 					<input type="hidden" name="id" value={item.id} />
-					<button type="submit" aria-label="Delete {item.name}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400">✕</button>
+					<button type="submit" aria-label="Delete {item.name}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400"><X class="h-3.5 w-3.5" /></button>
 				</form>
 			</li>
 		{/each}
@@ -344,7 +343,7 @@
 			{/if}
 		</div>
 
-		<div class="mt-3 space-y-2">
+		<div class="mt-3 space-y-3">
 			<div>
 				<label for="sheet-category" class="mb-1 block text-xs font-medium text-stone-500">Category</label>
 				<select
@@ -361,19 +360,19 @@
 			</div>
 
 			<div>
-				<div class="mb-1 flex items-center justify-between">
+				<div class="mb-2 flex items-center justify-between">
 					<p class="text-xs font-medium text-stone-500">Quantity</p>
 					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
 						<button
 							type="button"
 							onclick={() => { quantityType = 'estimate'; quantity = 1; }}
-							class="px-2.5 py-1 transition-colors {quantityType === 'estimate' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+							class="px-3 py-1.5 transition-colors {quantityType === 'estimate' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
 						>Estimate</button>
 						<button
 							type="button"
 							onclick={() => { quantityType = 'count'; quantity = 1; }}
-							class="px-2.5 py-1 transition-colors {quantityType === 'count' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
-						>Count</button>
+							class="px-3 py-1.5 transition-colors {quantityType === 'count' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+						>Quantity</button>
 					</div>
 				</div>
 				<input type="hidden" name="quantityType" value={quantityType} />

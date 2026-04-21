@@ -12,6 +12,7 @@
 	import type { MealType } from '$lib/server/db/schema';
 	import { CUISINE_LABELS, CUISINES, type Cuisine } from '$lib/cuisine';
 	import PrepTimePicker, { PREP_TIME_LABELS } from '$lib/components/PrepTimePicker.svelte';
+	import { X, ListFilter } from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -189,9 +190,7 @@
 					class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors {activeFilterCount > 0 ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 bg-white text-stone-500 hover:border-stone-400'}"
 					aria-label="Filters"
 				>
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
-						<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-					</svg>
+					<ListFilter class="h-4 w-4" />
 					{#if activeFilterCount > 0}
 						<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">{activeFilterCount}</span>
 					{/if}
@@ -255,7 +254,7 @@
 						</button>
 						<form method="POST" action="?/delete" use:enhance>
 							<input type="hidden" name="id" value={recipe.id} />
-							<button type="submit" aria-label="Delete {recipe.name}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400">✕</button>
+							<button type="submit" aria-label="Delete {recipe.name}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400"><X class="h-3.5 w-3.5" /></button>
 						</form>
 					</li>
 				{/each}
@@ -380,7 +379,7 @@
 							onclick={() => removeIngredient(idx)}
 							class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400"
 							aria-label="Remove {item.itemName}"
-						>✕</button>
+						><X class="h-3.5 w-3.5" /></button>
 					</li>
 				{/each}
 			</ul>

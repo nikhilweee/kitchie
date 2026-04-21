@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { ChevronLeft } from 'lucide-svelte';
 
 	let { title, back }: { title: string; back?: string | true } = $props();
 
@@ -18,9 +19,9 @@
 		<!-- Left: back button or spacer -->
 		<div class="w-8 shrink-0">
 			{#if back === true}
-				<button type="button" onclick={() => history.back()} aria-label="Go back" class="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800">&lt;</button>
+				<button type="button" onclick={() => history.back()} aria-label="Go back" class="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800"><ChevronLeft class="h-4 w-4" /></button>
 			{:else if back}
-				<a href={back} aria-label="Go back" class="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800">&lt;</a>
+				<a href={back} aria-label="Go back" class="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800"><ChevronLeft class="h-4 w-4" /></a>
 			{/if}
 		</div>
 

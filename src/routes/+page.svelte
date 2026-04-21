@@ -13,6 +13,7 @@
 	import type { MealType } from '$lib/server/db/schema';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
+	import { X } from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -251,7 +252,7 @@
 								<span class="shrink-0 text-xs text-stone-400">{formatTime(entry.loggedAt)}</span>
 								<form method="POST" action="?/deleteMeal" use:enhance>
 									<input type="hidden" name="id" value={entry.id} />
-									<button type="submit" aria-label="Delete {entry.name}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400">✕</button>
+									<button type="submit" aria-label="Delete {entry.name}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400"><X class="h-3.5 w-3.5" /></button>
 								</form>
 							</li>
 						{/each}
@@ -437,7 +438,7 @@
 									onclick={() => removePantryItem(sel.itemName)}
 									class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400"
 									aria-label="Remove {sel.itemName}"
-								>✕</button>
+								><X class="h-3.5 w-3.5" /></button>
 							</div>
 						</li>
 					{/each}

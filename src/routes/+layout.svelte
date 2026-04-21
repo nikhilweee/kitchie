@@ -3,13 +3,15 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/state';
 	import type { LayoutData } from './$types';
+	import { Utensils, ChefHat, ShoppingBasket } from 'lucide-svelte';
+	import type { Component } from 'svelte';
 
 	let { children, data }: { children: any; data: LayoutData } = $props();
 
-	const navItems = [
-		{ href: '/meals', label: 'Meals', icon: '🍽️' },
-		{ href: '/recipes', label: 'Recipes', icon: '📋' },
-		{ href: '/pantry', label: 'Pantry', icon: '🧺' }
+	const navItems: { href: string; label: string; icon: Component }[] = [
+		{ href: '/meals', label: 'Meals', icon: Utensils },
+		{ href: '/recipes', label: 'Recipes', icon: ChefHat },
+		{ href: '/pantry', label: 'Pantry', icon: ShoppingBasket }
 	];
 </script>
 
@@ -30,7 +32,7 @@
 							? 'text-orange-500'
 							: 'text-stone-400 hover:text-stone-600'}"
 					>
-						<span class="text-xl leading-none">{item.icon}</span>
+						<item.icon class="h-5 w-5" />
 						{item.label}
 					</a>
 				</li>

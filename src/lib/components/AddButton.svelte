@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Plus } from 'lucide-svelte';
 
 	let { label, onclick }: { label: string; onclick: () => void } = $props();
 
@@ -30,7 +31,7 @@
 		{onclick}
 		class="flex w-full max-w-lg items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-base font-semibold text-white shadow-lg hover:bg-orange-600 active:scale-95"
 	>
-		<span class="text-xl leading-none">+</span>
+		<Plus class="h-5 w-5" />
 		{label}
 	</button>
 </div>

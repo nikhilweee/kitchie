@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { ChevronLeft, X } from 'lucide-svelte';
 
 	let {
 		open,
@@ -31,7 +32,7 @@
 						onclick={onback}
 						aria-label="Go back"
 						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800"
-					>&lt;</button>
+					><ChevronLeft class="h-4 w-4" /></button>
 				{:else}
 					<div class="w-8 shrink-0"></div>
 				{/if}
@@ -41,7 +42,7 @@
 					onclick={onclose}
 					aria-label="Close"
 					class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800"
-				>✕</button>
+				><X class="h-4 w-4" /></button>
 			</div>
 			{@render children()}
 		</div>
