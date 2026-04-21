@@ -110,21 +110,6 @@
 		showToast(msg);
 	}
 
-	// ── Item list helpers ─────────────────────────────────────────────────────
-	function groupItems(items: Item[]) {
-		const expiringSoon: Item[] = [];
-		const runningLow: Item[] = [];
-		const normal: Item[] = [];
-		for (const item of items) {
-			const days = daysUntilExpiry(new Date(item.expiryDate));
-			const isLow = item.quantityType === 'estimate' ? item.quantity <= 0.15 : item.quantity <= 1;
-			if (days <= 3) expiringSoon.push(item);
-			else if (isLow) runningLow.push(item);
-			else normal.push(item);
-		}
-		return { expiringSoon, runningLow, normal };
-	}
-
 	function expiryLabel(iso: string) {
 		const d = daysUntilExpiry(new Date(iso));
 		if (d < 0) return 'Expired';
@@ -145,16 +130,14 @@
 	// ── Search + filter ───────────────────────────────────────────────────────
 	type StatusFilter = 'expiring' | 'low' | 'normal';
 	let search = $state('');
-	let activeStatuses = $state(new Set<StatusFilter>(['normal']));
+	let activeStatus = $state<StatusFilter | null>(null);
 	let activeCategories = $state(new Set<PantryCategory>());
 	let filterOpen = $state(false);
 	type SortKey = 'name-asc' | 'name-desc' | 'expiry-asc' | 'expiry-desc';
 	let sort = $state<SortKey | null>(null);
 
 	function toggleStatus(s: StatusFilter) {
-		const next = new Set(activeStatuses);
-		if (next.has(s)) next.delete(s); else next.add(s);
-		activeStatuses = next;
+		activeStatus = activeStatus === s ? null : s;
 	}
 
 	function toggleCategory(cat: PantryCategory) {
@@ -193,13 +176,11 @@
 	const filteredItems = $derived(
 		sortItems(data.items.filter((i) => {
 			if (search.trim() && !i.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
-			if (activeStatuses.size > 0 && !activeStatuses.has(itemStatus(i))) return false;
+			if (activeStatus !== null && itemStatus(i) !== activeStatus) return false;
 			if (activeCategories.size > 0 && !activeCategories.has(i.category as PantryCategory)) return false;
 			return true;
 		}))
 	);
-
-	const groups = $derived(groupItems(filteredItems));
 </script>
 
 <svelte:head><title>Kitchie | Pantry</title></svelte:head>
@@ -214,8 +195,6 @@
 			<EmptyState emoji="🧺" heading="Pantry is empty" detail="Add items after your next shopping trip." />
 		{:else}
 			{@const presentCategories = categories.filter(([cat]) => data.items.some((i) => i.category === cat))}
-			{@const hasExpiring = data.items.some((i) => itemStatus(i) === 'expiring')}
-			{@const hasLow = data.items.some((i) => itemStatus(i) === 'low')}
 			<!-- Search + filter -->
 			<div class="relative mb-4 flex gap-2" use:clickOutside={() => (filterOpen = false)}>
 				<input
@@ -264,36 +243,19 @@
 			</div>
 			<div class="mb-4 flex gap-2">
 				<button type="button" onclick={() => toggleStatus('normal')}
-					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatuses.has('normal') ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'normal' ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>In Stock</button>
-				{#if hasExpiring}
-					<button type="button" onclick={() => toggleStatus('expiring')}
-						class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatuses.has('expiring') ? 'border-red-600 bg-red-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
-					>Expiring soon</button>
-				{/if}
-				{#if hasLow}
-					<button type="button" onclick={() => toggleStatus('low')}
-						class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatuses.has('low') ? 'border-orange-500 bg-orange-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
-					>Running low</button>
-				{/if}
+				<button type="button" onclick={() => toggleStatus('expiring')}
+					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'expiring' ? 'border-red-600 bg-red-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+				>Expiring Soon</button>
+				<button type="button" onclick={() => toggleStatus('low')}
+					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'low' ? 'border-orange-500 bg-orange-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+				>Running Low</button>
 			</div>
-			{#if groups.expiringSoon.length > 0}
-				<section class="mb-6">
-					<h2 class="mb-2 text-xs font-semibold tracking-wider text-red-500 uppercase">Expiring soon</h2>
-					{@render itemList(groups.expiringSoon)}
-				</section>
-			{/if}
-			{#if groups.runningLow.length > 0}
-				<section class="mb-6">
-					<h2 class="mb-2 text-xs font-semibold tracking-wider text-orange-500 uppercase">Running low</h2>
-					{@render itemList(groups.runningLow)}
-				</section>
-			{/if}
-			{#if groups.normal.length > 0}
-				<section class="mb-6">
-					<h2 class="mb-2 text-xs font-semibold tracking-wider text-stone-400 uppercase">In stock</h2>
-					{@render itemList(groups.normal)}
-				</section>
+			{#if filteredItems.length === 0}
+				<EmptyState emoji="🔍" heading="No matches" detail="Try a different search or filter." />
+			{:else}
+				{@render itemList(filteredItems)}
 			{/if}
 		{/if}
 	</main>

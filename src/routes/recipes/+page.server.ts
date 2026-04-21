@@ -3,7 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { recipes, recipeItems, pantryItems } from '$lib/server/db/schema';
 import { eq, and, desc, inArray } from 'drizzle-orm';
-import { getString, getStrings, getNumbers } from '$lib/server/form-data';
+import { getString, getStrings } from '$lib/server/form-data';
 import type { MealType } from '$lib/server/db/schema';
 import { CUISINES, type Cuisine } from '$lib/cuisine';
 
@@ -50,9 +50,11 @@ export const actions: Actions = {
 			: null;
 		const cuisineRaw = getString(data, 'cuisine');
 		const cuisine = (CUISINES as string[]).includes(cuisineRaw) ? (cuisineRaw as Cuisine) : null;
+		const prepTimeRaw = parseInt(getString(data, 'prepTime'), 10);
+		const prepTime = [1, 2, 3, 4].includes(prepTimeRaw) ? prepTimeRaw : null;
 		const pantryIds = getStrings(data, 'pantryItemId');
 		const itemNames = getStrings(data, 'itemName');
-		const quantities = getNumbers(data, 'quantity');
+		const quantities = getStrings(data, 'quantity');
 
 		if (!name) return fail(400, { error: 'Recipe name is required.' });
 
@@ -65,11 +67,11 @@ export const actions: Actions = {
 				.where(and(eq(recipes.id, id), eq(recipes.userId, userId)))
 				.get();
 			if (!existing) return fail(404, {});
-			await db.update(recipes).set({ name, mealType, cuisine }).where(eq(recipes.id, id));
+			await db.update(recipes).set({ name, mealType, cuisine, prepTime }).where(eq(recipes.id, id));
 			await db.delete(recipeItems).where(eq(recipeItems.recipeId, id));
 			recipeId = id;
 		} else {
-			const [recipe] = await db.insert(recipes).values({ userId, name, mealType, cuisine }).returning();
+			const [recipe] = await db.insert(recipes).values({ userId, name, mealType, cuisine, prepTime }).returning();
 			recipeId = recipe.id;
 		}
 
@@ -79,7 +81,7 @@ export const actions: Actions = {
 				recipeId,
 				pantryItemId: pantryIds[i] || null,
 				itemName: itemNames[i],
-				defaultQuantity: quantities[i] ?? 1
+				quantity: quantities[i] || null
 			});
 		}
 

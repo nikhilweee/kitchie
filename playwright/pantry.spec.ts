@@ -196,9 +196,8 @@ test('PANT-010: free-text ingredient in pantry update step creates a new pantry 
 	await flowDialog.getByRole('button', { name: 'Skip' }).click();
 	await page.waitForURL('/meals');
 
-	// Verify the new item was created in pantry (item is created at qty=0 → running low)
+	// Verify the new item was created in pantry (all items shown by default)
 	await page.goto('/pantry');
-	await page.getByRole('button', { name: 'Running low' }).click();
 	await expect(page.locator('li', { hasText: customItem }).first()).toBeVisible();
 });
 

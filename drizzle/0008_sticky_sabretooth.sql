@@ -1,0 +1,1 @@
+ALTER TABLE `recipe_items` ADD `unit` text DEFAULT 'ct' NOT NULL;

@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Covers: RECP-001, RECP-002, RECP-003, RECP-004, RECP-005, RECP-006, RECP-007, RECP-008, RECP-009
+// Covers: RECP-001, RECP-002, RECP-003, RECP-004, RECP-005, RECP-006, RECP-007, RECP-008, RECP-009, RECP-011
 
 // Add a recipe through the manual sheet on /recipes.
 // If ingredientName is given, it must already exist as a pantry item.
 async function addRecipe(
 	page: import('@playwright/test').Page,
 	name: string,
-	opts?: { ingredientName?: string; mealType?: string; cuisine?: string }
+	opts?: { ingredientName?: string; mealType?: string; cuisine?: string; prepTime?: string }
 ) {
 	await page.click('button:has-text("Add Recipe")');
 	const dialog = page.locator('[role="dialog"]');
@@ -19,6 +19,9 @@ async function addRecipe(
 	}
 	if (opts?.cuisine) {
 		await dialog.locator('#recipe-cuisine').selectOption(opts.cuisine);
+	}
+	if (opts?.prepTime) {
+		await dialog.getByRole('group', { name: 'Prep time' }).getByRole('button', { name: opts.prepTime }).click();
 	}
 	if (opts?.ingredientName) {
 		await dialog.getByPlaceholder('Search or type an ingredient…').fill(opts.ingredientName);
@@ -275,4 +278,30 @@ test('RECP-009: recipe cuisine saved and filtered', async ({ page }) => {
 	await page.locator('label', { hasText: 'Italian' }).click();
 	await expect(page.locator('li', { hasText: indianRecipe }).first()).toBeVisible();
 	await expect(page.locator('li', { hasText: italianRecipe }).first()).toBeVisible();
+});
+
+test('RECP-011: recipe prep time saved and sort by prep time works', async ({ page }) => {
+	await login(page);
+	const ts = Date.now();
+	const quickRecipe = `RecpQuick-${ts}`;
+	const longRecipe = `RecpLong-${ts}`;
+
+	await page.goto('/recipes');
+	await addRecipe(page, quickRecipe, { prepTime: 'Quick' });
+	// Verify prep time label shown in list row
+	await expect(page.locator('li', { hasText: quickRecipe }).first().locator('p.text-xs')).toContainText('Quick');
+
+	await addRecipe(page, longRecipe, { prepTime: 'Long' });
+
+	// Sort: prep time quick first → quickRecipe appears before longRecipe
+	await page.getByRole('button', { name: 'Filters' }).click();
+	await page.locator('label', { hasText: 'Prep time (quick first)' }).click();
+	await page.keyboard.press('Escape');
+
+	const allItems = page.locator('ul > li');
+	const quickIdx = await allItems.evaluateAll((els, quick) =>
+		els.findIndex((el) => el.textContent?.includes(quick)), quickRecipe);
+	const longIdx = await allItems.evaluateAll((els, long) =>
+		els.findIndex((el) => el.textContent?.includes(long)), longRecipe);
+	expect(quickIdx).toBeLessThan(longIdx);
 });

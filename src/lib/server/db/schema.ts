@@ -127,6 +127,7 @@ export const recipes = sqliteTable('recipes', {
 	name: text('name').notNull(),
 	mealType: text('meal_type').$type<MealType>(),
 	cuisine: text('cuisine').$type<Cuisine>(),
+	prepTime: integer('prep_time'), // 1=Quick, 2=Easy, 3=Medium, 4=Long
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.$defaultFn(() => new Date())
 		.notNull()
@@ -141,7 +142,7 @@ export const recipeItems = sqliteTable('recipe_items', {
 		.references(() => recipes.id, { onDelete: 'cascade' }),
 	pantryItemId: text('pantry_item_id').references(() => pantryItems.id, { onDelete: 'set null' }),
 	itemName: text('item_name').notNull(),
-	defaultQuantity: real('default_quantity').notNull().default(1)
+	quantity: text('quantity')
 });
 
 // ---------------------------------------------------------------------------

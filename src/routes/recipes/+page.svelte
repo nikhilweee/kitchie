@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import SmallEstimatePicker from '$lib/components/SmallEstimatePicker.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
@@ -12,6 +11,7 @@
 	import { MEAL_TYPE_LABELS, MEAL_TYPES } from '$lib/meal-type';
 	import type { MealType } from '$lib/server/db/schema';
 	import { CUISINE_LABELS, CUISINES, type Cuisine } from '$lib/cuisine';
+	import PrepTimePicker, { PREP_TIME_LABELS } from '$lib/components/PrepTimePicker.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -34,18 +34,37 @@
 		activeCuisines = next;
 	}
 
-	const activeFilterCount = $derived(activeCuisines.size);
+	type SortKey = 'name-asc' | 'name-desc' | 'prep-asc' | 'prep-desc';
+	let sort = $state<SortKey | null>(null);
+
+	const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+		{ key: 'name-asc', label: 'Name A → Z' },
+		{ key: 'name-desc', label: 'Name Z → A' },
+		{ key: 'prep-asc', label: 'Prep time (quick first)' },
+		{ key: 'prep-desc', label: 'Prep time (long first)' },
+	];
+
+	const activeFilterCount = $derived(activeCuisines.size + (sort !== null ? 1 : 0));
 
 	// Use derived (not data.recipes.length) so the search bar appears reactively
 	// after the first recipe is added via form enhance, without a full page reload.
 	const anyRecipes = $derived(data.recipes.length > 0);
 
-	const filteredRecipes = $derived(
+	const filteredBase = $derived(
 		data.recipes.filter((r) => {
 			if (search.trim() && !r.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
 			if (activeMealTypes.size > 0 && !activeMealTypes.has(r.mealType as MealType)) return false;
 			if (activeCuisines.size > 0 && !activeCuisines.has(r.cuisine as Cuisine)) return false;
 			return true;
+		})
+	);
+
+	const filteredRecipes = $derived(
+		sort === null ? filteredBase : [...filteredBase].sort((a, b) => {
+			if (sort === 'name-asc') return a.name.localeCompare(b.name);
+			if (sort === 'name-desc') return b.name.localeCompare(a.name);
+			const pa = a.prepTime ?? 999, pb = b.prepTime ?? 999;
+			return sort === 'prep-asc' ? pa - pb : pb - pa;
 		})
 	);
 	type PantryItem = PageData['pantryItems'][0];
@@ -65,6 +84,7 @@
 	let nameInput = $state('');
 	let mealTypeInput = $state<MealType | ''>('');
 	let cuisineInput = $state<Cuisine | ''>('');
+	let prepTimeInput = $state<number | null>(null);
 	let nameEl = $state<HTMLInputElement | undefined>(undefined);
 	let showNameSuggestions = $state(false);
 
@@ -78,7 +98,7 @@
 	);
 
 	// Ingredients in the sheet
-	type DraftItem = { pantryItemId: string | null; itemName: string; quantity: number; quantityType: 'estimate' | 'count' };
+	type DraftItem = { pantryItemId: string | null; itemName: string; quantity: string };
 	let draftItems = $state<DraftItem[]>([]);
 	let ingredientSearch = $state('');
 
@@ -104,6 +124,7 @@
 		nameInput = '';
 		mealTypeInput = '';
 		cuisineInput = '';
+		prepTimeInput = null;
 		draftItems = [];
 		ingredientSearch = '';
 		setTimeout(() => nameEl?.focus(), 50);
@@ -115,15 +136,12 @@
 		nameInput = recipe.name;
 		mealTypeInput = (recipe.mealType as MealType) ?? '';
 		cuisineInput = (recipe.cuisine as Cuisine) ?? '';
-		draftItems = recipe.items.map((i) => {
-			const pantry = data.pantryItems.find((p) => p.id === i.pantryItemId);
-			return {
-				pantryItemId: i.pantryItemId ?? null,
-				itemName: i.itemName,
-				quantity: i.defaultQuantity,
-				quantityType: (pantry?.quantityType ?? 'estimate') as 'estimate' | 'count'
-			};
-		});
+		prepTimeInput = recipe.prepTime ?? null;
+		draftItems = recipe.items.map((i) => ({
+			pantryItemId: i.pantryItemId ?? null,
+			itemName: i.itemName,
+			quantity: i.quantity ?? ''
+		}));
 		ingredientSearch = '';
 		setTimeout(() => nameEl?.focus(), 50);
 	}
@@ -134,12 +152,12 @@
 	}
 
 	function addIngredient(item: PantryItem) {
-		draftItems = [...draftItems, { pantryItemId: item.id, itemName: item.name, quantity: 1, quantityType: item.quantityType as 'estimate' | 'count' }];
+		draftItems = [...draftItems, { pantryItemId: item.id, itemName: item.name, quantity: '' }];
 		ingredientSearch = '';
 	}
 
 	function addCustomIngredient(name: string) {
-		draftItems = [...draftItems, { pantryItemId: null, itemName: name, quantity: 1, quantityType: 'estimate' }];
+		draftItems = [...draftItems, { pantryItemId: null, itemName: name, quantity: '' }];
 		ingredientSearch = '';
 	}
 
@@ -171,14 +189,23 @@
 					class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors {activeFilterCount > 0 ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 bg-white text-stone-500 hover:border-stone-400'}"
 					aria-label="Filters"
 				>
-					⊟
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+						<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+					</svg>
 					{#if activeFilterCount > 0}
 						<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">{activeFilterCount}</span>
 					{/if}
 				</button>
 				{#if filterOpen}
 					<div class="absolute top-full right-0 z-20 mt-1 w-64 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
-						<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Cuisine</div>
+						<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Sort</div>
+						{#each SORT_OPTIONS as opt (opt.key)}
+							<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
+								<input type="radio" name="recipe-sort" value={opt.key} checked={sort === opt.key} onchange={() => (sort = opt.key)} class="accent-orange-500" />
+								<span class="text-sm text-stone-700">{opt.label}</span>
+							</label>
+						{/each}
+						<div class="border-t border-stone-100 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Cuisine</div>
 						<div class="max-h-48 overflow-y-auto">
 							{#each CUISINES as c (c)}
 								<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
@@ -188,7 +215,7 @@
 							{/each}
 						</div>
 						<div class="border-t border-stone-100 p-2">
-							<button type="button" onclick={() => { activeCuisines = new Set(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
+							<button type="button" onclick={() => { sort = null; activeCuisines = new Set(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
 						</div>
 					</div>
 				{/if}
@@ -221,6 +248,9 @@
 								{recipe.items.length === 0
 									? 'No ingredients'
 									: recipe.items.map((i) => i.itemName).join(', ')}
+								{#if recipe.prepTime}
+									· {PREP_TIME_LABELS[recipe.prepTime]}
+								{/if}
 							</p>
 						</button>
 						<form method="POST" action="?/delete" use:enhance>
@@ -320,26 +350,31 @@
 			</div>
 		</div>
 
+		<!-- Prep time -->
+		<div class="mt-3">
+			<p class="mb-1 text-xs font-medium text-stone-500">Prep time</p>
+			<PrepTimePicker bind:value={prepTimeInput} name="prepTime" />
+		</div>
+
 		<!-- Ingredient list -->
 		<p class="mt-4 mb-2 text-xs font-medium text-stone-500">Ingredients</p>
 
 		{#if draftItems.length > 0}
 			<ul class="mb-3 space-y-2">
 				{#each draftItems as item, idx (idx)}
-					<li class="flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5">
+					<li class="flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2">
 						<input type="hidden" name="pantryItemId" value={item.pantryItemId ?? ''} />
 						<input type="hidden" name="itemName" value={item.itemName} />
+						<span class="w-5 shrink-0 text-center text-xs font-medium text-stone-400">{idx + 1}</span>
 						<span class="min-w-0 flex-1 truncate text-sm font-medium text-stone-800">{item.itemName}</span>
-						{#if item.quantityType === 'count'}
-							<div class="flex items-center gap-1">
-								<button type="button" onclick={() => (item.quantity = Math.max(0, item.quantity - 1))} class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100">−</button>
-								<span class="w-8 text-center text-sm font-medium text-stone-800">{item.quantity}</span>
-								<button type="button" onclick={() => item.quantity++} class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100">+</button>
-							</div>
-							<input type="hidden" name="quantity" value={item.quantity} />
-						{:else}
-							<SmallEstimatePicker bind:value={item.quantity} name="quantity" />
-						{/if}
+						<input
+							type="text"
+							name="quantity"
+							bind:value={item.quantity}
+							placeholder="qty"
+							autocomplete="off"
+							class="w-16 shrink-0 rounded-lg border border-stone-200 bg-white px-2 py-1 text-center text-sm text-stone-700 placeholder-stone-300 focus:border-orange-400 focus:outline-none"
+						/>
 						<button
 							type="button"
 							onclick={() => removeIngredient(idx)}
