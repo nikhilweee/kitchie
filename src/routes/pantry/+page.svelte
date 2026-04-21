@@ -145,9 +145,11 @@
 	// ── Search + filter ───────────────────────────────────────────────────────
 	type StatusFilter = 'expiring' | 'low' | 'normal';
 	let search = $state('');
-	let activeStatuses = $state(new Set<StatusFilter>());
+	let activeStatuses = $state(new Set<StatusFilter>(['normal']));
 	let activeCategories = $state(new Set<PantryCategory>());
 	let filterOpen = $state(false);
+	type SortKey = 'name-asc' | 'name-desc' | 'expiry-asc' | 'expiry-desc';
+	let sort = $state<SortKey | null>(null);
 
 	function toggleStatus(s: StatusFilter) {
 		const next = new Set(activeStatuses);
@@ -169,15 +171,32 @@
 		return 'normal';
 	}
 
-	const activeFilterCount = $derived(activeCategories.size);
+	const activeFilterCount = $derived(activeCategories.size + (sort !== null ? 1 : 0));
+
+	const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+		{ key: 'name-asc', label: 'Name A → Z' },
+		{ key: 'name-desc', label: 'Name Z → A' },
+		{ key: 'expiry-asc', label: 'Expiry soonest' },
+		{ key: 'expiry-desc', label: 'Expiry latest' },
+	];
+
+	function sortItems(items: Item[]): Item[] {
+		if (!sort) return items;
+		return [...items].sort((a, b) => {
+			if (sort === 'name-asc') return a.name.localeCompare(b.name);
+			if (sort === 'name-desc') return b.name.localeCompare(a.name);
+			if (sort === 'expiry-asc') return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+			return new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime();
+		});
+	}
 
 	const filteredItems = $derived(
-		data.items.filter((i) => {
+		sortItems(data.items.filter((i) => {
 			if (search.trim() && !i.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
 			if (activeStatuses.size > 0 && !activeStatuses.has(itemStatus(i))) return false;
 			if (activeCategories.size > 0 && !activeCategories.has(i.category as PantryCategory)) return false;
 			return true;
-		})
+		}))
 	);
 
 	const groups = $derived(groupItems(filteredItems));
@@ -212,15 +231,24 @@
 					class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors {activeFilterCount > 0 ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 bg-white text-stone-500 hover:border-stone-400'}"
 					aria-label="Filters"
 				>
-					⊟
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+						<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+					</svg>
 					{#if activeFilterCount > 0}
 						<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">{activeFilterCount}</span>
 					{/if}
 				</button>
 				{#if filterOpen}
 					<div class="absolute top-full right-0 z-20 mt-1 w-56 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+						<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Sort</div>
+						{#each SORT_OPTIONS as opt (opt.key)}
+							<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
+								<input type="radio" name="pantry-sort" value={opt.key} checked={sort === opt.key} onchange={() => (sort = opt.key)} class="accent-orange-500" />
+								<span class="text-sm text-stone-700">{opt.label}</span>
+							</label>
+						{/each}
 						{#if presentCategories.length > 0}
-							<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Category</div>
+							<div class="border-t border-stone-100 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Category</div>
 							{#each presentCategories as [cat, label] (cat)}
 								<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
 									<input type="checkbox" checked={activeCategories.has(cat)} onchange={() => toggleCategory(cat)} class="accent-orange-500" />
@@ -229,25 +257,26 @@
 							{/each}
 						{/if}
 						<div class="border-t border-stone-100 p-2">
-							<button type="button" onclick={() => { activeStatuses = new Set(); activeCategories = new Set(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
+							<button type="button" onclick={() => { sort = null; activeCategories = new Set(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
 						</div>
 					</div>
 				{/if}
 			</div>
-			{#if hasExpiring || hasLow}
-				<div class="mb-4 flex gap-2">
-					{#if hasExpiring}
-						<button type="button" onclick={() => toggleStatus('expiring')}
-							class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors {activeStatuses.has('expiring') ? 'border-red-600 bg-red-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
-						>Expiring soon</button>
-					{/if}
-					{#if hasLow}
-						<button type="button" onclick={() => toggleStatus('low')}
-							class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors {activeStatuses.has('low') ? 'border-orange-500 bg-orange-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
-						>Running low</button>
-					{/if}
-				</div>
-			{/if}
+			<div class="mb-4 flex gap-2">
+				<button type="button" onclick={() => toggleStatus('normal')}
+					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatuses.has('normal') ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+				>In Stock</button>
+				{#if hasExpiring}
+					<button type="button" onclick={() => toggleStatus('expiring')}
+						class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatuses.has('expiring') ? 'border-red-600 bg-red-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+					>Expiring soon</button>
+				{/if}
+				{#if hasLow}
+					<button type="button" onclick={() => toggleStatus('low')}
+						class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatuses.has('low') ? 'border-orange-500 bg-orange-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+					>Running low</button>
+				{/if}
+			</div>
 			{#if groups.expiringSoon.length > 0}
 				<section class="mb-6">
 					<h2 class="mb-2 text-xs font-semibold tracking-wider text-red-500 uppercase">Expiring soon</h2>
