@@ -1,8 +1,6 @@
 <script lang="ts">
-	import type { Component } from 'svelte';
-
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let { icon: Icon, heading, detail }: { icon: Component<any>; heading: string; detail: string } =
+	let { icon: Icon, heading, detail }: { icon: any; heading: string; detail: string } =
 		$props();
 </script>
 

@@ -554,7 +554,7 @@
 
 	</form>
 
-	<!-- Primary action row (outside main form to allow sibling Toss form) -->
+	<!-- Primary action row (outside main form to allow sibling Discard form) -->
 	<div class="mt-4 flex gap-2">
 		{#if sheetMode === 'add'}
 			<button type="button" onclick={closeSheet}
@@ -563,16 +563,17 @@
 			</button>
 		{/if}
 		{#if sheetMode === 'edit' && editingItem && editingItem.status === 'active'}
-			<form method="POST" action="?/discard"
+			<form method="POST" action="?/discard" class="flex-1"
 				use:enhance={() => async ({ result, update }) => {
 					await update({ reset: false });
-					if (result.type === 'success') { closeSheet(); showToast('Tossed'); }
+					if (result.type === 'success') { closeSheet(); showToast('Trashed'); }
 				}}
 			>
 				<input type="hidden" name="id" value={editingItem.id} />
-				<button type="submit" aria-label="Toss item"
-					class="flex h-12 w-12 items-center justify-center rounded-xl border border-red-200 text-red-400 hover:bg-red-50 transition-colors">
+				<button type="submit"
+					class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-200 text-red-400 hover:bg-red-50 transition-colors text-sm font-medium">
 					<Trash2 class="h-4 w-4" />
+					Trash
 				</button>
 			</form>
 		{/if}
