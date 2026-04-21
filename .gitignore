@@ -30,3 +30,6 @@ vite.config.ts.timestamp-*
 test-results/
 playwright-report/
 playwright/.auth/
+
+# Local Claude instructions (not for version control)
+CLAUDE.local.md
