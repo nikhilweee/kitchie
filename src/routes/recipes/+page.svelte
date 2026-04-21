@@ -8,22 +8,21 @@
 	import type { PageData } from './$types';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
-	import { MEAL_TYPE_LABELS, MEAL_TYPES } from '$lib/meal-type';
-	import type { MealType } from '$lib/server/db/schema';
+	import { RECIPE_COURSE_LABELS, RECIPE_COURSES, type RecipeCourse } from '$lib/recipe-course';
 	import { CUISINE_LABELS, CUISINES, type Cuisine } from '$lib/cuisine';
 	import PrepTimePicker, { PREP_TIME_LABELS } from '$lib/components/PrepTimePicker.svelte';
-	import { X, ListFilter } from 'lucide-svelte';
+	import { X, ListFilter, Search, ChefHat } from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	type Recipe = PageData['recipes'][0];
 
 	let search = $state('');
-	let activeMealTypes = $state<Set<MealType>>(new Set());
+	let activeMealTypes = $state<Set<RecipeCourse>>(new Set());
 	let activeCuisines = $state<Set<Cuisine>>(new Set());
 	let filterOpen = $state(false);
 
-	function toggleMealType(t: MealType) {
+	function toggleMealType(t: RecipeCourse) {
 		const next = new Set(activeMealTypes);
 		if (next.has(t)) next.delete(t); else next.add(t);
 		activeMealTypes = next;
@@ -54,7 +53,7 @@
 	const filteredBase = $derived(
 		data.recipes.filter((r) => {
 			if (search.trim() && !r.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
-			if (activeMealTypes.size > 0 && !activeMealTypes.has(r.mealType as MealType)) return false;
+			if (activeMealTypes.size > 0 && !activeMealTypes.has(r.mealType as RecipeCourse)) return false;
 			if (activeCuisines.size > 0 && !activeCuisines.has(r.cuisine as Cuisine)) return false;
 			return true;
 		})
@@ -83,7 +82,7 @@
 	let sheetMode = $state<'add' | 'edit' | null>(null);
 	let editingRecipe = $state<Recipe | null>(null);
 	let nameInput = $state('');
-	let mealTypeInput = $state<MealType | ''>('');
+	let mealTypeInput = $state<RecipeCourse | ''>('');
 	let cuisineInput = $state<Cuisine | ''>('');
 	let prepTimeInput = $state<number | null>(null);
 	let nameEl = $state<HTMLInputElement | undefined>(undefined);
@@ -135,7 +134,7 @@
 		sheetMode = 'edit';
 		editingRecipe = recipe;
 		nameInput = recipe.name;
-		mealTypeInput = (recipe.mealType as MealType) ?? '';
+		mealTypeInput = (recipe.mealType as RecipeCourse) ?? '';
 		cuisineInput = (recipe.cuisine as Cuisine) ?? '';
 		prepTimeInput = recipe.prepTime ?? null;
 		draftItems = recipe.items.map((i) => ({
@@ -220,18 +219,18 @@
 				{/if}
 			</div>
 			<div class="mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
-				{#each MEAL_TYPES as t (t)}
+				{#each RECIPE_COURSES as t (t)}
 					<button type="button" onclick={() => toggleMealType(t)}
 						class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeMealTypes.has(t) ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
-					>{MEAL_TYPE_LABELS[t]}</button>
+					>{RECIPE_COURSE_LABELS[t]}</button>
 				{/each}
 			</div>
 		{/if}
 		{#if filteredRecipes.length === 0}
 			{#if search.trim() || activeMealTypes.size > 0 || activeCuisines.size > 0}
-				<EmptyState emoji="🔍" heading="No matches" detail="Try a different search or filter." />
+				<EmptyState icon={Search} heading="No matches" detail="Try a different search or filter." />
 			{:else}
-				<EmptyState emoji="📋" heading="No recipes yet" detail="Save a recipe to pre-fill ingredients when logging meals." />
+				<EmptyState icon={ChefHat} heading="No recipes yet" detail="Save a recipe to pre-fill ingredients when logging meals." />
 			{/if}
 		{:else}
 			<ul class="space-y-2">
@@ -320,7 +319,7 @@
 		<!-- Meal type + Cuisine -->
 		<div class="mt-3 flex gap-3">
 			<div class="flex-1">
-				<label for="recipe-meal-type" class="mb-1 block text-xs font-medium text-stone-500">Meal type</label>
+				<label for="recipe-meal-type" class="mb-1 block text-xs font-medium text-stone-500">Course</label>
 				<select
 					id="recipe-meal-type"
 					name="mealType"
@@ -328,8 +327,8 @@
 					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
 				>
 					<option value="">Any</option>
-					{#each MEAL_TYPES as t (t)}
-						<option value={t}>{MEAL_TYPE_LABELS[t]}</option>
+					{#each RECIPE_COURSES as t (t)}
+						<option value={t}>{RECIPE_COURSE_LABELS[t]}</option>
 					{/each}
 				</select>
 			</div>

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login, loginAs, TEST_USER } from './helpers/auth';
 
-// Covers: AUTH-001, AUTH-002, AUTH-003, AUTH-004, AUTH-005, AUTH-006, AUTH-007
+// Covers: AUTH-001, AUTH-002, AUTH-003, AUTH-004, AUTH-005, AUTH-006, AUTH-007, AUTH-008
 
 // AUTH-001–004 test the login/logout flow itself — must run without pre-loaded auth state
 // so that redirect and session-destruction behaviour is observable.
@@ -65,6 +65,17 @@ test('AUTH-006: username change succeeds; username must be unique', async ({ pag
 	await page.fill('input[name="username"]', TEST_USER.username);
 	await page.click('button:has-text("Save changes")');
 	await expect(page.locator('text=Profile updated.')).toBeVisible();
+});
+
+test('AUTH-008: back button on change-password page returns to profile without creating a history loop', async ({ page }) => {
+	await login(page);
+	await page.goto('/profile');
+	await page.click('a:has-text("Change password")');
+	await expect(page).toHaveURL('/profile/password');
+	await page.click('button[aria-label="Go back"]');
+	await expect(page).toHaveURL('/profile');
+	await page.click('button[aria-label="Go back"]');
+	await expect(page).not.toHaveURL('/profile/password');
 });
 
 test('AUTH-007: password change requires current password, match, and min 8 chars', async ({ page }) => {

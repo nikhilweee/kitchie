@@ -16,7 +16,7 @@
 <svelte:head><title>Kitchie | Change Password</title></svelte:head>
 
 <div class="flex min-h-svh flex-col bg-stone-50">
-	<PageHeader title="Change password" back="/profile" />
+	<PageHeader title="Change password" back={true} />
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-6 pb-28">
 		<form

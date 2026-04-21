@@ -13,7 +13,7 @@
 	import type { MealType } from '$lib/server/db/schema';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
-	import { X } from 'lucide-svelte';
+	import { X, Utensils } from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -226,7 +226,7 @@
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
 		{#if data.entries.length === 0}
-			<EmptyState emoji="🍽️" heading="No meals logged yet" detail="Tap the button below to log your first meal." />
+			<EmptyState icon={Utensils} heading="No meals logged yet" detail="Tap the button below to log your first meal." />
 		{:else}
 			{#each grouped as [day, entries] (day)}
 				<section class="mb-6">

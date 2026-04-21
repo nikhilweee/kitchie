@@ -1,5 +1,6 @@
 import { integer, sqliteTable, text, real } from 'drizzle-orm/sqlite-core';
 import type { Cuisine } from '$lib/cuisine';
+import type { RecipeCourse } from '$lib/recipe-course';
 import { relations } from 'drizzle-orm';
 
 // ---------------------------------------------------------------------------
@@ -125,7 +126,7 @@ export const recipes = sqliteTable('recipes', {
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
 	name: text('name').notNull(),
-	mealType: text('meal_type').$type<MealType>(),
+	mealType: text('meal_type').$type<RecipeCourse>(),
 	cuisine: text('cuisine').$type<Cuisine>(),
 	prepTime: integer('prep_time'), // 1=Quick, 2=Easy, 3=Medium, 4=Long
 	createdAt: integer('created_at', { mode: 'timestamp' })

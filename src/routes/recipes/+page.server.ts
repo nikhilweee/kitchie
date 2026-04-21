@@ -4,7 +4,7 @@ import { db } from '$lib/server/db';
 import { recipes, recipeItems, pantryItems } from '$lib/server/db/schema';
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { getString, getStrings } from '$lib/server/form-data';
-import type { MealType } from '$lib/server/db/schema';
+import { RECIPE_COURSES, type RecipeCourse } from '$lib/recipe-course';
 import { CUISINES, type Cuisine } from '$lib/cuisine';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -45,8 +45,8 @@ export const actions: Actions = {
 		const id = getString(data, 'id');
 		const name = getString(data, 'name');
 		const mealTypeRaw = getString(data, 'mealType');
-		const mealType = (['breakfast', 'lunch', 'dinner', 'snack'] as MealType[]).includes(mealTypeRaw as MealType)
-			? (mealTypeRaw as MealType)
+		const mealType = (RECIPE_COURSES as string[]).includes(mealTypeRaw)
+			? (mealTypeRaw as RecipeCourse)
 			: null;
 		const cuisineRaw = getString(data, 'cuisine');
 		const cuisine = (CUISINES as string[]).includes(cuisineRaw) ? (cuisineRaw as Cuisine) : null;

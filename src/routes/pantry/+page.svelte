@@ -14,7 +14,7 @@
 	import { toDateStr } from '$lib/date-format';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
-	import { X, ListFilter } from 'lucide-svelte';
+	import { X, ListFilter, ShoppingBasket, Search } from 'lucide-svelte';
 	import type { PantryCategory, QuantityType } from '$lib/server/db/schema';
 
 	let { data }: { data: PageData } = $props();
@@ -193,7 +193,7 @@
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
 		{#if data.items.length === 0}
-			<EmptyState emoji="🧺" heading="Pantry is empty" detail="Add items after your next shopping trip." />
+			<EmptyState icon={ShoppingBasket} heading="Pantry is empty" detail="Add items after your next shopping trip." />
 		{:else}
 			{@const presentCategories = categories.filter(([cat]) => data.items.some((i) => i.category === cat))}
 			<!-- Search + filter -->
@@ -252,7 +252,7 @@
 				>Running Low</button>
 			</div>
 			{#if filteredItems.length === 0}
-				<EmptyState emoji="🔍" heading="No matches" detail="Try a different search or filter." />
+				<EmptyState icon={Search} heading="No matches" detail="Try a different search or filter." />
 			{:else}
 				{@render itemList(filteredItems)}
 			{/if}

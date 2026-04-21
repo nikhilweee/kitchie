@@ -27,3 +27,7 @@
 ## AUTH-007
 **Requirement:** Changing password requires the current password, a new password (min 8 chars), and matching confirmation.  
 **Test:** `playwright/auth.spec.ts` — "AUTH-007: password change requires current password, match, and min 8 chars"
+
+## AUTH-008
+**Requirement:** The back button on the change-password page returns to /profile and does not create a history loop (pressing back from /profile must not return to /profile/password).  
+**Test:** `playwright/auth.spec.ts` — "AUTH-008: back button on change-password page returns to profile without creating a history loop"
