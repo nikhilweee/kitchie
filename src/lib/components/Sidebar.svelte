@@ -32,7 +32,7 @@
 				class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
 			>
 				<ShoppingCart class="h-4 w-4 text-stone-400" />
-				Shopping lists
+				Shopping Lists
 			</a>
 			<p class="mt-3 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Settings</p>
 			<a

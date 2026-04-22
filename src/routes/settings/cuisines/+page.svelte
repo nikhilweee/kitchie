@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import type { PageData, ActionData } from './$types';
 	import PageHeader from '$lib/components/PageHeader.svelte';
-	import { Pencil, Trash2, Check, X } from 'lucide-svelte';
+	import { Pencil, Trash2, Check, X, GripVertical } from 'lucide-svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -11,6 +11,15 @@
 	let editingId = $state<string | null>(null);
 	let editName = $state('');
 
+	// Drag state
+	let items = $state(data.cuisines.map((c) => c));
+	let draggedId = $state<string | null>(null);
+	let reorderForm: HTMLFormElement;
+
+	$effect(() => {
+		items = data.cuisines.map((c) => c);
+	});
+
 	function startEdit(c: PageData['cuisines'][0]) {
 		editingId = c.id;
 		editName = c.name;
@@ -18,6 +27,33 @@
 
 	function cancelEdit() {
 		editingId = null;
+	}
+
+	function onDragStart(id: string) {
+		draggedId = id;
+	}
+
+	function onDragOver(e: DragEvent, id: string) {
+		e.preventDefault();
+		if (!draggedId || draggedId === id) return;
+		const from = items.findIndex((c) => c.id === draggedId);
+		const to = items.findIndex((c) => c.id === id);
+		if (from === -1 || to === -1) return;
+		const next = [...items];
+		const [moved] = next.splice(from, 1);
+		next.splice(to, 0, moved);
+		items = next;
+	}
+
+	function onDrop() {
+		draggedId = null;
+		const input = reorderForm.querySelector<HTMLInputElement>('input[name="ids"]')!;
+		input.value = items.map((c) => c.id).join(',');
+		reorderForm.requestSubmit();
+	}
+
+	function onDragEnd() {
+		draggedId = null;
 	}
 </script>
 
@@ -61,9 +97,21 @@
 			</form>
 		</div>
 
+		<!-- Hidden reorder form -->
+		<form bind:this={reorderForm} method="POST" action="?/reorder" use:enhance class="hidden">
+			<input type="hidden" name="ids" value="" />
+		</form>
+
 		<ul class="space-y-2">
-			{#each data.cuisines as cuisine (cuisine.id)}
-				<li class="rounded-xl bg-white px-4 py-3 shadow-xs">
+			{#each items as cuisine (cuisine.id)}
+				<li
+					class="rounded-xl bg-white px-4 py-3 shadow-xs transition-opacity {draggedId === cuisine.id ? 'opacity-40' : ''}"
+					draggable={editingId !== cuisine.id}
+					ondragstart={() => onDragStart(cuisine.id)}
+					ondragover={(e) => onDragOver(e, cuisine.id)}
+					ondrop={onDrop}
+					ondragend={onDragEnd}
+				>
 					{#if editingId === cuisine.id}
 						<form
 							method="POST"
@@ -88,6 +136,7 @@
 						</form>
 					{:else}
 						<div class="flex items-center gap-3">
+							<GripVertical class="h-4 w-4 shrink-0 cursor-grab text-stone-300 active:cursor-grabbing" />
 							<p class="min-w-0 flex-1 text-sm font-medium text-stone-900">{cuisine.name}</p>
 							{#if cuisine.usageCount > 0}
 								<span class="shrink-0 text-xs text-stone-400">{cuisine.usageCount} recipe{cuisine.usageCount !== 1 ? 's' : ''}</span>

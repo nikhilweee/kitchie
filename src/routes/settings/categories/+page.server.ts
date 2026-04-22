@@ -92,6 +92,23 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
+	reorder: async ({ request, locals }) => {
+		const userId = locals.user!.id;
+		const data = await request.formData();
+		const ids = getString(data, 'ids').split(',').filter(Boolean);
+		if (ids.length === 0) return fail(400, {});
+
+		await Promise.all(
+			ids.map((id, i) =>
+				db
+					.update(userCategories)
+					.set({ sortOrder: i + 1 })
+					.where(and(eq(userCategories.id, id), eq(userCategories.userId, userId)))
+			)
+		);
+		return { success: true };
+	},
+
 	delete: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();

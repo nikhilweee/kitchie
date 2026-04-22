@@ -105,7 +105,7 @@ export const actions: Actions = {
 
 		const expiryDateStr = getString(data, 'expiryDate');
 		const expiryDate = expiryDateStr ? new Date(expiryDateStr) : calcExpiry(cat.ttlDays, purchaseDate);
-		const expiryOverridden = !!expiryDateStr;
+		const expiryOverridden = getString(data, 'expiryOverridden') === 'true';
 
 		await db.insert(pantryItems).values({
 			userId, name, category: cat.id, quantityType, quantity, unit, purchaseDate, expiryDate, expiryOverridden
@@ -142,7 +142,7 @@ export const actions: Actions = {
 		const purchaseDate = isRestoring ? new Date() : (purchaseDateStr ? new Date(purchaseDateStr) : new Date());
 		const expiryDateStr = getString(data, 'expiryDate');
 		const expiryDate = isRestoring ? calcExpiry(cat.ttlDays, purchaseDate) : (expiryDateStr ? new Date(expiryDateStr) : calcExpiry(cat.ttlDays, purchaseDate));
-		const expiryOverridden = isRestoring ? false : !!expiryDateStr;
+		const expiryOverridden = isRestoring ? false : getString(data, 'expiryOverridden') === 'true';
 
 		await db
 			.update(pantryItems)

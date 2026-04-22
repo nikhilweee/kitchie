@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { PageData } from './$types';
-	import { daysUntilExpiry, calcExpiry } from '$lib/expiry';
+	import { daysUntilExpiry } from '$lib/expiry';
 	import { guessQuantityType } from '$lib/quantity';
 	import EstimatePicker from '$lib/components/EstimatePicker.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
@@ -38,9 +38,54 @@
 	let quantity = $state(1);
 	let unit = $state('count');
 	let expiryDate = $state('');
+	let expiryMode = $state<'relative' | 'exact'>('relative');
+	let expiryDays = $state(30);
 	let purchaseDate = $state(todayStr()); // persists across adds
 	let categoryLocked = $state(false);
 	let expiryLocked = $state(false);
+
+	const EXPIRY_OPTIONS = [
+		{ label: 'in 1d',  days: 1   },
+		{ label: 'in 3d',  days: 3   },
+		{ label: 'in 1w',  days: 7   },
+		{ label: 'in 2w',  days: 14  },
+		{ label: 'in 1m',  days: 30  },
+		{ label: 'in 2m',  days: 60  },
+		{ label: 'in 3m',  days: 90  },
+		{ label: 'in 6m',  days: 180 },
+		{ label: 'in 1y',  days: 365 },
+		{ label: 'in 2y',  days: 730 },
+	] as const;
+
+	const PURCHASE_OPTIONS = [
+		{ label: 'Today',   days: 0  },
+		{ label: '1d ago',  days: 1  },
+		{ label: '2d ago',  days: 2  },
+		{ label: '3d ago',  days: 3  },
+		{ label: '1w ago',  days: 7  },
+		{ label: '2w ago',  days: 14 },
+		{ label: '1m ago',  days: 30 },
+	] as const;
+
+	function closestDuration(ttlDays: number): number {
+		return EXPIRY_OPTIONS.reduce((prev, curr) =>
+			Math.abs(curr.days - ttlDays) < Math.abs(prev.days - ttlDays) ? curr : prev
+		).days;
+	}
+
+	let purchaseDaysAgo = $state(0);
+
+	const computedPurchaseDate = $derived.by(() => {
+		const d = new Date();
+		d.setDate(d.getDate() - purchaseDaysAgo);
+		return d.toISOString().split('T')[0];
+	});
+
+	const computedExpiryDate = $derived.by(() => {
+		const base = new Date(expiryMode === 'relative' ? computedPurchaseDate : (purchaseDate || todayStr()));
+		base.setDate(base.getDate() + expiryDays);
+		return base.toISOString().split('T')[0];
+	});
 
 	// Toast
 	let toast = $state<string | null>(null);
@@ -84,6 +129,9 @@
 		quantityType = 'estimate';
 		quantity = 1;
 		unit = 'count';
+		expiryMode = 'relative';
+		expiryDays = closestDuration(categoryById(defaultCategoryId())?.ttlDays ?? 30);
+		purchaseDaysAgo = 0;
 		expiryDate = '';
 		categoryLocked = false;
 		expiryLocked = false;
@@ -102,7 +150,17 @@
 		purchaseDate = toDateStr(item.purchaseDate);
 		expiryDate = toDateStr(item.expiryDate);
 		categoryLocked = true;
-		expiryLocked = item.expiryOverridden;
+		if (item.expiryOverridden) {
+			expiryMode = 'exact';
+			expiryLocked = true;
+		} else {
+			expiryMode = 'relative';
+			expiryLocked = false;
+			const diffDays = Math.round(
+				(new Date(item.expiryDate).getTime() - new Date(item.purchaseDate).getTime()) / 86400000
+			);
+			expiryDays = closestDuration(diffDays);
+		}
 		history.replaceState(history.state, '', `?edit=${item.id}`);
 		setTimeout(() => nameEl?.focus(), 50);
 	}
@@ -133,8 +191,7 @@
 		if (!expiryLocked) {
 			const cat = categoryById(categoryId);
 			const ttlDays = cat?.ttlDays ?? 30;
-			const pd = purchaseDate ? new Date(purchaseDate) : new Date();
-			expiryDate = calcExpiry(ttlDays, pd).toISOString().split('T')[0];
+			expiryDays = closestDuration(ttlDays);
 		}
 		if (sheetMode === 'add') quantity = 1;
 	}
@@ -480,7 +537,6 @@
 
 			<div>
 				<div class="mb-2 flex items-center justify-between">
-					<p class="text-xs font-medium text-stone-500">Quantity</p>
 					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
 						<button
 							type="button"
@@ -492,6 +548,16 @@
 							onclick={() => { quantityType = 'count'; quantity = 1; }}
 							class="px-3 py-1.5 transition-colors {quantityType === 'count' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
 						>Quantity</button>
+					</div>
+					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
+						<button type="button"
+							onclick={() => { expiryMode = 'relative'; expiryLocked = false; }}
+							class="px-3 py-1.5 transition-colors {expiryMode === 'relative' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+						>Duration</button>
+						<button type="button"
+							onclick={() => { expiryMode = 'exact'; expiryDate = computedExpiryDate; expiryLocked = true; }}
+							class="px-3 py-1.5 transition-colors {expiryMode === 'exact' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+						>Date</button>
 					</div>
 				</div>
 				<input type="hidden" name="quantityType" value={quantityType} />
@@ -533,29 +599,60 @@
 				{/if}
 			</div>
 
-			<div class="grid grid-cols-2 gap-2">
-				<div>
-					<label for="sheet-purchased" class="mb-1 block text-xs font-medium text-stone-500">Purchased</label>
-					<input
-						id="sheet-purchased"
-						name="purchaseDate"
-						type="date"
-						bind:value={purchaseDate}
-						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
-					/>
+			{#if expiryMode === 'relative'}
+				<input type="hidden" name="purchaseDate" value={computedPurchaseDate} />
+				<input type="hidden" name="expiryDate" value={computedExpiryDate} />
+				<input type="hidden" name="expiryOverridden" value="false" />
+				<div class="grid grid-cols-2 gap-2">
+					<div>
+						<p class="mb-1 text-xs font-medium text-stone-500">Purchased</p>
+						<select
+							bind:value={purchaseDaysAgo}
+							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+						>
+							{#each PURCHASE_OPTIONS as opt (opt.days)}
+								<option value={opt.days}>{opt.label}</option>
+							{/each}
+						</select>
+					</div>
+					<div>
+						<p class="mb-1 text-xs font-medium text-stone-500">Expires</p>
+						<select
+							bind:value={expiryDays}
+							onchange={() => (expiryLocked = true)}
+							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+						>
+							{#each EXPIRY_OPTIONS as opt (opt.days)}
+								<option value={opt.days}>{opt.label}</option>
+							{/each}
+						</select>
+					</div>
 				</div>
-				<div>
-					<label for="sheet-expiry" class="mb-1 block text-xs font-medium text-stone-500">Expires</label>
-					<input
-						id="sheet-expiry"
-						name="expiryDate"
-						type="date"
-						bind:value={expiryDate}
-						oninput={() => (expiryLocked = true)}
-						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
-					/>
+			{:else}
+				<input type="hidden" name="expiryOverridden" value="true" />
+				<div class="grid grid-cols-2 gap-2">
+					<div>
+						<label for="sheet-purchased" class="mb-1 block text-xs font-medium text-stone-500">Purchased</label>
+						<input
+							id="sheet-purchased"
+							name="purchaseDate"
+							type="date"
+							bind:value={purchaseDate}
+							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
+						/>
+					</div>
+					<div>
+						<label for="sheet-expiry" class="mb-1 block text-xs font-medium text-stone-500">Expires</label>
+						<input
+							id="sheet-expiry"
+							name="expiryDate"
+							type="date"
+							bind:value={expiryDate}
+							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
+						/>
+					</div>
 				</div>
-			</div>
+			{/if}
 		</div>
 
 		{#if sheetMode === 'edit' && editingItem && editingItem.status !== 'active'}
@@ -600,7 +697,7 @@
 		{@const itemId = editingItem.id}
 		<div class="mt-3 border-t border-stone-100 pt-3">
 			<p class="mb-2 text-xs font-medium text-stone-400">Shopping lists</p>
-			<div class="flex flex-wrap gap-2">
+			<div class="space-y-1.5">
 				{#each data.lists as list (list.id)}
 					{@const onList = data.listMembership.has(`${list.id}:${itemId}`)}
 					<form method="POST" action={onList ? '?/removeFromList' : '?/addToList'}
@@ -611,8 +708,9 @@
 						<input type="hidden" name="itemId" value={itemId} />
 						<input type="hidden" name="listId" value={list.id} />
 						<button type="submit"
-							class="rounded-full border px-3 py-1 text-xs font-medium transition-colors {onList ? 'border-orange-400 bg-orange-50 text-orange-600 hover:border-red-300 hover:bg-red-50 hover:text-red-500' : 'border-stone-300 text-stone-600 hover:border-orange-400 hover:text-orange-600'}">
-							{onList ? '✓ ' : '+ '}{list.name}
+							class="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors {onList ? 'border-orange-300 bg-orange-50 text-orange-700 hover:border-red-300 hover:bg-red-50 hover:text-red-600' : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-orange-300 hover:bg-orange-50'}">
+							<span class="text-xs">{onList ? '✓' : '+'}</span>
+							{list.name}
 						</button>
 					</form>
 				{/each}
