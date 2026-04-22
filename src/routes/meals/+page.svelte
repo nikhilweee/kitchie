@@ -5,6 +5,7 @@
 	import { MEAL_TYPE_LABELS, MEAL_TYPES, guessMealType, currentDateTimeStr } from '$lib/meal-type';
 	import { toDateTimeLocalStr } from '$lib/date-format';
 	import SmallEstimatePicker from '$lib/components/SmallEstimatePicker.svelte';
+	import SmallCountPicker from '$lib/components/SmallCountPicker.svelte';
 	import PageHeader from '$lib/components/PageHeader.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
@@ -157,7 +158,7 @@
 	function addCustomPantryItem(name: string) {
 		pantrySelected = [
 			...pantrySelected,
-			{ pantryItemId: null, itemName: name, quantityType: 'count', newQuantity: 0 }
+			{ pantryItemId: null, itemName: name, quantityType: 'estimate', newQuantity: 1 }
 		];
 		pantrySearch = '';
 	}
@@ -430,26 +431,9 @@
 						{@const stock = pantryStock(sel.pantryItemId)}
 						<li class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5">
 							<div class="flex items-center gap-2">
-								<div class="min-w-0 flex-1">
-									<span class="truncate text-sm font-medium text-stone-800">{sel.itemName}</span>
-									{#if stock?.unit && stock.unit !== 'count'}
-										<span class="ml-1 text-xs text-stone-400">{stock.unit}</span>
-									{/if}
-								</div>
+								<span class="min-w-0 flex-1 truncate text-sm font-medium text-stone-800">{sel.itemName}</span>
 								{#if sel.quantityType === 'count'}
-									<div class="flex items-center gap-1">
-										<button
-											type="button"
-											onclick={() => (sel.newQuantity = Math.max(0, sel.newQuantity - 1))}
-											class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100"
-										>−</button>
-										<span class="w-8 text-center text-sm font-medium text-stone-800">{sel.newQuantity}</span>
-										<button
-											type="button"
-											onclick={() => sel.newQuantity++}
-											class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-100"
-										>+</button>
-									</div>
+									<SmallCountPicker bind:value={sel.newQuantity} unit={stock?.unit} />
 								{:else}
 									<SmallEstimatePicker bind:value={sel.newQuantity} />
 								{/if}

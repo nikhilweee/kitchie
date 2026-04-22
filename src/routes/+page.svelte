@@ -147,7 +147,7 @@
 	function addCustomPantryItem(name: string) {
 		pantrySelected = [
 			...pantrySelected,
-			{ pantryItemId: null, itemName: name, quantityType: 'count', newQuantity: 0 }
+			{ pantryItemId: null, itemName: name, quantityType: 'estimate', newQuantity: 1 }
 		];
 		pantrySearch = '';
 	}

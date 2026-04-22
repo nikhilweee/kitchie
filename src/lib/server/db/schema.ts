@@ -161,6 +161,27 @@ export const userCuisines = sqliteTable('user_cuisines', {
 });
 
 // ---------------------------------------------------------------------------
+// Shopping lists
+// ---------------------------------------------------------------------------
+
+export const shoppingLists = sqliteTable('shopping_lists', {
+	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull()
+});
+
+export const shoppingListItems = sqliteTable('shopping_list_items', {
+	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+	listId: text('list_id').notNull().references(() => shoppingLists.id, { onDelete: 'cascade' }),
+	userId: text('user_id').notNull(),
+	name: text('name').notNull(),
+	pantryItemId: text('pantry_item_id'), // nullable — links to existing pantry item
+	shopped: integer('shopped', { mode: 'boolean' }).notNull().default(false),
+	createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()).notNull()
+});
+
+// ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------
 
@@ -209,4 +230,14 @@ export const userCategoriesRelations = relations(userCategories, ({ one }) => ({
 
 export const userCuisinesRelations = relations(userCuisines, ({ one }) => ({
 	user: one(users, { fields: [userCuisines.userId], references: [users.id] })
+}));
+
+export const shoppingListsRelations = relations(shoppingLists, ({ one, many }) => ({
+	user: one(users, { fields: [shoppingLists.userId], references: [users.id] }),
+	items: many(shoppingListItems)
+}));
+
+export const shoppingListItemsRelations = relations(shoppingListItems, ({ one }) => ({
+	list: one(shoppingLists, { fields: [shoppingListItems.listId], references: [shoppingLists.id] }),
+	pantryItem: one(pantryItems, { fields: [shoppingListItems.pantryItemId], references: [pantryItems.id] })
 }));

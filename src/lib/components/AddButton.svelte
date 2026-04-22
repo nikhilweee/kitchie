@@ -4,6 +4,14 @@
 
 	let { label, onclick }: { label: string; onclick: () => void } = $props();
 
+	function onKeydown(e: KeyboardEvent) {
+		if (e.key !== 'n' && e.key !== 'N') return;
+		const active = document.activeElement;
+		if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
+		e.preventDefault();
+		onclick();
+	}
+
 	let hidden = $state(false);
 	let lastY = 0;
 
@@ -21,6 +29,8 @@
 		return () => window.removeEventListener('scroll', onScroll);
 	});
 </script>
+
+<svelte:window onkeydown={onKeydown} />
 
 <div
 	class="fixed bottom-14 left-0 right-0 z-10 flex justify-center px-4 pb-2 transition-transform duration-200 {hidden

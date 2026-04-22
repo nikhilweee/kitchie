@@ -286,6 +286,7 @@
 	const presentCategories = $derived(
 		data.categories.filter((cat) => data.items.some((i) => i.category === cat.id))
 	);
+
 </script>
 
 <svelte:head><title>Kitchie | Pantry</title></svelte:head>
@@ -347,7 +348,7 @@
 					</div>
 				{/if}
 			</div>
-			<div class="mb-4 flex gap-2 overflow-x-auto pb-0.5">
+			<div class="mb-4 flex gap-2 overflow-x-auto scrollbar-none">
 				<button type="button" onclick={() => toggleStatus('normal')}
 					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'normal' ? 'border-green-600 bg-green-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>In Stock</button>
@@ -593,6 +594,31 @@
 			{sheetMode === 'edit' ? 'Save' : 'Add item'}
 		</button>
 	</div>
+
+	<!-- Add to shopping list (edit mode only) -->
+	{#if sheetMode === 'edit' && editingItem && data.lists.length > 0}
+		{@const itemId = editingItem.id}
+		<div class="mt-3 border-t border-stone-100 pt-3">
+			<p class="mb-2 text-xs font-medium text-stone-400">Shopping lists</p>
+			<div class="flex flex-wrap gap-2">
+				{#each data.lists as list (list.id)}
+					{@const onList = data.listMembership.has(`${list.id}:${itemId}`)}
+					<form method="POST" action={onList ? '?/removeFromList' : '?/addToList'}
+						use:enhance={() => async ({ result, update }) => {
+							await update({ reset: false });
+							if (result.type === 'success') showToast(onList ? `Removed from ${list.name}` : `Added to ${list.name}`);
+						}}>
+						<input type="hidden" name="itemId" value={itemId} />
+						<input type="hidden" name="listId" value={list.id} />
+						<button type="submit"
+							class="rounded-full border px-3 py-1 text-xs font-medium transition-colors {onList ? 'border-orange-400 bg-orange-50 text-orange-600 hover:border-red-300 hover:bg-red-50 hover:text-red-500' : 'border-stone-300 text-stone-600 hover:border-orange-400 hover:text-orange-600'}">
+							{onList ? '✓ ' : '+ '}{list.name}
+						</button>
+					</form>
+				{/each}
+			</div>
+		</div>
+	{/if}
 
 	<!-- Danger zone: delete permanently (edit mode only, two-tap) -->
 	{#if sheetMode === 'edit' && editingItem}

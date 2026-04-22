@@ -1,8 +1,8 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { pantryItems, userCategories } from '$lib/server/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { pantryItems, userCategories, shoppingLists, shoppingListItems } from '$lib/server/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
 import { calcExpiry } from '$lib/expiry';
 import { getString, getNumber } from '$lib/server/form-data';
 import { inferItemDefaults } from '$lib/server/infer-item';
@@ -40,10 +40,18 @@ async function getOrSeedCategories(userId: string) {
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const userId = locals.user!.id;
 
-	const [items, categories] = await Promise.all([
+	const [items, categories, lists, listItems] = await Promise.all([
 		db.select().from(pantryItems).where(eq(pantryItems.userId, userId)).orderBy(pantryItems.expiryDate),
-		getOrSeedCategories(userId)
+		getOrSeedCategories(userId),
+		db.select().from(shoppingLists).where(eq(shoppingLists.userId, userId)).orderBy(desc(shoppingLists.createdAt)),
+		db.select({ listId: shoppingListItems.listId, pantryItemId: shoppingListItems.pantryItemId })
+			.from(shoppingListItems).where(eq(shoppingListItems.userId, userId))
 	]);
+
+	// Set of "listId:pantryItemId" for fast membership lookup
+	const listMembership = new Set(
+		listItems.filter((r) => r.pantryItemId).map((r) => `${r.listId}:${r.pantryItemId}`)
+	);
 
 	return {
 		items: items.map((i) => ({
@@ -53,6 +61,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			createdAt: i.createdAt.toISOString()
 		})),
 		categories,
+		lists: lists.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() })),
+		listMembership,
 		editId: url.searchParams.get('edit')
 	};
 };
@@ -167,6 +177,49 @@ export const actions: Actions = {
 		await db
 			.delete(pantryItems)
 			.where(and(eq(pantryItems.id, id), eq(pantryItems.userId, userId)));
+
+		return { success: true };
+	},
+
+	addToList: async ({ request, locals }) => {
+		const userId = locals.user!.id;
+		const data = await request.formData();
+		const itemId = getString(data, 'itemId');
+		const listId = getString(data, 'listId');
+		if (!itemId || !listId) return fail(400, {});
+
+		// Verify ownership
+		const item = db.select().from(pantryItems)
+			.where(and(eq(pantryItems.id, itemId), eq(pantryItems.userId, userId))).get();
+		const list = db.select().from(shoppingLists)
+			.where(and(eq(shoppingLists.id, listId), eq(shoppingLists.userId, userId))).get();
+		if (!item || !list) return fail(404, {});
+
+		// Skip if already on this list
+		const existing = db.select().from(shoppingListItems)
+			.where(and(eq(shoppingListItems.listId, listId), eq(shoppingListItems.pantryItemId, itemId))).get();
+		if (existing) return { success: true, alreadyOnList: true };
+
+		await db.insert(shoppingListItems).values({
+			listId, userId, name: item.name, pantryItemId: item.id
+		});
+
+		return { success: true, listName: list.name };
+	},
+
+	removeFromList: async ({ request, locals }) => {
+		const userId = locals.user!.id;
+		const data = await request.formData();
+		const itemId = getString(data, 'itemId');
+		const listId = getString(data, 'listId');
+		if (!itemId || !listId) return fail(400, {});
+
+		await db.delete(shoppingListItems)
+			.where(and(
+				eq(shoppingListItems.listId, listId),
+				eq(shoppingListItems.pantryItemId, itemId),
+				eq(shoppingListItems.userId, userId)
+			));
 
 		return { success: true };
 	}

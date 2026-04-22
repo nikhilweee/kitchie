@@ -2,6 +2,7 @@
 	let { open, onclose }: { open: boolean; onclose: () => void } = $props();
 
 	const shortcuts = [
+		{ label: 'Add new item',   keys: ['N'] },
 		{ label: 'Save / Confirm', keys: ['⌘', '↵'] },
 		{ label: 'Trash / Delete', keys: ['⌘', '⌫'] },
 		{ label: 'Close',          keys: ['Esc'] },

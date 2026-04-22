@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { ChevronLeft, Menu } from 'lucide-svelte';
+	import type { Snippet } from 'svelte';
 
-	let { title, back, onhamburger }: { title: string; back?: string | true; onhamburger?: () => void } = $props();
+	let { title, back, onhamburger, actions }: { title: string; back?: string | true; onhamburger?: () => void; actions?: Snippet } = $props();
 
 	function initials(user: { name: string | null; username: string }) {
 		const src = user.name ?? user.username;
@@ -30,8 +31,11 @@
 		<!-- Title: absolutely centered within the container -->
 		<h1 class="flex-1 text-center text-lg font-bold text-stone-900">{title}</h1>
 
-		<!-- Right: avatar -->
-		<div class="w-8 shrink-0 flex justify-end">
+		<!-- Right: actions or avatar -->
+		<div class="min-w-8 shrink-0 flex items-center justify-end gap-2">
+			{#if actions}
+				{@render actions()}
+			{/if}
 			{#if page.data.user}
 				<a
 					href="/profile"
