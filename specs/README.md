@@ -62,3 +62,4 @@ These entries are tracked but do not count as verified. Add a test before relyin
 | `PANT` | Pantry management and update flow |
 | `RECP` | Recipes |
 | `SETT` | Settings: categories and cuisines |
+| `SHOP` | Shopping lists |

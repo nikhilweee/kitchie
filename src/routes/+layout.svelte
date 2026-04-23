@@ -3,16 +3,16 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/state';
 	import type { LayoutData } from './$types';
-	import { Utensils, ChefHat, ShoppingBasket } from 'lucide-svelte';
-	import type { Component } from 'svelte';
+	import { Utensils, ChefHat, ShoppingBasket, ShoppingCart } from 'lucide-svelte';
 	import KeyboardShortcutsModal from '$lib/components/KeyboardShortcutsModal.svelte';
 
 	let { children, data }: { children: any; data: LayoutData } = $props();
 
-	const navItems: { href: string; label: string; icon: Component }[] = [
+	const navItems = [
 		{ href: '/meals', label: 'Meals', icon: Utensils },
 		{ href: '/recipes', label: 'Recipes', icon: ChefHat },
-		{ href: '/pantry', label: 'Pantry', icon: ShoppingBasket }
+		{ href: '/pantry', label: 'Pantry', icon: ShoppingBasket },
+		{ href: '/shopping', label: 'Shopping', icon: ShoppingCart }
 	];
 
 	let shortcutsOpen = $state(false);

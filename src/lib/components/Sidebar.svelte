@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Tag, UtensilsCrossed, ShoppingCart, Clipboard, ClipboardCheck, SlidersHorizontal } from 'lucide-svelte';
+	import { Tag, UtensilsCrossed, Clipboard, ClipboardCheck, SlidersHorizontal } from 'lucide-svelte';
 
 	let { open, onclose }: { open: boolean; onclose: () => void } = $props();
 
@@ -35,15 +35,7 @@
 		</div>
 
 		<nav class="flex-1 px-3 py-3">
-			<p class="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Shopping</p>
-			<a
-				href="/shopping"
-				class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
-			>
-				<ShoppingCart class="h-4 w-4 text-stone-400" />
-				Shopping Lists
-			</a>
-			<p class="mt-3 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Settings</p>
+			<p class="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Settings</p>
 			<a
 				href="/settings/categories"
 				class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-100"

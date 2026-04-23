@@ -16,3 +16,5 @@ html[data-display="slim"] .density-sheet { padding-top: 0.5rem !important; paddi
 html[data-display="slim"] .density-sheet-header { margin-bottom: 0.5rem !important; }
 html[data-display="slim"] .density-sheet-name { padding-top: 0.625rem !important; padding-bottom: 0.625rem !important; font-size: 1rem !important; }
 html[data-display="slim"] .density-sheet-btn { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; height: auto !important; }
+html[data-display="slim"] .density-picker { height: 1.5rem !important; }
+html[data-display="slim"] .density-picker-btn { height: 1.5rem !important; width: 1.5rem !important; font-size: 0.75rem !important; }

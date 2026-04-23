@@ -34,7 +34,7 @@
 {/if}
 
 <div
-	class="grid h-8 w-[6.5rem] shrink-0 grid-cols-3 overflow-hidden rounded-lg border border-stone-200"
+	class="grid h-8 w-[6.5rem] shrink-0 grid-cols-3 overflow-hidden rounded-lg border border-stone-200 density-picker"
 	role="group"
 	aria-label="Quantity level"
 >

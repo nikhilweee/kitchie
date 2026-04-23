@@ -6,23 +6,33 @@
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
-	import { ShoppingCart } from 'lucide-svelte';
+	import { ShoppingCart, Pencil, Trash2 } from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	let sidebarOpen = $state(false);
-	let sheetOpen = $state(false);
+	type SheetMode = 'create' | 'rename' | null;
+	let sheetMode = $state<SheetMode>(null);
 	let nameInput = $state('');
 	let nameEl = $state<HTMLInputElement | undefined>(undefined);
+	let renameTarget = $state<{ id: string; name: string } | null>(null);
 
 	function openNew() {
 		nameInput = '';
-		sheetOpen = true;
+		renameTarget = null;
+		sheetMode = 'create';
+		setTimeout(() => nameEl?.focus(), 50);
+	}
+
+	function openRename(list: { id: string; name: string }) {
+		renameTarget = list;
+		nameInput = list.name;
+		sheetMode = 'rename';
 		setTimeout(() => nameEl?.focus(), 50);
 	}
 
 	function closeSheet() {
-		sheetOpen = false;
+		sheetMode = null;
 	}
 </script>
 
@@ -31,7 +41,7 @@
 <Sidebar open={sidebarOpen} onclose={() => (sidebarOpen = false)} />
 
 <div class="flex min-h-svh flex-col bg-stone-50">
-	<PageHeader title="Shopping lists" onhamburger={() => (sidebarOpen = true)} />
+	<PageHeader title="Shopping Lists" onhamburger={() => (sidebarOpen = true)} />
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4">
 		{#if data.lists.length === 0}
@@ -39,17 +49,24 @@
 		{:else}
 			<ul class="space-y-2">
 				{#each data.lists as list (list.id)}
-					<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs">
+					<li class="flex items-center gap-2 rounded-xl bg-white px-4 shadow-xs density-li">
 						<a href="/shopping/{list.id}" class="min-w-0 flex-1">
 							<p class="truncate font-medium text-stone-900">{list.name}</p>
-							<p class="text-xs text-stone-400">
+							<p class="text-xs text-stone-400 density-hide">
 								{list.shoppedCount}/{list.itemCount} items
 							</p>
 						</a>
+						<button type="button" onclick={() => openRename(list)}
+							class="flex h-7 w-7 shrink-0 items-center justify-center text-stone-300 hover:text-stone-500 transition-colors"
+							aria-label="Rename {list.name}">
+							<Pencil class="h-3.5 w-3.5" />
+						</button>
 						<form method="POST" action="?/delete" use:enhance>
 							<input type="hidden" name="id" value={list.id} />
-							<button type="submit" class="p-1 text-stone-300 hover:text-red-400 transition-colors" aria-label="Delete {list.name}">
-								×
+							<button type="submit"
+								class="flex h-7 w-7 shrink-0 items-center justify-center text-stone-300 hover:text-red-400 transition-colors"
+								aria-label="Delete {list.name}">
+								<Trash2 class="h-3.5 w-3.5" />
 							</button>
 						</form>
 					</li>
@@ -61,12 +78,18 @@
 	<AddButton label="New list" onclick={openNew} />
 </div>
 
-<BottomSheet open={sheetOpen} onclose={closeSheet}>
-	<form method="POST" action="?/create" use:enhance={() => async ({ result, update }) => {
-		await update();
-		if (result.type === 'redirect') closeSheet();
-	}}>
-		<h2 class="mb-4 text-base font-semibold text-stone-900">New shopping list</h2>
+<BottomSheet open={sheetMode !== null} onclose={closeSheet}>
+	<form method="POST" action={sheetMode === 'rename' ? '?/rename' : '?/create'}
+		use:enhance={() => async ({ result, update }) => {
+			await update();
+			if (result.type === 'redirect' || result.type === 'success') closeSheet();
+		}}>
+		{#if sheetMode === 'rename'}
+			<input type="hidden" name="id" value={renameTarget?.id} />
+		{/if}
+		<h2 class="mb-4 text-base font-semibold text-stone-900">
+			{sheetMode === 'rename' ? 'Rename list' : 'New shopping list'}
+		</h2>
 		<label class="mb-1 block text-xs font-medium text-stone-500" for="list-name">List name</label>
 		<input
 			id="list-name"
@@ -84,7 +107,7 @@
 			</button>
 			<button type="submit" data-shortcut="primary"
 				class="flex-1 rounded-xl bg-orange-500 py-2.5 text-sm font-semibold text-white">
-				Create list
+				{sheetMode === 'rename' ? 'Save' : 'Create list'}
 			</button>
 		</div>
 	</form>

@@ -71,13 +71,14 @@ test('SETT-003: edit a category name and TTL', async ({ page }) => {
 	await page.getByRole('button', { name: 'Add' }).click();
 	await expect(page.locator('li', { hasText: original }).first()).toBeVisible();
 
-	// Edit
+	// Edit via bottom sheet
 	await page.locator('li', { hasText: original }).first()
-		.locator('button[aria-label^="Edit"]').click();
-	const row = page.locator('li').filter({ has: page.locator('input[name="name"]') }).first();
-	await row.locator('input[name="name"]').fill(updated);
-	await row.locator('input[name="ttlDays"]').fill('45');
-	await row.locator('button[aria-label="Save"]').click();
+		.locator('button[type="button"]').click();
+	const sheet = page.locator('[role="dialog"]');
+	await sheet.waitFor();
+	await sheet.locator('input[name="name"]').fill(updated);
+	await sheet.locator('input[name="ttlDays"]').fill('45');
+	await sheet.getByRole('button', { name: 'Save' }).click();
 
 	await expect(page.locator('li', { hasText: updated }).first()).toBeVisible();
 	await expect(page.locator('li', { hasText: updated }).first()).toContainText('45 day');
@@ -152,11 +153,13 @@ test('SETT-007: edit a cuisine name', async ({ page }) => {
 	await page.getByRole('button', { name: 'Add' }).click();
 	await expect(page.locator('li', { hasText: original }).first()).toBeVisible();
 
+	// Edit via bottom sheet
 	await page.locator('li', { hasText: original }).first()
-		.locator('button[aria-label^="Edit"]').click();
-	const row = page.locator('li').filter({ has: page.locator('input[name="name"]') }).first();
-	await row.locator('input[name="name"]').fill(updated);
-	await row.locator('button[aria-label="Save"]').click();
+		.locator('button[type="button"]').click();
+	const sheet = page.locator('[role="dialog"]');
+	await sheet.waitFor();
+	await sheet.locator('input[name="name"]').fill(updated);
+	await sheet.getByRole('button', { name: 'Save' }).click();
 
 	await expect(page.locator('li', { hasText: updated }).first()).toBeVisible();
 	await expect(page.locator('li', { hasText: original })).toHaveCount(0);

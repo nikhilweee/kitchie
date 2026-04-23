@@ -48,6 +48,21 @@ export const actions: Actions = {
 		redirect(303, `/shopping/${list.id}`);
 	},
 
+	rename: async ({ request, locals }) => {
+		const userId = locals.user!.id;
+		const data = await request.formData();
+		const id = getString(data, 'id');
+		const name = getString(data, 'name');
+		if (!id || !name) return fail(400, {});
+
+		await db
+			.update(shoppingLists)
+			.set({ name })
+			.where(and(eq(shoppingLists.id, id), eq(shoppingLists.userId, userId)));
+
+		return { success: true };
+	},
+
 	delete: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();

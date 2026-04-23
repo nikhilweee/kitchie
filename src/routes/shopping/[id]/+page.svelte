@@ -273,33 +273,35 @@
 	</main>
 
 	<!-- FAB: compact + when finishing, full-width Add items otherwise -->
-	<div class="fixed bottom-14 left-0 right-0 z-10 flex items-center gap-2 px-4 pb-2 transition-transform duration-200 {fabHidden ? 'translate-y-28' : ''}">
-		{#if shoppedItems.length > 0}
-			<form method="POST" action="?/finish" use:enhance={() => async ({ update }) => {
-				await update({ reset: false });
-				showToast('Added to pantry');
-			}} class="flex flex-1">
-				{#each checkoutItems as item (item.id)}
-					<input type="hidden" name="itemId" value={item.id} />
-					<input type="hidden" name="pantryItemId" value={item.pantryItemId ?? ''} />
-					<input type="hidden" name="newQuantity" value={item.newQuantity} />
-				{/each}
-				<button type="submit"
-					class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-orange-500 py-4 text-base font-semibold text-white shadow-lg hover:bg-orange-600 active:scale-95">
-					Checkout
+	<div class="fixed bottom-14 left-0 right-0 z-10 px-4 pb-2 transition-transform duration-200 {fabHidden ? 'translate-y-28' : ''}">
+		<div class="mx-auto flex w-full max-w-lg items-center gap-2">
+			{#if shoppedItems.length > 0}
+				<form method="POST" action="?/finish" use:enhance={() => async ({ update }) => {
+					await update({ reset: false });
+					showToast('Added to pantry');
+				}} class="flex flex-1">
+					{#each checkoutItems as item (item.id)}
+						<input type="hidden" name="itemId" value={item.id} />
+						<input type="hidden" name="pantryItemId" value={item.pantryItemId ?? ''} />
+						<input type="hidden" name="newQuantity" value={item.newQuantity} />
+					{/each}
+					<button type="submit"
+						class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-orange-500 py-4 text-base font-semibold text-white shadow-lg hover:bg-orange-600 active:scale-95 density-fab">
+						Checkout
+					</button>
+				</form>
+				<button type="button" onclick={openAdd} aria-label="Add items"
+					class="flex w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-orange-500 bg-white py-4 text-orange-500 shadow-lg hover:bg-orange-50 active:scale-95 transition-colors density-fab">
+					<Plus class="h-5 w-5" />
 				</button>
-			</form>
-			<button type="button" onclick={openAdd} aria-label="Add items"
-				class="flex w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-orange-500 bg-white py-4 text-orange-500 shadow-lg hover:bg-orange-50 active:scale-95 transition-colors">
-				<Plus class="h-5 w-5" />
-			</button>
-		{:else}
-			<button type="button" onclick={openAdd}
-				class="flex w-full max-w-lg mx-auto items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-base font-semibold text-white shadow-lg hover:bg-orange-600 active:scale-95">
-				<Plus class="h-5 w-5" />
-				Add items
-			</button>
-		{/if}
+			{:else}
+				<button type="button" onclick={openAdd}
+					class="flex w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-base font-semibold text-white shadow-lg hover:bg-orange-600 active:scale-95 density-fab">
+					<Plus class="h-5 w-5" />
+					Add items
+				</button>
+			{/if}
+		</div>
 	</div>
 </div>
 
