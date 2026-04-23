@@ -221,8 +221,11 @@ test('RECP-007: delete a recipe', async ({ page }) => {
 	await page.goto('/recipes');
 	await addRecipe(page, name);
 
-	await page.locator('li', { hasText: name }).first()
-		.locator(`button[aria-label="Delete ${name}"]`).click();
+	// Open edit sheet then delete via FormActions
+	await page.locator('li', { hasText: name }).first().locator('button').click();
+	const dialog = page.locator('[role="dialog"]');
+	await dialog.waitFor();
+	await dialog.locator('button[formaction="?/delete"]').click();
 
 	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
 });

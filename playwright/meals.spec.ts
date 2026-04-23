@@ -90,9 +90,11 @@ test('MEAL-006: delete a logged meal', async ({ page }) => {
 	await addMeal(page, name);
 	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
 
-	// Click the delete (✕) button on that meal row
-	await page.locator('li', { hasText: name }).first()
-		.locator(`button[aria-label="Delete ${name}"]`).click();
+	// Open edit sheet then delete via FormActions
+	await page.locator('li', { hasText: name }).first().locator('button').click();
+	const dialog = page.locator('[role="dialog"]');
+	await dialog.waitFor();
+	await dialog.locator('button[formaction="?/deleteMeal"]').click();
 
 	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
 });
