@@ -9,9 +9,33 @@ test('SETT-001: hamburger opens sidebar with settings links', async ({ page }) =
 	await page.click('button[aria-label="Open menu"]');
 	await expect(page.locator('nav a', { hasText: 'Categories' })).toBeVisible();
 	await expect(page.locator('nav a', { hasText: 'Cuisines' })).toBeVisible();
-	// Clicking a link closes sidebar and navigates
+	await expect(page.locator('nav a', { hasText: 'Display' })).toBeVisible();
+	// Clicking a link navigates
 	await page.locator('nav a', { hasText: 'Categories' }).click();
 	await expect(page).toHaveURL('/settings/categories');
+});
+
+test('SETT-009: display density toggle persists across navigation', async ({ page }) => {
+	await login(page);
+	await page.goto('/settings/display');
+
+	const slimBtn = page.getByRole('button', { name: 'Slim' });
+	const comfortableBtn = page.getByRole('button', { name: 'Comfortable' });
+	await expect(slimBtn).toBeVisible();
+	await expect(comfortableBtn).toBeVisible();
+
+	// Switch to slim
+	await slimBtn.click();
+	await expect(page.locator('html')).toHaveAttribute('data-display', 'slim');
+
+	// Navigate away and back — localStorage should restore the setting
+	await page.goto('/pantry');
+	await expect(page.locator('html')).toHaveAttribute('data-display', 'slim');
+
+	// Reset to comfortable
+	await page.goto('/settings/display');
+	await comfortableBtn.click();
+	await expect(page.locator('html')).toHaveAttribute('data-display', 'comfortable');
 });
 
 test('SETT-002: add a custom category', async ({ page }) => {

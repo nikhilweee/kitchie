@@ -159,7 +159,6 @@
 			expiryDays = closestDuration(diffDays);
 		}
 		history.replaceState(history.state, '', `?edit=${item.id}`);
-		setTimeout(() => nameEl?.focus(), 50);
 	}
 
 	function closeSheet() {
@@ -294,13 +293,12 @@
 		}
 
 		// expiry-asc or expiry-desc
-		const BUCKET_ORDER = ['Expired', 'Next 7 days', 'Next 14 days', 'More than 14 days'];
+		const BUCKET_ORDER = ['Expired', 'Expires This Week', 'Expires Later'];
 		const bucketFor = (item: Item) => {
 			const days = daysUntilExpiry(new Date(item.expiryDate));
 			if (days <= 0) return 'Expired';
-			if (days <= 7) return 'Next 7 days';
-			if (days <= 14) return 'Next 14 days';
-			return 'More than 14 days';
+			if (days <= 7) return 'Expires This Week';
+			return 'Expires Later';
 		};
 		const map = new SvelteMap<string, Item[]>(BUCKET_ORDER.map((b) => [b, []]));
 		for (const item of items) map.get(bucketFor(item))!.push(item);
@@ -438,14 +436,14 @@
 {#snippet itemList(items: Item[])}
 	<ul class="space-y-2">
 		{#each items as item (item.id)}
-			<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs">
+			<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs density-li">
 				<button
 					type="button"
 					onclick={() => openEdit(item)}
 					class="min-w-0 flex-1 text-left"
 				>
-					<p class="truncate font-medium text-stone-900">{item.name}</p>
-					<p class="text-xs text-stone-400">{categoryLabel(item.category)}</p>
+					<p class="truncate font-medium text-stone-900 density-text">{item.name}</p>
+					<p class="text-xs text-stone-400 density-hide">{categoryLabel(item.category)}</p>
 				</button>
 				<div class="flex w-16 shrink-0 justify-end">
 					{#if item.quantityType === 'estimate'}
@@ -499,7 +497,7 @@
 				autocapitalize="sentences"
 				autocomplete="off"
 				required
-				class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+				class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none density-sheet-name"
 			/>
 			{#if showNameSuggestions && nameSuggestions.length > 0}
 				<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
@@ -667,7 +665,7 @@
 	<div class="mt-4 flex gap-2">
 		{#if sheetMode === 'add'}
 			<button type="button" onclick={closeSheet}
-				class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors">
+				class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors density-sheet-btn">
 				Cancel
 			</button>
 		{/if}
@@ -680,14 +678,14 @@
 			>
 				<input type="hidden" name="id" value={editingItem.id} />
 				<button type="submit" data-shortcut="delete"
-					class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-200 text-red-400 hover:bg-red-50 transition-colors text-sm font-medium">
+					class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-200 text-red-400 hover:bg-red-50 transition-colors text-sm font-medium density-sheet-btn">
 					<Trash2 class="h-4 w-4" />
 					Trash
 				</button>
 			</form>
 		{/if}
 		<button type="submit" form="pantry-item-form" data-shortcut="primary" disabled={!nameInput.trim()}
-			class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40 transition-colors">
+			class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40 transition-colors density-sheet-btn">
 			{sheetMode === 'edit' ? 'Save' : 'Add item'}
 		</button>
 	</div>
@@ -728,7 +726,7 @@
 		{:else}
 			<div class="mt-2 flex gap-2">
 				<button type="button" onclick={() => (confirmingDelete = false)}
-					class="flex-1 rounded-xl border border-stone-300 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors">
+					class="flex-1 rounded-xl border border-stone-300 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors density-sheet-btn">
 					Cancel
 				</button>
 				<form method="POST" action="?/delete" class="flex-1"
@@ -738,7 +736,7 @@
 					}}
 				>
 					<input type="hidden" name="id" value={editingItem.id} />
-					<button type="submit" class="w-full rounded-xl bg-red-500 py-2.5 text-sm font-medium text-white hover:bg-red-600 transition-colors">
+					<button type="submit" class="w-full rounded-xl bg-red-500 py-2.5 text-sm font-medium text-white hover:bg-red-600 transition-colors density-sheet-btn">
 						Yes, delete
 					</button>
 				</form>

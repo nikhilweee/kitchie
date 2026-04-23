@@ -49,7 +49,7 @@
 **Test:** `playwright/pantry.spec.ts` — "PANT-012: sorting by category groups items by category name"
 
 ## PANT-013
-**Requirement:** Sorting the pantry by expiry groups items into time-bucket headers: Expired, Next 7 days, Next 14 days, More than 14 days.  
+**Requirement:** Sorting the pantry by expiry groups items into time-bucket headers: Expired, Expires This Week, Expires Later.  
 **Test:** `playwright/pantry.spec.ts` — "PANT-013: sorting by expiry groups items into time buckets"
 
 ## PANT-014

@@ -1,7 +1,7 @@
 # Settings specs
 
 ## SETT-001
-**Requirement:** A hamburger button on the main tab pages (Meals, Pantry, Recipes) opens a sidebar with links to the Categories and Cuisines settings pages.  
+**Requirement:** A hamburger button on the main tab pages (Meals, Pantry, Recipes) opens a sidebar with links to Categories, Cuisines, and Display settings pages.  
 **Test:** `playwright/settings.spec.ts` — "SETT-001: hamburger opens sidebar with settings links"
 
 ## SETT-002
@@ -31,3 +31,7 @@
 ## SETT-008
 **Requirement:** A cuisine that has one or more recipes cannot be deleted; its delete button is disabled.  
 **Test:** `playwright/settings.spec.ts` — "SETT-008: cannot delete a cuisine in use"
+
+## SETT-009
+**Requirement:** The Display settings page (/settings/display) lets the user toggle between Comfortable and Slim density; the selection is reflected immediately via the `data-display` attribute on `<html>` and persists across navigation via localStorage.  
+**Test:** `playwright/settings.spec.ts` — "SETT-009: display density toggle persists across navigation"

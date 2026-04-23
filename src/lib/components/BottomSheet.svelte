@@ -41,23 +41,19 @@
 
 {#if open}
 	<div
-		class="fixed inset-0 z-50 overflow-y-auto bg-white px-4 pt-3 pb-10"
+		class="fixed inset-0 z-50 overflow-y-auto bg-white px-4 pt-3 pb-10 density-sheet"
 		role="dialog"
 		aria-modal="true"
 	>
 		<div class="mx-auto max-w-lg">
 			<!-- Header: back button left, handle center, close button right -->
-			<div class="mb-4 flex items-center justify-between">
-				{#if onback}
-					<button
-						type="button"
-						onclick={onback}
-						aria-label="Go back"
-						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800"
-					><ChevronLeft class="h-4 w-4" /></button>
-				{:else}
-					<div class="w-8 shrink-0"></div>
-				{/if}
+			<div class="mb-4 flex items-center justify-between density-sheet-header">
+				<button
+					type="button"
+					onclick={onback ?? onclose}
+					aria-label={onback ? 'Go back' : 'Close'}
+					class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-500 hover:bg-stone-200 hover:text-stone-800"
+				><ChevronLeft class="h-4 w-4" /></button>
 				<div class="h-1 w-10 rounded-full bg-stone-200"></div>
 				<button
 					type="button"

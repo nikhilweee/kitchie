@@ -39,7 +39,7 @@
 >
 	<button
 		{onclick}
-		class="flex w-full max-w-lg items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-base font-semibold text-white shadow-lg hover:bg-orange-600 active:scale-95"
+		class="flex w-full max-w-lg items-center justify-center gap-2 rounded-2xl bg-orange-500 px-6 py-4 text-base font-semibold text-white shadow-lg hover:bg-orange-600 active:scale-95 density-fab"
 	>
 		<Plus class="h-5 w-5" />
 		{label}

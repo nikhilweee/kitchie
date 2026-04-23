@@ -17,6 +17,7 @@
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { createToast } from '$lib/toast.svelte';
 
+
 	let { data }: { data: PageData } = $props();
 
 	let sidebarOpen = $state(false);
@@ -233,14 +234,14 @@
 					</h2>
 					<ul class="space-y-2">
 						{#each entries as entry (entry.id)}
-							<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs">
+							<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs density-li">
 								<button
 									type="button"
 									onclick={() => openEdit(entry)}
 									class="min-w-0 flex-1 text-left"
 								>
-									<p class="truncate font-medium text-stone-900">{entry.name}</p>
-									<p class="text-xs text-stone-400">
+									<p class="truncate font-medium text-stone-900 density-text">{entry.name}</p>
+									<p class="text-xs text-stone-400 density-hide">
 										{MEAL_TYPE_LABELS[entry.mealType as MealType]}
 										{#if entry.ingredients.length > 0}
 											· {entry.ingredients.join(', ')}
@@ -294,7 +295,7 @@
 				autocomplete="off"
 				autocapitalize="sentences"
 				required
-				class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+				class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none density-sheet-name"
 			/>
 			{#if sheetMode === 'add' && suggestions.length > 0}
 				<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
@@ -474,11 +475,11 @@
 			</div>
 
 			<div class="mt-4 flex gap-2">
-				<a href="/" class="flex-1 rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-50">Skip</a>
+				<a href="/" class="flex-1 rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-50 density-sheet-btn">Skip</a>
 				<button
 					type="button"
 					onclick={onFlowNext}
-					class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600"
+					class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 density-sheet-btn"
 				>{showRecipeStep ? 'Next' : 'Update pantry'}</button>
 			</div>
 
@@ -502,8 +503,8 @@
 					{/each}
 				</ul>
 				<div class="flex gap-2">
-					<button type="button" onclick={() => submitFlow('skip')} class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50">Skip</button>
-					<button type="button" onclick={() => submitFlow('update')} class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600">Update recipe</button>
+					<button type="button" onclick={() => submitFlow('skip')} class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 density-sheet-btn">Skip</button>
+					<button type="button" onclick={() => submitFlow('update')} class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 density-sheet-btn">Update recipe</button>
 				</div>
 			{:else}
 				<!-- 3a: save new recipe -->
@@ -517,8 +518,8 @@
 					{/each}
 				</ul>
 				<div class="flex gap-2">
-					<button type="button" onclick={() => submitFlow('skip')} class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50">Skip</button>
-					<button type="button" onclick={() => submitFlow('save')} class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600">Save recipe</button>
+					<button type="button" onclick={() => submitFlow('skip')} class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 density-sheet-btn">Skip</button>
+					<button type="button" onclick={() => submitFlow('save')} class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 density-sheet-btn">Save recipe</button>
 				</div>
 			{/if}
 		{/if}

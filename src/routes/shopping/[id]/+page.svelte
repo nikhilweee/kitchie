@@ -8,6 +8,7 @@
 	import SmallEstimatePicker from '$lib/components/SmallEstimatePicker.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import { createToast } from '$lib/toast.svelte';
+
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import { ShoppingCart, X, CheckCheck, ListFilter, Plus } from 'lucide-svelte';
@@ -201,7 +202,7 @@
 				<ul class="mb-4 space-y-2">
 					{#each activeItems as item (item.id)}
 						{@const fi = finishItems.find((f) => f.id === item.id)}
-						<li class="flex items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-xs">
+						<li class="flex items-center gap-2 rounded-xl bg-white px-3 shadow-xs py-2.5 density-li-sm">
 							<form method="POST" action="?/toggleShopped" use:enhance={() => async ({ update }) => {
 								await update({ reset: false });
 							}}>
@@ -243,7 +244,7 @@
 					<ul class="space-y-2">
 						{#each shoppedItems as item (item.id)}
 							{@const fi = finishItems.find((f) => f.id === item.id)}
-							<li class="flex items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-xs">
+							<li class="flex items-center gap-2 rounded-xl bg-white px-3 shadow-xs py-2.5 density-li-sm">
 								<form method="POST" action="?/toggleShopped" use:enhance={() => async ({ update }) => {
 									await update({ reset: false });
 								}}>

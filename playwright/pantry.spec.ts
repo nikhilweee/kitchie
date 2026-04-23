@@ -331,7 +331,7 @@ test('PANT-013: sorting by expiry groups items into time buckets', async ({ page
 	await addPantryItem(page, `ExpiryItem-${Date.now()}`);
 
 	// Expiry is the default sort — no need to switch
-	const buckets = ['Expired', 'Next 7 days', 'Next 14 days', 'More than 14 days'];
+	const buckets = ['Expired', 'Expires This Week', 'Expires Later'];
 	const visible = await Promise.all(
 		buckets.map((b) => page.locator('h2', { hasText: b }).isVisible())
 	);

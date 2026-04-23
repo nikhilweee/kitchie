@@ -1,7 +1,17 @@
 <script lang="ts">
-	import { Tag, UtensilsCrossed, ShoppingCart } from 'lucide-svelte';
+	import { Tag, UtensilsCrossed, ShoppingCart, Clipboard, ClipboardCheck, SlidersHorizontal } from 'lucide-svelte';
 
 	let { open, onclose }: { open: boolean; onclose: () => void } = $props();
+
+	let copied = $state(false);
+
+	async function copyPantry() {
+		const res = await fetch('/api/pantry-export');
+		if (!res.ok) return;
+		await navigator.clipboard.writeText(await res.text());
+		copied = true;
+		setTimeout(() => (copied = false), 2000);
+	}
 </script>
 
 {#if open}
@@ -28,7 +38,6 @@
 			<p class="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Shopping</p>
 			<a
 				href="/shopping"
-				onclick={onclose}
 				class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
 			>
 				<ShoppingCart class="h-4 w-4 text-stone-400" />
@@ -37,7 +46,6 @@
 			<p class="mt-3 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Settings</p>
 			<a
 				href="/settings/categories"
-				onclick={onclose}
 				class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
 			>
 				<Tag class="h-4 w-4 text-stone-400" />
@@ -45,12 +53,32 @@
 			</a>
 			<a
 				href="/settings/cuisines"
-				onclick={onclose}
 				class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
 			>
 				<UtensilsCrossed class="h-4 w-4 text-stone-400" />
 				Cuisines
 			</a>
+			<a
+				href="/settings/display"
+				class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
+			>
+				<SlidersHorizontal class="h-4 w-4 text-stone-400" />
+				Display
+			</a>
+			<p class="mt-3 mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Tools</p>
+			<button
+				type="button"
+				onclick={copyPantry}
+				class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
+			>
+				{#if copied}
+					<ClipboardCheck class="h-4 w-4 text-green-500" />
+					<span class="text-green-600">Copied!</span>
+				{:else}
+					<Clipboard class="h-4 w-4 text-stone-400" />
+					Copy Pantry Items
+				{/if}
+			</button>
 		</nav>
 	</div>
 {/if}

@@ -144,7 +144,6 @@
 		}));
 		ingredientSearch = '';
 		history.replaceState(history.state, '', `?edit=${recipe.id}`);
-		setTimeout(() => nameEl?.focus(), 50);
 	}
 
 	function closeSheet() {
@@ -261,14 +260,14 @@
 		{:else}
 			<ul class="space-y-2">
 				{#each filteredRecipes as recipe (recipe.id)}
-					<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs">
+					<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs density-li">
 						<button
 							type="button"
 							onclick={() => openEdit(recipe)}
 							class="min-w-0 flex-1 text-left"
 						>
-							<p class="truncate font-medium text-stone-900">{recipe.name}</p>
-							<p class="text-xs text-stone-400">
+							<p class="truncate font-medium text-stone-900 density-text">{recipe.name}</p>
+							<p class="text-xs text-stone-400 density-hide">
 								{recipe.items.length === 0
 									? 'No ingredients'
 									: recipe.items.map((i) => i.itemName).join(', ')}
@@ -317,7 +316,7 @@
 				autocapitalize="sentences"
 				autocomplete="off"
 				required
-				class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+				class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none density-sheet-name"
 			/>
 			{#if showNameSuggestions && nameSuggestions.length > 0}
 				<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
