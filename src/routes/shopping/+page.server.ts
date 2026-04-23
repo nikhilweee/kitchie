@@ -2,7 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { shoppingLists, shoppingListItems } from '$lib/server/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { getString } from '$lib/server/form-data';
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -56,7 +56,7 @@ export const actions: Actions = {
 
 		await db
 			.delete(shoppingLists)
-			.where(eq(shoppingLists.id, id) && eq(shoppingLists.userId, userId));
+			.where(and(eq(shoppingLists.id, id), eq(shoppingLists.userId, userId)));
 
 		return { success: true };
 	}

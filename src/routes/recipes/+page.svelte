@@ -9,6 +9,8 @@
 	import type { PageData } from './$types';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
+	import { createToast } from '$lib/toast.svelte';
+	import { createSort } from '$lib/sort.svelte';
 	import { RECIPE_COURSE_LABELS, RECIPE_COURSES, type RecipeCourse } from '$lib/recipe-course';
 	import PrepTimePicker, { PREP_TIME_LABELS } from '$lib/components/PrepTimePicker.svelte';
 	import { X, ListFilter, Search, ChefHat } from 'lucide-svelte';
@@ -41,16 +43,7 @@
 	}
 
 	type SortField = 'name' | 'prep' | 'recent';
-	type SortDir = 'asc' | 'desc';
-	type SortKey = `${SortField}-${SortDir}`;
-	let sortBy = $state<SortField>('recent');
-	let sortDir = $state<SortDir>('desc');
-	const sort = $derived<SortKey>(`${sortBy}-${sortDir}`);
-
-	function toggleSort(field: SortField) {
-		if (sortBy === field) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
-		else { sortBy = field; sortDir = field === 'recent' ? 'desc' : 'asc'; }
-	}
+	const s = createSort<SortField>('recent', 'desc', (f) => f === 'recent' ? 'desc' : 'asc');
 
 	const SORT_FIELDS: { field: SortField; label: string }[] = [
 		{ field: 'name', label: 'Name' },
@@ -72,25 +65,20 @@
 
 	const filteredRecipes = $derived(
 		[...filteredBase].sort((a, b) => {
-			if (sort === 'name-asc') return a.name.localeCompare(b.name);
-			if (sort === 'name-desc') return b.name.localeCompare(a.name);
-			if (sort === 'recent-asc') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-			if (sort === 'recent-desc') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+			if (s.key === 'name-asc') return a.name.localeCompare(b.name);
+			if (s.key === 'name-desc') return b.name.localeCompare(a.name);
+			if (s.key === 'recent-asc') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+			if (s.key === 'recent-desc') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
 			const pa = a.prepTime ?? 999, pb = b.prepTime ?? 999;
-			return sort === 'prep-asc' ? pa - pb : pb - pa;
+			return s.key === 'prep-asc' ? pa - pb : pb - pa;
 		})
 	);
 
 	type PantryItem = PageData['pantryItems'][0];
 
 	// Toast
-	let toast = $state<string | null>(null);
-	let toastTimer: ReturnType<typeof setTimeout>;
-	function showToast(msg: string) {
-		clearTimeout(toastTimer);
-		toast = msg;
-		toastTimer = setTimeout(() => (toast = null), 2500);
-	}
+	const toast = createToast();
+	const showToast = toast.show;
 
 	// ── Sheet mode ────────────────────────────────────────────────────────────
 	let sheetMode = $state<'add' | 'edit' | null>(null);
@@ -190,7 +178,7 @@
 
 <svelte:head><title>Kitchie | Recipes</title></svelte:head>
 
-<Toast message={toast} />
+<Toast message={toast.message} />
 <Sidebar open={sidebarOpen} onclose={() => (sidebarOpen = false)} />
 
 <div class="flex min-h-svh flex-col bg-stone-50">
@@ -221,12 +209,12 @@
 					<div class="absolute top-full right-0 z-20 mt-1 w-64 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
 						<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Sort</div>
 						{#each SORT_FIELDS as f (f.field)}
-							<button type="button" onclick={() => toggleSort(f.field)}
+							<button type="button" onclick={() => s.cycle(f.field)}
 								class="flex w-full items-center gap-2 px-3 py-2 hover:bg-stone-50">
-								<span class="flex h-4 w-4 shrink-0 items-center justify-center text-xs {sortBy === f.field ? 'text-orange-500' : 'text-stone-300'}">
-									{sortBy === f.field ? (sortDir === 'asc' ? '↑' : '↓') : '•'}
+								<span class="flex h-4 w-4 shrink-0 items-center justify-center text-xs {s.by === f.field ? 'text-orange-500' : 'text-stone-300'}">
+									{s.by === f.field ? (s.dir === 'asc' ? '↑' : '↓') : '•'}
 								</span>
-								<span class="text-sm {sortBy === f.field ? 'font-medium text-stone-900' : 'text-stone-700'}">{f.label}</span>
+								<span class="text-sm {s.by === f.field ? 'font-medium text-stone-900' : 'text-stone-700'}">{f.label}</span>
 							</button>
 						{/each}
 						<div class="border-t border-stone-100 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Cuisine</div>
@@ -239,7 +227,7 @@
 							{/each}
 						</div>
 						<div class="border-t border-stone-100 p-2">
-							<button type="button" onclick={() => { sortBy = 'recent'; sortDir = 'desc'; activeCuisines = new Set(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
+							<button type="button" onclick={() => { s.by = 'recent'; s.dir = 'desc'; activeCuisines = new Set(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
 						</div>
 					</div>
 				{/if}

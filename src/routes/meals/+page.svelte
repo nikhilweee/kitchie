@@ -16,19 +16,14 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import { X, Utensils, ChefHat, ChevronRight } from 'lucide-svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import { createToast } from '$lib/toast.svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	let sidebarOpen = $state(false);
 
-	// Toast
-	let toast = $state<string | null>(null);
-	let toastTimer: ReturnType<typeof setTimeout>;
-	function showToast(msg: string) {
-		clearTimeout(toastTimer);
-		toast = msg;
-		toastTimer = setTimeout(() => (toast = null), 2500);
-	}
+	const toast = createToast();
+	const showToast = toast.show;
 
 	// ── Add / Edit meal sheet ────────────────────────────────────────────────
 	type Entry = PageData['entries'][0];
@@ -233,7 +228,7 @@
 
 <svelte:head><title>Kitchie | Meals</title></svelte:head>
 
-<Toast message={toast} />
+<Toast message={toast.message} />
 
 <div class="flex min-h-svh flex-col bg-stone-50">
 	<PageHeader title="Meals" onhamburger={() => (sidebarOpen = true)} />

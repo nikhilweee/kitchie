@@ -1,42 +1,13 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { pantryItems, userCategories, shoppingLists, shoppingListItems } from '$lib/server/db/schema';
+import { pantryItems, shoppingLists, shoppingListItems } from '$lib/server/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { calcExpiry } from '$lib/expiry';
 import { getString, getNumber } from '$lib/server/form-data';
 import { inferItemDefaults } from '$lib/server/infer-item';
-import { DEFAULT_CATEGORIES, SLUG_TO_CATEGORY_NAME } from '$lib/defaults';
 import { pantryStatusFields } from '$lib/server/pantry';
-
-async function getOrSeedCategories(userId: string) {
-	let cats = await db
-		.select()
-		.from(userCategories)
-		.where(eq(userCategories.userId, userId))
-		.orderBy(userCategories.sortOrder);
-
-	if (cats.length === 0) {
-		cats = await db
-			.insert(userCategories)
-			.values(DEFAULT_CATEGORIES.map((c) => ({ ...c, userId })))
-			.returning();
-		cats.sort((a, b) => a.sortOrder - b.sortOrder);
-
-		// Migrate existing pantry items from old slug values to new category IDs
-		for (const [slug, name] of Object.entries(SLUG_TO_CATEGORY_NAME)) {
-			const cat = cats.find((c) => c.name === name);
-			if (cat) {
-				await db
-					.update(pantryItems)
-					.set({ category: cat.id })
-					.where(and(eq(pantryItems.userId, userId), eq(pantryItems.category, slug)));
-			}
-		}
-	}
-
-	return cats;
-}
+import { getOrSeedCategories, resolveCatByName } from '$lib/server/categories';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const userId = locals.user!.id;
@@ -68,23 +39,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	};
 };
 
-async function resolveCategory(userId: string, submittedId: string, inferredName: string) {
-	const cats = await db
-		.select()
-		.from(userCategories)
-		.where(eq(userCategories.userId, userId))
-		.orderBy(userCategories.sortOrder);
-
-	if (submittedId) {
-		const found = cats.find((c) => c.id === submittedId);
-		if (found) return found;
-	}
-
-	// Fall back to inference
-	const byName = cats.find((c) => c.name === inferredName);
-	return byName ?? cats.find((c) => c.name === 'Other') ?? cats[0];
-}
-
 export const actions: Actions = {
 	add: async ({ request, locals }) => {
 		const userId = locals.user!.id;
@@ -99,7 +53,8 @@ export const actions: Actions = {
 		const submittedCategoryId = getString(data, 'category');
 		const submittedQType = getString(data, 'quantityType') as 'count' | 'estimate';
 		const inferred = inferItemDefaults(name);
-		const cat = await resolveCategory(userId, submittedCategoryId, inferred.category);
+		const cats = await getOrSeedCategories(userId);
+		const cat = cats.find((c) => c.id === submittedCategoryId) ?? resolveCatByName(cats, inferred.category);
 		const quantityType = submittedQType || inferred.quantityType;
 		const quantity = getNumber(data, 'quantity', 1);
 		const unit = quantityType === 'count' ? (getString(data, 'unit') || 'count') : null;
@@ -126,7 +81,8 @@ export const actions: Actions = {
 		const submittedCategoryId = getString(data, 'category');
 		const submittedQType = getString(data, 'quantityType') as 'count' | 'estimate';
 		const inferred = inferItemDefaults(name);
-		const cat = await resolveCategory(userId, submittedCategoryId, inferred.category);
+		const cats = await getOrSeedCategories(userId);
+		const cat = cats.find((c) => c.id === submittedCategoryId) ?? resolveCatByName(cats, inferred.category);
 		const quantityType = submittedQType || inferred.quantityType;
 		const quantity = getNumber(data, 'quantity', 1);
 		const unit = quantityType === 'count' ? (getString(data, 'unit') || 'count') : null;

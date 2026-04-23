@@ -1,11 +1,11 @@
 import { fail, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { shoppingLists, shoppingListItems, pantryItems, userCategories } from '$lib/server/db/schema';
+import { shoppingLists, shoppingListItems, pantryItems } from '$lib/server/db/schema';
 import { eq, and, ne } from 'drizzle-orm';
 import { getString, getStrings } from '$lib/server/form-data';
-import { inferItemDefaults } from '$lib/server/infer-item';
-import { updatePantryQuantity, pantryStatusFields } from '$lib/server/pantry';
+import { updatePantryQuantity, createPantryItemFromName } from '$lib/server/pantry';
+import { getOrSeedCategories } from '$lib/server/categories';
 import { calcExpiry } from '$lib/expiry';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
@@ -26,9 +26,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			.orderBy(shoppingListItems.createdAt),
 		db.select().from(pantryItems)
 			.where(eq(pantryItems.userId, userId)),
-		db.select().from(userCategories)
-			.where(eq(userCategories.userId, userId))
-			.orderBy(userCategories.sortOrder),
+		getOrSeedCategories(userId),
 		// Items on other lists (for visual indicator)
 		db.select({ pantryItemId: shoppingListItems.pantryItemId, name: shoppingListItems.name })
 			.from(shoppingListItems)
@@ -130,7 +128,7 @@ export const actions: Actions = {
 		const newQuantities = getStrings(data, 'newQuantity').map(Number);
 		const pantryIdInputs = getStrings(data, 'pantryItemId');
 
-		const allCats = await db.select().from(userCategories).where(eq(userCategories.userId, userId));
+		const allCats = await getOrSeedCategories(userId);
 		const shoppedItems = await db.select().from(shoppingListItems)
 			.where(and(eq(shoppingListItems.listId, listId), eq(shoppingListItems.userId, userId)));
 
@@ -155,21 +153,7 @@ export const actions: Actions = {
 				}
 			} else {
 				// New item: create pantry entry with inferred defaults
-				const { category: categoryName, quantityType, unit } = inferItemDefaults(shoppingItem.name);
-				const purchaseDate = new Date();
-				const cat = allCats.find((c) => c.name === categoryName) ?? allCats.find((c) => c.name === 'Other') ?? allCats[0];
-				const expiryDate = calcExpiry(cat?.ttlDays ?? 30, purchaseDate);
-				await db.insert(pantryItems).values({
-					userId,
-					name: shoppingItem.name,
-					category: cat?.id ?? categoryName,
-					quantityType,
-					unit: quantityType === 'count' ? (unit ?? 'count') : null,
-					purchaseDate,
-					expiryDate,
-					expiryOverridden: false,
-					...pantryStatusFields(newQty)
-				});
+				await createPantryItemFromName(userId, shoppingItem.name, newQty, allCats);
 			}
 
 			// Remove from shopping list

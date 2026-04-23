@@ -4,35 +4,7 @@ import { db } from '$lib/server/db';
 import { userCategories, pantryItems } from '$lib/server/db/schema';
 import { eq, and, count } from 'drizzle-orm';
 import { getString } from '$lib/server/form-data';
-import { DEFAULT_CATEGORIES, SLUG_TO_CATEGORY_NAME } from '$lib/defaults';
-
-async function getOrSeedCategories(userId: string) {
-	let cats = await db
-		.select()
-		.from(userCategories)
-		.where(eq(userCategories.userId, userId))
-		.orderBy(userCategories.sortOrder);
-
-	if (cats.length === 0) {
-		cats = await db
-			.insert(userCategories)
-			.values(DEFAULT_CATEGORIES.map((c, i) => ({ ...c, sortOrder: i + 1, userId })))
-			.returning();
-		cats.sort((a, b) => a.sortOrder - b.sortOrder);
-
-		for (const [slug, name] of Object.entries(SLUG_TO_CATEGORY_NAME)) {
-			const cat = cats.find((c) => c.name === name);
-			if (cat) {
-				await db
-					.update(pantryItems)
-					.set({ category: cat.id })
-					.where(and(eq(pantryItems.userId, userId), eq(pantryItems.category, slug)));
-			}
-		}
-	}
-
-	return cats;
-}
+import { getOrSeedCategories } from '$lib/server/categories';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user!.id;

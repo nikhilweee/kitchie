@@ -5,36 +5,7 @@ import { recipes, recipeItems, pantryItems, userCuisines } from '$lib/server/db/
 import { eq, and, desc, inArray } from 'drizzle-orm';
 import { getString, getStrings } from '$lib/server/form-data';
 import { RECIPE_COURSES, type RecipeCourse } from '$lib/recipe-course';
-import { DEFAULT_CUISINES, SLUG_TO_CUISINE_NAME } from '$lib/defaults';
-
-async function getOrSeedCuisines(userId: string) {
-	let cuisines = await db
-		.select()
-		.from(userCuisines)
-		.where(eq(userCuisines.userId, userId))
-		.orderBy(userCuisines.sortOrder);
-
-	if (cuisines.length === 0) {
-		cuisines = await db
-			.insert(userCuisines)
-			.values(DEFAULT_CUISINES.map((name, i) => ({ name, sortOrder: i + 1, userId })))
-			.returning();
-		cuisines.sort((a, b) => a.sortOrder - b.sortOrder);
-
-		// Migrate existing recipes from old slug values to new cuisine IDs
-		for (const [slug, name] of Object.entries(SLUG_TO_CUISINE_NAME)) {
-			const cuisine = cuisines.find((c) => c.name === name);
-			if (cuisine) {
-				await db
-					.update(recipes)
-					.set({ cuisine: cuisine.id })
-					.where(and(eq(recipes.userId, userId), eq(recipes.cuisine, slug)));
-			}
-		}
-	}
-
-	return cuisines;
-}
+import { getOrSeedCuisines } from '$lib/server/cuisines';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const userId = locals.user!.id;

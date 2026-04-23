@@ -7,6 +7,7 @@
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import SmallEstimatePicker from '$lib/components/SmallEstimatePicker.svelte';
 	import Toast from '$lib/components/Toast.svelte';
+	import { createToast } from '$lib/toast.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import { ShoppingCart, X, CheckCheck, ListFilter, Plus } from 'lucide-svelte';
@@ -33,13 +34,8 @@
 	});
 
 	// Toast
-	let toast = $state<string | null>(null);
-	let toastTimer: ReturnType<typeof setTimeout>;
-	function showToast(msg: string) {
-		clearTimeout(toastTimer);
-		toast = msg;
-		toastTimer = setTimeout(() => (toast = null), 2500);
-	}
+	const toast = createToast();
+	const showToast = toast.show;
 
 	// Sheet state
 	type SheetMode = 'add' | null;
@@ -190,7 +186,7 @@
 
 <svelte:head><title>Kitchie | {data.list.name}</title></svelte:head>
 
-<Toast message={toast} />
+<Toast message={toast.message} />
 <Sidebar open={sidebarOpen} onclose={() => (sidebarOpen = false)} />
 
 <div class="flex min-h-svh flex-col bg-stone-50">
