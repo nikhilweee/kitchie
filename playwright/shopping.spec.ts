@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Covers: SHOP-005
+// Covers: SHOP-005, SHOP-006
 
 test('SHOP-005: rename a shopping list', async ({ page }) => {
 	await login(page);
@@ -35,4 +35,37 @@ test('SHOP-005: rename a shopping list', async ({ page }) => {
 	// New name should appear; old name gone
 	await expect(page.locator('li', { hasText: newName }).first()).toBeVisible();
 	await expect(page.locator('li', { hasText: originalName })).toHaveCount(0);
+});
+
+test('SHOP-006: add items to a shopping list via inline search', async ({ page }) => {
+	await login(page);
+
+	// Create a list and land on its detail page
+	await page.goto('/shopping');
+	await page.getByRole('button', { name: 'New list' }).click();
+	await page.locator('[role="dialog"]').waitFor();
+	await page.getByPlaceholder('e.g. Whole Foods, Costco…').fill(`ShopSearch-${Date.now()}`);
+	await page.getByRole('button', { name: 'Create list' }).click();
+	await page.waitForURL(/\/shopping\/.+/);
+
+	// Add a pantry item via inline search
+	await page.goto('/pantry');
+	await page.getByRole('button', { name: 'Add to Pantry' }).click();
+	await page.locator('[role="dialog"]').waitFor();
+	const pantryItem = `PantryForShop-${Date.now()}`;
+	await page.locator('[role="dialog"]').getByPlaceholder('What did you buy?').fill(pantryItem);
+	await page.locator('[role="dialog"]').getByRole('button', { name: 'Add item' }).click();
+	await expect(page.locator('li', { hasText: pantryItem }).first()).toBeVisible();
+
+	// Go back to the shopping list and search for the pantry item
+	await page.goBack();
+	await page.getByPlaceholder('Search or type an item…').fill(pantryItem.slice(0, 6));
+	await page.getByRole('button', { name: pantryItem }).click();
+	await expect(page.locator('li', { hasText: pantryItem }).first()).toBeVisible();
+
+	// Add a free-text item
+	const freeItem = `FreeItem-${Date.now()}`;
+	await page.getByPlaceholder('Search or type an item…').fill(freeItem);
+	await page.getByRole('button', { name: `Add "${freeItem}" to list` }).click();
+	await expect(page.locator('li', { hasText: freeItem }).first()).toBeVisible();
 });
