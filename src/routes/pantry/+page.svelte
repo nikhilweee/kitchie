@@ -218,6 +218,7 @@
 	// ── Search + filter ───────────────────────────────────────────────────────
 	type StatusFilter = 'expiring' | 'low' | 'normal' | 'done';
 	let search = $state('');
+	let searchEl = $state<HTMLInputElement | undefined>(undefined);
 	let activeStatus = $state<StatusFilter | null>(null);
 	let activeCategories = $state(new SvelteSet<string>());
 	let filterOpen = $state(false);
@@ -337,6 +338,13 @@
 </script>
 
 <svelte:head><title>Kitchie | Pantry</title></svelte:head>
+<svelte:window onkeydown={(e) => {
+	if (e.key !== '/') return;
+	const active = document.activeElement;
+	if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
+	e.preventDefault();
+	searchEl?.focus();
+}} />
 
 <Toast message={toast.message} />
 <Sidebar open={sidebarOpen} onclose={() => (sidebarOpen = false)} />
@@ -353,7 +361,9 @@
 				<div class="relative flex-1">
 					<input
 						type="text"
+						bind:this={searchEl}
 						bind:value={search}
+						onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); searchEl?.blur(); } }}
 						placeholder="Search pantry…"
 						autocomplete="off"
 						class="block w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none {search ? 'pr-8' : ''}"
@@ -703,9 +713,12 @@
 				{#each data.lists as list (list.id)}
 					{@const onList = data.listMembership.has(`${list.id}:${itemId}`)}
 					<form method="POST" action={onList ? '?/removeFromList' : '?/addToList'}
-						use:enhance={() => async ({ result, update }) => {
-							await update({ reset: false });
-							if (result.type === 'success') showToast(onList ? `Removed from ${list.name}` : `Added to ${list.name}`);
+						use:enhance={() => {
+							const wasOnList = onList;
+							return async ({ result, update }) => {
+								await update({ reset: false });
+								if (result.type === 'success') showToast(wasOnList ? `Removed from ${list.name}` : `Added to ${list.name}`);
+							};
 						}}>
 						<input type="hidden" name="itemId" value={itemId} />
 						<input type="hidden" name="listId" value={list.id} />

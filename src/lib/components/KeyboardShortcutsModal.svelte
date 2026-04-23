@@ -3,6 +3,7 @@
 
 	const shortcuts = [
 		{ label: 'Add new item',   keys: ['N'] },
+		{ label: 'Focus search',   keys: ['/'] },
 		{ label: 'Save / Confirm', keys: ['⌘', '↵'] },
 		{ label: 'Trash / Delete', keys: ['⌘', '⌫'] },
 		{ label: 'Close',          keys: ['Esc'] },

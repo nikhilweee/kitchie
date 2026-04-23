@@ -2,7 +2,7 @@ import { fail, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { shoppingLists, shoppingListItems, pantryItems } from '$lib/server/db/schema';
-import { eq, and, ne } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { getString, getStrings } from '$lib/server/form-data';
 import { updatePantryQuantity, createPantryItemFromName } from '$lib/server/pantry';
 import { getOrSeedCategories } from '$lib/server/categories';
@@ -20,17 +20,13 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 
 	if (!list) error(404, 'List not found');
 
-	const [items, allPantry, allCategories, otherListItems] = await Promise.all([
+	const [items, allPantry, allCategories] = await Promise.all([
 		db.select().from(shoppingListItems)
 			.where(eq(shoppingListItems.listId, listId))
 			.orderBy(shoppingListItems.createdAt),
 		db.select().from(pantryItems)
 			.where(eq(pantryItems.userId, userId)),
-		getOrSeedCategories(userId),
-		// Items on other lists (for visual indicator)
-		db.select({ pantryItemId: shoppingListItems.pantryItemId, name: shoppingListItems.name })
-			.from(shoppingListItems)
-			.where(and(eq(shoppingListItems.userId, userId), ne(shoppingListItems.listId, listId)))
+		getOrSeedCategories(userId)
 	]);
 
 	return {
@@ -42,9 +38,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			expiryDate: i.expiryDate.toISOString(),
 			createdAt: i.createdAt.toISOString()
 		})),
-		categories: allCategories,
-		// Set of names already on other lists
-		otherListNames: new Set(otherListItems.map((i) => i.name.toLowerCase()))
+		categories: allCategories
 	};
 };
 

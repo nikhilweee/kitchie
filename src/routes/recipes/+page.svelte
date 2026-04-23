@@ -21,6 +21,7 @@
 	type Cuisine = PageData['cuisines'][0];
 
 	let search = $state('');
+	let searchEl = $state<HTMLInputElement | undefined>(undefined);
 	let activeMealTypes = $state<Set<RecipeCourse>>(new Set());
 	let activeCuisines = $state<Set<string>>(new Set());
 	let filterOpen = $state(false);
@@ -176,6 +177,13 @@
 </script>
 
 <svelte:head><title>Kitchie | Recipes</title></svelte:head>
+<svelte:window onkeydown={(e) => {
+	if (e.key !== '/') return;
+	const active = document.activeElement;
+	if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
+	e.preventDefault();
+	searchEl?.focus();
+}} />
 
 <Toast message={toast.message} />
 <Sidebar open={sidebarOpen} onclose={() => (sidebarOpen = false)} />
@@ -189,7 +197,9 @@
 				<div class="relative flex-1">
 					<input
 						type="text"
+						bind:this={searchEl}
 						bind:value={search}
+						onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); searchEl?.blur(); } }}
 						placeholder="Search recipes…"
 						autocomplete="off"
 						class="block w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none {search ? 'pr-8' : ''}"

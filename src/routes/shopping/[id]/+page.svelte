@@ -214,9 +214,6 @@
 							</form>
 							<span class="min-w-0 flex-1 truncate text-sm font-medium text-stone-900">{item.name}</span>
 							{#if fi}{@render qtyPicker(fi)}{/if}
-							{#if data.otherListNames.has(item.name.toLowerCase())}
-								<span class="shrink-0 text-[10px] text-stone-400">other list</span>
-							{/if}
 							<form method="POST" action="?/removeItem" use:enhance={() => async ({ update }) => {
 								await update({ reset: false });
 							}}>
@@ -417,7 +414,6 @@
 			<ul class="space-y-1">
 				{#each filteredPantry as p (p.id)}
 					{@const isOnThisList = currentPantryIds.has(p.id)}
-					{@const isOnOtherList = data.otherListNames.has(p.name.toLowerCase()) && !isOnThisList}
 					<li>
 						<label class="flex cursor-pointer items-center gap-3 rounded-xl px-2 py-2 hover:bg-stone-50">
 							<input
@@ -439,9 +435,6 @@
 									×{p.quantity % 1 === 0 ? p.quantity : p.quantity.toFixed(1)}
 								{/if}
 							</span>
-							{#if isOnOtherList}
-								<span class="shrink-0 text-[10px] text-stone-400">other list</span>
-							{/if}
 						</label>
 					</li>
 				{/each}
