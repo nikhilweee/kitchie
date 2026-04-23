@@ -8,6 +8,7 @@ import { guessMealType } from '$lib/meal-type';
 import { calcExpiry } from '$lib/expiry';
 import { getString, getStrings, getNumbers } from '$lib/server/form-data';
 import { inferItemDefaults } from '$lib/server/infer-item';
+import { updatePantryQuantity, pantryStatusFields } from '$lib/server/pantry';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const userId = locals.user!.id;
@@ -203,15 +204,7 @@ export const actions: Actions = {
 					.get();
 				if (item) {
 					used = Math.max(0, item.quantity - newQty);
-					const finalQty = Math.max(0, newQty);
-					await db
-						.update(pantryItems)
-						.set({
-							quantity: finalQty,
-							status: finalQty === 0 ? 'consumed' : 'active',
-							finishedAt: finalQty === 0 ? new Date() : null
-						})
-						.where(eq(pantryItems.id, pantryItemId));
+					await updatePantryQuantity(pantryItemId, newQty, userId);
 				}
 			} else {
 				// Custom item: reuse existing pantry entry or create new
@@ -222,12 +215,7 @@ export const actions: Actions = {
 					.get();
 				if (existing) {
 					pantryItemId = existing.id;
-					const finalQty = Math.max(0, newQty);
-					await db.update(pantryItems).set({
-						quantity: finalQty,
-						status: finalQty === 0 ? 'consumed' : 'active',
-						finishedAt: finalQty === 0 ? new Date() : null
-					}).where(eq(pantryItems.id, pantryItemId));
+					await updatePantryQuantity(pantryItemId, newQty, userId);
 				} else {
 					const { category: categoryName, quantityType, unit } = inferItemDefaults(itemName);
 					const purchaseDate = new Date();
@@ -239,7 +227,7 @@ export const actions: Actions = {
 					const expiryDate = calcExpiry(ttlDays, purchaseDate);
 					const [created] = await db
 						.insert(pantryItems)
-						.values({ userId, name: itemName, category: categoryId, quantityType, quantity: Math.max(0, newQty), unit, purchaseDate, expiryDate, expiryOverridden: false })
+						.values({ userId, name: itemName, category: categoryId, quantityType, unit, purchaseDate, expiryDate, expiryOverridden: false, ...pantryStatusFields(newQty) })
 						.returning();
 					pantryItemId = created.id;
 				}

@@ -7,6 +7,7 @@ import { calcExpiry } from '$lib/expiry';
 import { getString, getNumber } from '$lib/server/form-data';
 import { inferItemDefaults } from '$lib/server/infer-item';
 import { DEFAULT_CATEGORIES, SLUG_TO_CATEGORY_NAME } from '$lib/defaults';
+import { pantryStatusFields } from '$lib/server/pantry';
 
 async function getOrSeedCategories(userId: string) {
 	let cats = await db
@@ -130,13 +131,12 @@ export const actions: Actions = {
 		const quantity = getNumber(data, 'quantity', 1);
 		const unit = quantityType === 'count' ? (getString(data, 'unit') || 'count') : null;
 
-		const status = quantity === 0 ? 'consumed' : 'active';
-		const finishedAt = quantity === 0 ? new Date() : null;
+		const qtyFields = pantryStatusFields(quantity);
 
 		// When restoring a consumed/discarded item, check current status and reset dates
 		const [current] = await db.select({ status: pantryItems.status }).from(pantryItems)
 			.where(and(eq(pantryItems.id, id), eq(pantryItems.userId, userId)));
-		const isRestoring = current && current.status !== 'active' && status === 'active';
+		const isRestoring = current && current.status !== 'active' && qtyFields.status === 'active';
 
 		const purchaseDateStr = getString(data, 'purchaseDate');
 		const purchaseDate = isRestoring ? new Date() : (purchaseDateStr ? new Date(purchaseDateStr) : new Date());
@@ -146,7 +146,7 @@ export const actions: Actions = {
 
 		await db
 			.update(pantryItems)
-			.set({ name, category: cat.id, quantityType, quantity, unit, purchaseDate, expiryDate, expiryOverridden, status, finishedAt })
+			.set({ name, category: cat.id, quantityType, unit, purchaseDate, expiryDate, expiryOverridden, ...qtyFields })
 			.where(and(eq(pantryItems.id, id), eq(pantryItems.userId, userId)));
 
 		return { success: true };

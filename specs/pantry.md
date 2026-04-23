@@ -75,3 +75,11 @@
 ## PANT-019
 **Requirement:** Navigating to `/pantry?edit=<id>` opens the edit sheet for that pantry item directly.  
 **Test:** `playwright/pantry.spec.ts` — "PANT-019: ?edit=<id> deep-link opens pantry item edit sheet"
+
+## PANT-020
+**Requirement:** Setting an existing pantry item's quantity to 0 in the meals "Update pantry" flow marks it as consumed; it disappears from the active list and appears under "Out of Stock".  
+**Test:** `playwright/pantry.spec.ts` — "PANT-020: setting an existing pantry item to qty=0 in meals update flow marks it consumed"
+
+## PANT-021
+**Requirement:** A free-text ingredient added in the meals "Update pantry" flow with quantity 0 is created as a consumed pantry item; it does not appear in the active list and appears under "Out of Stock".  
+**Test:** `playwright/pantry.spec.ts` — "PANT-021: free-text item created with qty=0 in meals update flow is marked consumed"

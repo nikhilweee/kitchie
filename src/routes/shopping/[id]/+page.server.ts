@@ -5,6 +5,7 @@ import { shoppingLists, shoppingListItems, pantryItems, userCategories } from '$
 import { eq, and, ne } from 'drizzle-orm';
 import { getString, getStrings } from '$lib/server/form-data';
 import { inferItemDefaults } from '$lib/server/infer-item';
+import { updatePantryQuantity, pantryStatusFields } from '$lib/server/pantry';
 import { calcExpiry } from '$lib/expiry';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
@@ -150,14 +151,7 @@ export const actions: Actions = {
 				if (existing) {
 					const cat = allCats.find((c) => c.id === existing.category);
 					const expiryDate = calcExpiry(cat?.ttlDays ?? 30, purchaseDate);
-					await db.update(pantryItems).set({
-						quantity: newQty,
-						status: newQty === 0 ? 'consumed' : 'active',
-						finishedAt: newQty === 0 ? new Date() : null,
-						purchaseDate,
-						expiryDate,
-						expiryOverridden: false
-					}).where(eq(pantryItems.id, pantryItemId));
+					await updatePantryQuantity(pantryItemId, newQty, userId, { purchaseDate, expiryDate, expiryOverridden: false });
 				}
 			} else {
 				// New item: create pantry entry with inferred defaults
@@ -170,11 +164,11 @@ export const actions: Actions = {
 					name: shoppingItem.name,
 					category: cat?.id ?? categoryName,
 					quantityType,
-					quantity: newQty,
 					unit: quantityType === 'count' ? (unit ?? 'count') : null,
 					purchaseDate,
 					expiryDate,
-					expiryOverridden: false
+					expiryOverridden: false,
+					...pantryStatusFields(newQty)
 				});
 			}
 
