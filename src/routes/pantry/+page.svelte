@@ -259,7 +259,11 @@
 			if (s.key === 'category-asc' || s.key === 'category-desc') {
 				const catCmp = categoryLabel(a.category).localeCompare(categoryLabel(b.category));
 				const dir = s.key === 'category-asc' ? 1 : -1;
-				return catCmp !== 0 ? catCmp * dir : a.name.localeCompare(b.name) * dir;
+				if (catCmp !== 0) return catCmp * dir;
+				// asc: secondary by expiry asc; desc: secondary by name desc
+				if (s.key === 'category-asc')
+					return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+				return b.name.localeCompare(a.name);
 			}
 			if (s.key === 'expiry-asc') return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
 			return new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime();
