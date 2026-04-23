@@ -16,7 +16,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import { createToast } from '$lib/toast.svelte';
 	import { createSort } from '$lib/sort.svelte';
-	import { ListFilter, ShoppingBasket, Search, Trash2 } from 'lucide-svelte';
+	import { ListFilter, ShoppingBasket, Search, Trash2, X } from 'lucide-svelte';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 	import type { QuantityType } from '$lib/server/db/schema';
 
@@ -348,13 +348,25 @@
 		{:else}
 			<!-- Search + filter -->
 			<div class="relative mb-4 flex gap-2" use:clickOutside={() => (filterOpen = false)}>
-				<input
-					type="text"
-					bind:value={search}
-					placeholder="Search pantry…"
-					autocomplete="off"
-					class="block flex-1 rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
-				/>
+				<div class="relative flex-1">
+					<input
+						type="text"
+						bind:value={search}
+						placeholder="Search pantry…"
+						autocomplete="off"
+						class="block w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none {search ? 'pr-8' : ''}"
+					/>
+					{#if search}
+						<button
+							type="button"
+							onclick={() => (search = '')}
+							class="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+							aria-label="Clear search"
+						>
+							<X class="h-4 w-4" />
+						</button>
+					{/if}
+				</div>
 				<button
 					type="button"
 					onclick={() => (filterOpen = !filterOpen)}
@@ -539,13 +551,13 @@
 					</div>
 					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
 						<button type="button"
-							onclick={() => { expiryMode = 'relative'; expiryLocked = false; }}
-							class="px-3 py-1.5 transition-colors {expiryMode === 'relative' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
-						>Duration</button>
-						<button type="button"
 							onclick={() => { expiryMode = 'exact'; expiryDate = computedExpiryDate; expiryLocked = true; }}
 							class="px-3 py-1.5 transition-colors {expiryMode === 'exact' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
 						>Date</button>
+						<button type="button"
+							onclick={() => { expiryMode = 'relative'; expiryLocked = false; }}
+							class="px-3 py-1.5 transition-colors {expiryMode === 'relative' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+						>Duration</button>
 					</div>
 				</div>
 				<input type="hidden" name="quantityType" value={quantityType} />
