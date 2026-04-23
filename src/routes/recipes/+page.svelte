@@ -277,10 +277,6 @@
 								{/if}
 							</p>
 						</button>
-						<form method="POST" action="?/delete" use:enhance>
-							<input type="hidden" name="id" value={recipe.id} />
-							<button type="submit" aria-label="Delete {recipe.name}" class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-stone-300 hover:bg-red-50 hover:text-red-400"><X class="h-3.5 w-3.5" /></button>
-						</form>
 					</li>
 				{/each}
 			</ul>
