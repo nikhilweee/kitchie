@@ -16,7 +16,7 @@
 	let editTtl = $state(30);
 
 	// Drag state
-	let items = $state(data.categories.map((c) => c));
+	let items = $state<typeof data.categories>([]);
 	let draggedId = $state<string | null>(null);
 	let dragOverId = $state<string | null>(null);
 	let reorderForm: HTMLFormElement;

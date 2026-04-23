@@ -12,7 +12,7 @@
 	let editName = $state('');
 
 	// Drag state
-	let items = $state(data.cuisines.map((c) => c));
+	let items = $state<typeof data.cuisines>([]);
 	let draggedId = $state<string | null>(null);
 	let reorderForm: HTMLFormElement;
 
