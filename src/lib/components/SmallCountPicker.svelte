@@ -10,7 +10,7 @@
 </script>
 
 <!-- h-8 × 104px — matches SmallEstimatePicker dimensions -->
-<div class="flex shrink-0 items-center gap-0.5" role="group" aria-label="Quantity">
+<div class="flex w-[6.5rem] shrink-0 items-center justify-between gap-0.5" role="group" aria-label="Quantity">
 	<button type="button"
 		onclick={() => (value = Math.max(0, value - 1))}
 		class="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-sm text-stone-500 hover:bg-stone-100 density-picker-btn">−</button>

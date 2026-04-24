@@ -49,13 +49,12 @@
 		{:else}
 			<ul class="space-y-2">
 				{#each data.lists as list (list.id)}
-					<li class="flex items-center gap-2 rounded-xl bg-white px-4 shadow-xs density-li">
+					<li class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 shadow-xs density-li">
 						<a href="/shopping/{list.id}" class="min-w-0 flex-1">
 							<p class="truncate font-medium text-stone-900">{list.name}</p>
-							<p class="text-xs text-stone-400 density-hide">
-								{list.shoppedCount}/{list.itemCount} items
-							</p>
+							<p class="text-xs text-stone-400 density-hide">{list.shoppedCount}/{list.itemCount} items</p>
 						</a>
+						<span class="hidden h-7 shrink-0 items-center px-1 text-xs text-stone-400 density-show-slim">{list.shoppedCount}/{list.itemCount}</span>
 						<button type="button" onclick={() => openRename(list)}
 							class="flex h-7 w-7 shrink-0 items-center justify-center text-stone-300 hover:text-stone-500 transition-colors"
 							aria-label="Rename {list.name}">

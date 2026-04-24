@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013, PANT-014, PANT-015, PANT-016, PANT-017, PANT-018, PANT-019, PANT-020, PANT-021
+// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013, PANT-014, PANT-015, PANT-016, PANT-017, PANT-018, PANT-019, PANT-020, PANT-021, PANT-022, PANT-023, PANT-024
 
 async function addPantryItem(page: import('@playwright/test').Page, name: string) {
 	await page.click('button:has-text("Add to Pantry")');
@@ -331,7 +331,7 @@ test('PANT-013: sorting by expiry groups items into time buckets', async ({ page
 	await addPantryItem(page, `ExpiryItem-${Date.now()}`);
 
 	// Expiry is the default sort — no need to switch
-	const buckets = ['Expired', 'Expires This Week', 'Expires Later'];
+	const buckets = ['Expired', 'This Week', 'Later'];
 	const visible = await Promise.all(
 		buckets.map((b) => page.locator('h2', { hasText: b }).isVisible())
 	);
@@ -551,4 +551,101 @@ test('PANT-019: ?edit=<id> deep-link opens pantry item edit sheet', async ({ pag
 	const dialog = page.locator('[role="dialog"]');
 	await dialog.waitFor();
 	await expect(dialog.getByPlaceholder('What did you buy?')).toHaveValue(name);
+});
+
+// Simulate long-press by dispatching pointerdown, waiting, then pointerup
+async function longPress(page: import('@playwright/test').Page, locator: import('@playwright/test').Locator) {
+	await locator.dispatchEvent('pointerdown');
+	await page.waitForTimeout(600);
+	await locator.dispatchEvent('pointerup');
+}
+
+test('PANT-022: bulk consume selected pantry items', async ({ page }) => {
+	await login(page);
+	await page.goto('/pantry');
+	const nameA = `BulkConsumeA-${Date.now()}`;
+	const nameB = `BulkConsumeB-${Date.now()}`;
+	await addPantryItem(page, nameA);
+	await addPantryItem(page, nameB);
+
+	// Long-press first item to enter selection mode
+	const itemA = page.locator('li', { hasText: nameA }).first();
+	await longPress(page, itemA.locator('button').first());
+
+	// First item should now be selected (checkbox visible)
+	await expect(itemA.locator('button').first()).toBeVisible();
+
+	// Tap second item to select it
+	await page.locator('li', { hasText: nameB }).first().locator('button').first().click();
+
+	// Consume
+	await page.getByRole('button', { name: 'Consume', exact: true }).click();
+
+	// Both items should appear under Out of Stock
+	await page.locator('button', { hasText: 'Out of Stock' }).click();
+	await expect(page.locator('li', { hasText: nameA }).first()).toBeVisible();
+	await expect(page.locator('li', { hasText: nameB }).first()).toBeVisible();
+});
+
+test('PANT-023: bulk add selected pantry items to a shopping list', async ({ page }) => {
+	await login(page);
+
+	// Create a shopping list
+	await page.goto('/shopping');
+	await page.getByRole('button', { name: 'New list' }).click();
+	await page.locator('[role="dialog"]').waitFor();
+	const listName = `BulkList-${Date.now()}`;
+	await page.getByPlaceholder('e.g. Whole Foods, Costco…').fill(listName);
+	await page.getByRole('button', { name: 'Create list' }).click();
+	await page.waitForURL(/\/shopping\/.+/);
+
+	// Add two pantry items
+	await page.goto('/pantry');
+	const nameA = `BulkListA-${Date.now()}`;
+	const nameB = `BulkListB-${Date.now()}`;
+	await addPantryItem(page, nameA);
+	await addPantryItem(page, nameB);
+
+	// Long-press to enter selection mode and select first item
+	const itemA = page.locator('li', { hasText: nameA }).first();
+	await longPress(page, itemA.locator('button').first());
+
+	// Select second item
+	await page.locator('li', { hasText: nameB }).first().locator('button').first().click();
+
+	// Tap "Add to list"
+	await page.getByRole('button', { name: 'Add to list' }).click();
+	await page.locator('[role="dialog"]').waitFor();
+
+	// Pick the list
+	await page.getByRole('button', { name: listName }).click();
+
+	// Navigate to the shopping list and verify items are there
+	await page.goto('/shopping');
+	await page.locator('a', { hasText: listName }).first().click();
+	await expect(page.locator('li', { hasText: nameA }).first()).toBeVisible();
+	await expect(page.locator('li', { hasText: nameB }).first()).toBeVisible();
+});
+
+test('PANT-024: bulk delete selected pantry items', async ({ page }) => {
+	await login(page);
+	await page.goto('/pantry');
+	const nameA = `BulkDelA-${Date.now()}`;
+	const nameB = `BulkDelB-${Date.now()}`;
+	await addPantryItem(page, nameA);
+	await addPantryItem(page, nameB);
+
+	// Long-press to enter selection mode
+	const itemA = page.locator('li', { hasText: nameA }).first();
+	await longPress(page, itemA.locator('button').first());
+
+	// Select second item
+	await page.locator('li', { hasText: nameB }).first().locator('button').first().click();
+
+	// Tap trash icon
+	await page.locator('button[aria-label="Delete selected"]').click();
+
+	// Both items should be gone
+	await expect(page.locator('li', { hasText: nameA })).toHaveCount(0);
+	await expect(page.locator('li', { hasText: nameB })).toHaveCount(0);
 });

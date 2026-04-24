@@ -2,9 +2,9 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { pantryItems, shoppingLists, shoppingListItems } from '$lib/server/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import { calcExpiry } from '$lib/expiry';
-import { getString, getNumber } from '$lib/server/form-data';
+import { getString, getStrings, getNumber } from '$lib/server/form-data';
 import { inferItemDefaults } from '$lib/server/infer-item';
 import { pantryStatusFields } from '$lib/server/pantry';
 import { getOrSeedCategories, resolveCatByName } from '$lib/server/categories';
@@ -176,6 +176,31 @@ export const actions: Actions = {
 				eq(shoppingListItems.pantryItemId, itemId),
 				eq(shoppingListItems.userId, userId)
 			));
+
+		return { success: true };
+	},
+
+	bulkConsume: async ({ request, locals }) => {
+		const userId = locals.user!.id;
+		const data = await request.formData();
+		const ids = getStrings(data, 'id');
+		if (!ids.length) return fail(400, {});
+
+		await db.update(pantryItems)
+			.set({ quantity: 0, status: 'consumed', finishedAt: new Date() })
+			.where(and(inArray(pantryItems.id, ids), eq(pantryItems.userId, userId)));
+
+		return { success: true };
+	},
+
+	bulkTrash: async ({ request, locals }) => {
+		const userId = locals.user!.id;
+		const data = await request.formData();
+		const ids = getStrings(data, 'id');
+		if (!ids.length) return fail(400, {});
+
+		await db.delete(pantryItems)
+			.where(and(inArray(pantryItems.id, ids), eq(pantryItems.userId, userId)));
 
 		return { success: true };
 	}

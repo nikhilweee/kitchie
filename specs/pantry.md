@@ -83,3 +83,15 @@
 ## PANT-021
 **Requirement:** A free-text ingredient added in the meals "Update pantry" flow with quantity 0 is created as a consumed pantry item; it does not appear in the active list and appears under "Out of Stock".  
 **Test:** `playwright/pantry.spec.ts` — "PANT-021: free-text item created with qty=0 in meals update flow is marked consumed"
+
+## PANT-022
+**Requirement:** Long-pressing a pantry item enters selection mode (auto-selecting that item); tapping additional items selects them; tapping "Consume" marks all selected items as consumed (they appear under "Out of Stock").  
+**Test:** `playwright/pantry.spec.ts` — "PANT-022: bulk consume selected pantry items"
+
+## PANT-023
+**Requirement:** In selection mode, tapping "Add to list" opens a list picker; picking a shopping list adds all selected pantry items to that list.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-023: bulk add selected pantry items to a shopping list"
+
+## PANT-024
+**Requirement:** In selection mode, tapping the trash icon permanently deletes all selected pantry items.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-024: bulk delete selected pantry items"

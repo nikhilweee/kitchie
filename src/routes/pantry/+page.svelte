@@ -18,6 +18,42 @@
 	import { createSort } from '$lib/sort.svelte';
 	import { ListFilter, ShoppingBasket, Search, Trash2, X } from 'lucide-svelte';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
+
+	// ── Bulk selection ─────────────────────────────────────────────────────────
+	let selectionMode = $state(false);
+	let selectedIds = $state(new SvelteSet<string>());
+	let listPickerOpen = $state(false);
+
+	let longPressTimer: ReturnType<typeof setTimeout> | undefined;
+	const LONG_PRESS_MS = 500;
+
+	function startLongPress(id: string) {
+		longPressTimer = setTimeout(() => {
+			selectionMode = true;
+			selectedIds.add(id);
+		}, LONG_PRESS_MS);
+	}
+
+	function cancelLongPress() {
+		clearTimeout(longPressTimer);
+	}
+
+	function toggleItem(id: string) {
+		selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id);
+	}
+
+	function toggleSelectAll() {
+		if (selectedIds.size === filteredItems.length) {
+			selectedIds = new SvelteSet();
+		} else {
+			filteredItems.forEach((i) => selectedIds.add(i.id));
+		}
+	}
+
+	function exitSelection() {
+		selectionMode = false;
+		selectedIds = new SvelteSet();
+	}
 	import type { QuantityType } from '$lib/server/db/schema';
 
 	let { data }: { data: PageData } = $props();
@@ -208,6 +244,15 @@
 		return d < 0 ? `-${value}${unit}` : `${value}${unit}`;
 	}
 
+	function purchaseLabel(iso: string) {
+		const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+		if (days <= 0) return 'today';
+		if (days === 1) return '1d ago';
+		if (days < 30) return `${days}d ago`;
+		if (days < 365) return `${Math.round(days / 30)}m ago`;
+		return `${Math.round(days / 365)}y ago`;
+	}
+
 	function expiryColor(iso: string) {
 		const d = daysUntilExpiry(new Date(iso));
 		if (d < 0)  return 'text-red-500';
@@ -222,13 +267,14 @@
 	let activeStatus = $state<StatusFilter | null>(null);
 	let activeCategories = $state(new SvelteSet<string>());
 	let filterOpen = $state(false);
-	type SortField = 'name' | 'category' | 'expiry';
+	type SortField = 'name' | 'category' | 'expiry' | 'purchased';
 	const s = createSort<SortField>('expiry', 'asc');
 
 	const SORT_FIELDS: { field: SortField; label: string }[] = [
 		{ field: 'name', label: 'Name' },
 		{ field: 'category', label: 'Category' },
-		{ field: 'expiry', label: 'Expiry' },
+		{ field: 'expiry', label: 'Expiry date' },
+		{ field: 'purchased', label: 'Purchase date' },
 	];
 
 	function toggleStatus(s: StatusFilter) {
@@ -267,7 +313,9 @@
 				return b.name.localeCompare(a.name);
 			}
 			if (s.key === 'expiry-asc') return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
-			return new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime();
+			if (s.key === 'expiry-desc') return new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime();
+			if (s.key === 'purchased-asc') return new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime();
+			return new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime();
 		});
 	}
 
@@ -297,13 +345,31 @@
 			return [...map.entries()].map(([label, items]) => ({ label, items }));
 		}
 
+		// purchased-asc or purchased-desc
+		if (s.key === 'purchased-asc' || s.key === 'purchased-desc') {
+			const PURCHASE_BUCKET_ORDER = ['Today', 'This Week', 'Earlier'];
+			const bucketFor = (item: Item) => {
+				const days = Math.floor((Date.now() - new Date(item.purchaseDate).getTime()) / 86400000);
+				if (days <= 0) return 'Today';
+				if (days <= 7) return 'This Week';
+				return 'Earlier';
+			};
+			const map = new SvelteMap<string, Item[]>(PURCHASE_BUCKET_ORDER.map((b) => [b, []]));
+			for (const item of items) map.get(bucketFor(item))!.push(item);
+			let groups = [...map.entries()]
+				.filter(([, items]) => items.length > 0)
+				.map(([label, items]) => ({ label, items }));
+			if (s.key === 'purchased-desc') groups = groups.reverse();
+			return groups;
+		}
+
 		// expiry-asc or expiry-desc
-		const BUCKET_ORDER = ['Expired', 'Expires This Week', 'Expires Later'];
+		const BUCKET_ORDER = ['Expired', 'This Week', 'Later'];
 		const bucketFor = (item: Item) => {
 			const days = daysUntilExpiry(new Date(item.expiryDate));
 			if (days <= 0) return 'Expired';
-			if (days <= 7) return 'Expires This Week';
-			return 'Expires Later';
+			if (days <= 7) return 'This Week';
+			return 'Later';
 		};
 		const map = new SvelteMap<string, Item[]>(BUCKET_ORDER.map((b) => [b, []]));
 		for (const item of items) map.get(bucketFor(item))!.push(item);
@@ -431,12 +497,29 @@
 					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'done' ? 'border-stone-500 bg-stone-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>Out of Stock</button>
 			</div>
+			{#if selectionMode}
+				<div class="mb-3 flex items-center gap-3">
+					<span class="flex-1 text-sm font-medium text-stone-700">{selectedIds.size} selected</span>
+					<button type="button" onclick={toggleSelectAll}
+						class="text-xs font-medium text-orange-500">
+						{selectedIds.size === filteredItems.length ? 'Deselect all' : 'Select all'}
+					</button>
+					<button type="button" onclick={exitSelection}
+						class="text-xs font-medium text-stone-400">Cancel</button>
+				</div>
+			{/if}
 			{#if filteredItems.length === 0}
 				<EmptyState icon={Search} heading="No matches" detail="Try a different search or filter." />
 			{:else}
 				{#each groupedItems as group (group.label)}
-					{#if groupedItems.length > 1}
-						<h2 class="mt-4 mb-1 px-1 text-xs font-semibold uppercase tracking-wider text-stone-400">{group.label}</h2>
+					{#if group.label}
+						<div class="mt-4 mb-1 flex items-center gap-3 px-4">
+							<h2 class="flex-1 text-xs font-semibold uppercase tracking-wider text-stone-400">{group.label}</h2>
+							<span class="w-16 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Qty</span>
+							<span class="{s.by === 'purchased' ? 'w-12' : 'w-8'} text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+								{s.by === 'purchased' ? 'Pur' : 'Exp'}
+							</span>
+						</div>
 					{/if}
 					{@render itemList(group.items)}
 				{/each}
@@ -444,16 +527,96 @@
 		{/if}
 	</main>
 
-	<AddButton label="Add to Pantry" onclick={openAdd} />
+	{#if !selectionMode}
+		<AddButton label="Add to Pantry" onclick={openAdd} />
+	{/if}
+
+	{#if selectionMode && selectedIds.size > 0}
+		<div class="fixed bottom-14 left-0 right-0 z-10 px-4 pb-2">
+			<div class="mx-auto flex w-full max-w-lg items-center gap-2">
+				<form method="POST" action="?/bulkConsume" use:enhance={() => async ({ update }) => {
+					const count = selectedIds.size;
+					await update({ reset: false });
+					showToast(`${count} item${count !== 1 ? 's' : ''} consumed`);
+					exitSelection();
+				}} class="contents">
+					{#each [...selectedIds] as id}
+						<input type="hidden" name="id" value={id} />
+					{/each}
+					<button type="submit"
+						class="flex-1 rounded-2xl border-2 border-stone-700 bg-stone-700 py-4 text-base font-semibold text-white shadow-lg density-fab">
+						Consume
+					</button>
+				</form>
+				<button type="button" onclick={() => (listPickerOpen = true)}
+					class="flex-1 rounded-2xl bg-orange-500 py-4 text-base font-semibold text-white shadow-lg density-fab">
+					Add to list
+				</button>
+				<form method="POST" action="?/bulkTrash" use:enhance={() => async ({ update }) => {
+					const count = selectedIds.size;
+					await update({ reset: false });
+					showToast(`${count} item${count !== 1 ? 's' : ''} deleted`);
+					exitSelection();
+				}} class="contents">
+					{#each [...selectedIds] as id}
+						<input type="hidden" name="id" value={id} />
+					{/each}
+					<button type="submit" aria-label="Delete selected"
+						class="flex w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-red-200 bg-white py-4 text-red-400 shadow-lg hover:bg-red-50 density-fab">
+						<Trash2 class="h-5 w-5" />
+					</button>
+				</form>
+			</div>
+		</div>
+	{/if}
 </div>
+
+<BottomSheet open={listPickerOpen} onclose={() => (listPickerOpen = false)}>
+	<h2 class="mb-4 text-base font-semibold text-stone-900">Add to list</h2>
+	{#if data.lists.length === 0}
+		<p class="text-sm text-stone-400">No shopping lists yet. Create one from the Shopping tab.</p>
+	{:else}
+		<ul class="space-y-2">
+			{#each data.lists as list (list.id)}
+				<li>
+					<form method="POST" action="/shopping/{list.id}?/addItems"
+						use:enhance={() => async ({ update }) => {
+							await update({ reset: false });
+							showToast(`Added to ${list.name}`);
+							listPickerOpen = false;
+							exitSelection();
+						}}>
+						{#each [...selectedIds] as id}
+							<input type="hidden" name="pantryItemId" value={id} />
+						{/each}
+						<button type="submit"
+							class="flex w-full items-center justify-between rounded-xl bg-stone-50 px-4 py-3 text-left text-sm font-medium text-stone-800 hover:bg-stone-100">
+							{list.name}
+						</button>
+					</form>
+				</li>
+			{/each}
+		</ul>
+	{/if}
+</BottomSheet>
 
 {#snippet itemList(items: Item[])}
 	<ul class="space-y-2">
 		{#each items as item (item.id)}
 			<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs density-li">
+				{#if selectionMode}
+					<button type="button" onclick={() => toggleItem(item.id)}
+						class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors
+							{selectedIds.has(item.id) ? 'border-orange-500 bg-orange-500 text-white' : 'border-stone-300'}">
+						{#if selectedIds.has(item.id)}✓{/if}
+					</button>
+				{/if}
 				<button
 					type="button"
-					onclick={() => openEdit(item)}
+					onpointerdown={() => startLongPress(item.id)}
+					onpointerup={cancelLongPress}
+					onpointerleave={cancelLongPress}
+					onclick={() => selectionMode ? toggleItem(item.id) : openEdit(item)}
 					class="min-w-0 flex-1 text-left"
 				>
 					<p class="truncate font-medium text-stone-900 density-text">{item.name}</p>
@@ -471,6 +634,10 @@
 				{#if item.status !== 'active'}
 					<span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {item.status === 'consumed' ? 'bg-stone-100 text-stone-400' : 'bg-red-50 text-red-400'}">
 						{item.status}
+					</span>
+				{:else if s.by === 'purchased'}
+					<span class="w-12 shrink-0 text-right text-xs font-medium text-stone-400">
+						{purchaseLabel(item.purchaseDate)}
 					</span>
 				{:else}
 					<span class="w-8 shrink-0 text-right text-xs font-medium {expiryColor(item.expiryDate)}">
