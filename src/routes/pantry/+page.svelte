@@ -555,7 +555,7 @@
 				</form>
 				<button type="button" onclick={() => (listPickerOpen = true)}
 					class="flex-1 rounded-2xl bg-orange-500 py-4 text-base font-semibold text-white shadow-lg density-fab">
-					Add to list
+					Add to cart
 				</button>
 				<form method="POST" action="?/bulkTrash" use:enhance={() => async ({ update }) => {
 					const count = selectedIds.size;
@@ -577,9 +577,9 @@
 </div>
 
 <BottomSheet open={listPickerOpen} onclose={() => (listPickerOpen = false)}>
-	<h2 class="mb-4 text-base font-semibold text-stone-900">Add to list</h2>
+	<h2 class="mb-4 text-base font-semibold text-stone-900">Add to cart</h2>
 	{#if data.lists.length === 0}
-		<p class="text-sm text-stone-400">No shopping lists yet. Create one from the Shopping tab.</p>
+		<p class="text-sm text-stone-400">No carts yet. Create one from the Carts tab.</p>
 	{:else}
 		<ul class="space-y-2">
 			{#each data.lists as list (list.id)}
@@ -885,7 +885,7 @@
 	{#if sheetMode === 'edit' && editingItem && data.lists.length > 0}
 		{@const itemId = editingItem.id}
 		<div class="mt-3 border-t border-stone-100 pt-3">
-			<p class="mb-2 text-xs font-medium text-stone-400">Shopping lists</p>
+			<p class="mb-2 text-xs font-medium text-stone-400">Carts</p>
 			<div class="space-y-1.5">
 				{#each data.lists as list (list.id)}
 					{@const onList = data.listMembership.has(`${list.id}:${itemId}`)}

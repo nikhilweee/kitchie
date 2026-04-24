@@ -157,7 +157,7 @@
 						}}>
 							<input type="hidden" name="freeText" value={search.trim()} />
 							<button type="submit" class="w-full px-4 py-2.5 text-left text-sm text-orange-600 hover:bg-orange-50">
-								Add "{search.trim()}" to list
+								Add "{search.trim()}" to cart
 							</button>
 						</form>
 					{/if}

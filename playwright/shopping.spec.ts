@@ -3,16 +3,16 @@ import { login } from './helpers/auth';
 
 // Covers: SHOP-005, SHOP-006
 
-test('SHOP-005: rename a shopping list', async ({ page }) => {
+test('SHOP-005: rename a cart', async ({ page }) => {
 	await login(page);
 	await page.goto('/shopping');
 
 	// Create a list — server redirects to /shopping/{id} after create
 	const originalName = `List-${Date.now()}`;
-	await page.getByRole('button', { name: 'New list' }).click();
+	await page.getByRole('button', { name: 'New cart' }).click();
 	await page.locator('[role="dialog"]').waitFor();
 	await page.getByPlaceholder('e.g. Whole Foods, Costco…').fill(originalName);
-	await page.getByRole('button', { name: 'Create list' }).click();
+	await page.getByRole('button', { name: 'Create cart' }).click();
 	await page.waitForURL(/\/shopping\/.+/);
 
 	// Navigate back to index and wait for the new list to appear
@@ -23,7 +23,7 @@ test('SHOP-005: rename a shopping list', async ({ page }) => {
 	// Click the pencil (rename) button — the only type="button" in each list item
 	await listItem.locator('button[type="button"]').click();
 	await page.locator('[role="dialog"]').waitFor();
-	await expect(page.getByRole('heading', { name: 'Rename list' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Rename cart' })).toBeVisible();
 
 	// Rename it
 	const newName = `Renamed-${Date.now()}`;
@@ -37,15 +37,15 @@ test('SHOP-005: rename a shopping list', async ({ page }) => {
 	await expect(page.locator('li', { hasText: originalName })).toHaveCount(0);
 });
 
-test('SHOP-006: add items to a shopping list via inline search', async ({ page }) => {
+test('SHOP-006: add items to a cart via inline search', async ({ page }) => {
 	await login(page);
 
 	// Create a list and land on its detail page
 	await page.goto('/shopping');
-	await page.getByRole('button', { name: 'New list' }).click();
+	await page.getByRole('button', { name: 'New cart' }).click();
 	await page.locator('[role="dialog"]').waitFor();
 	await page.getByPlaceholder('e.g. Whole Foods, Costco…').fill(`ShopSearch-${Date.now()}`);
-	await page.getByRole('button', { name: 'Create list' }).click();
+	await page.getByRole('button', { name: 'Create cart' }).click();
 	await page.waitForURL(/\/shopping\/.+/);
 
 	// Add a pantry item via inline search
@@ -66,6 +66,6 @@ test('SHOP-006: add items to a shopping list via inline search', async ({ page }
 	// Add a free-text item
 	const freeItem = `FreeItem-${Date.now()}`;
 	await page.getByPlaceholder('Search or type an item…').fill(freeItem);
-	await page.getByRole('button', { name: `Add "${freeItem}" to list` }).click();
+	await page.getByRole('button', { name: `Add "${freeItem}" to cart` }).click();
 	await expect(page.locator('li', { hasText: freeItem }).first()).toBeVisible();
 });

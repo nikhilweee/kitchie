@@ -12,7 +12,7 @@
 		{ href: '/meals', label: 'Meals', icon: Utensils },
 		{ href: '/recipes', label: 'Recipes', icon: ChefHat },
 		{ href: '/pantry', label: 'Pantry', icon: ShoppingBasket },
-		{ href: '/shopping', label: 'Shopping', icon: ShoppingCart }
+		{ href: '/shopping', label: 'Carts', icon: ShoppingCart }
 	];
 
 	let shortcutsOpen = $state(false);

@@ -587,16 +587,16 @@ test('PANT-022: bulk consume selected pantry items', async ({ page }) => {
 	await expect(page.locator('li', { hasText: nameB }).first()).toBeVisible();
 });
 
-test('PANT-023: bulk add selected pantry items to a shopping list', async ({ page }) => {
+test('PANT-023: bulk add selected pantry items to a cart', async ({ page }) => {
 	await login(page);
 
 	// Create a shopping list
 	await page.goto('/shopping');
-	await page.getByRole('button', { name: 'New list' }).click();
+	await page.getByRole('button', { name: 'New cart' }).click();
 	await page.locator('[role="dialog"]').waitFor();
 	const listName = `BulkList-${Date.now()}`;
 	await page.getByPlaceholder('e.g. Whole Foods, Costco…').fill(listName);
-	await page.getByRole('button', { name: 'Create list' }).click();
+	await page.getByRole('button', { name: 'Create cart' }).click();
 	await page.waitForURL(/\/shopping\/.+/);
 
 	// Add two pantry items
@@ -614,7 +614,7 @@ test('PANT-023: bulk add selected pantry items to a shopping list', async ({ pag
 	await page.locator('li', { hasText: nameB }).first().locator('button').first().click();
 
 	// Tap "Add to list"
-	await page.getByRole('button', { name: 'Add to list' }).click();
+	await page.getByRole('button', { name: 'Add to cart' }).click();
 	await page.locator('[role="dialog"]').waitFor();
 
 	// Pick the list

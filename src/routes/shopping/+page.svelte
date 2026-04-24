@@ -36,16 +36,16 @@
 	}
 </script>
 
-<svelte:head><title>Kitchie | Shopping</title></svelte:head>
+<svelte:head><title>Kitchie | Carts</title></svelte:head>
 
 <Sidebar open={sidebarOpen} onclose={() => (sidebarOpen = false)} />
 
 <div class="flex min-h-svh flex-col bg-stone-50">
-	<PageHeader title="Shopping Lists" onhamburger={() => (sidebarOpen = true)} />
+	<PageHeader title="Carts" onhamburger={() => (sidebarOpen = true)} />
 
 	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4">
 		{#if data.lists.length === 0}
-			<EmptyState icon={ShoppingCart} heading="No lists yet" detail="Tap + to create a shopping list" />
+			<EmptyState icon={ShoppingCart} heading="No carts yet" detail="Tap + to create a cart" />
 		{:else}
 			<ul class="space-y-2">
 				{#each data.lists as list (list.id)}
@@ -74,7 +74,7 @@
 		{/if}
 	</main>
 
-	<AddButton label="New list" onclick={openNew} />
+	<AddButton label="New cart" onclick={openNew} />
 </div>
 
 <BottomSheet open={sheetMode !== null} onclose={closeSheet}>
@@ -87,7 +87,7 @@
 			<input type="hidden" name="id" value={renameTarget?.id} />
 		{/if}
 		<h2 class="mb-4 text-base font-semibold text-stone-900">
-			{sheetMode === 'rename' ? 'Rename list' : 'New shopping list'}
+			{sheetMode === 'rename' ? 'Rename cart' : 'New cart'}
 		</h2>
 		<label class="mb-1 block text-xs font-medium text-stone-500" for="list-name">List name</label>
 		<input
@@ -106,7 +106,7 @@
 			</button>
 			<button type="submit" data-shortcut="primary"
 				class="flex-1 rounded-xl bg-orange-500 py-2.5 text-sm font-semibold text-white">
-				{sheetMode === 'rename' ? 'Save' : 'Create list'}
+				{sheetMode === 'rename' ? 'Save' : 'Create cart'}
 			</button>
 		</div>
 	</form>

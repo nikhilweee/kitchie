@@ -89,8 +89,8 @@
 **Test:** `playwright/pantry.spec.ts` — "PANT-022: bulk consume selected pantry items"
 
 ## PANT-023
-**Requirement:** In selection mode, tapping "Add to list" opens a list picker; picking a shopping list adds all selected pantry items to that list.  
-**Test:** `playwright/pantry.spec.ts` — "PANT-023: bulk add selected pantry items to a shopping list"
+**Requirement:** In selection mode, tapping "Add to cart" opens a cart picker; picking a cart adds all selected pantry items to that cart.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-023: bulk add selected pantry items to a cart"
 
 ## PANT-024
 **Requirement:** In selection mode, tapping the trash icon permanently deletes all selected pantry items.  
