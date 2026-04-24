@@ -16,7 +16,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import { createToast } from '$lib/toast.svelte';
 	import { createSort } from '$lib/sort.svelte';
-	import { ListFilter, ShoppingBasket, Search, Trash2, X } from 'lucide-svelte';
+	import { ListFilter, ShoppingBasket, Search, Trash2, X, ShoppingCart } from 'lucide-svelte';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 
 	// ── Bulk selection ─────────────────────────────────────────────────────────
@@ -297,6 +297,10 @@
 
 	const activeFilterCount = $derived(activeCategories.size);
 
+	const onListIds = $derived(new Set(
+		[...data.listMembership].map((key) => key.split(':')[1])
+	));
+
 
 	function sortItems(items: Item[]): Item[] {
 		if (!s.key) return items;
@@ -314,8 +318,8 @@
 			}
 			if (s.key === 'expiry-asc') return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
 			if (s.key === 'expiry-desc') return new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime();
-			if (s.key === 'purchased-asc') return new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime();
-			return new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime();
+			if (s.key === 'purchased-asc') return new Date(b.purchaseDate).getTime() - new Date(a.purchaseDate).getTime();
+			return new Date(a.purchaseDate).getTime() - new Date(b.purchaseDate).getTime();
 		});
 	}
 
@@ -515,8 +519,9 @@
 					{#if group.label}
 						<div class="mt-4 mb-1 flex items-center gap-3 px-4">
 							<h2 class="flex-1 text-xs font-semibold uppercase tracking-wider text-stone-400">{group.label}</h2>
-							<span class="w-16 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Qty</span>
-							<span class="{s.by === 'purchased' ? 'w-12' : 'w-8'} text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+							<span class="w-8 shrink-0"></span>
+							<span class="w-8 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Qty</span>
+							<span class="{s.by === 'purchased' ? 'w-12' : 'w-8'} shrink-0 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">
 								{s.by === 'purchased' ? 'Pur' : 'Exp'}
 							</span>
 						</div>
@@ -544,7 +549,7 @@
 						<input type="hidden" name="id" value={id} />
 					{/each}
 					<button type="submit"
-						class="flex-1 rounded-2xl border-2 border-stone-700 bg-stone-700 py-4 text-base font-semibold text-white shadow-lg density-fab">
+						class="flex-1 rounded-2xl bg-stone-700 py-4 text-base font-semibold text-white shadow-lg density-fab">
 						Consume
 					</button>
 				</form>
@@ -622,7 +627,12 @@
 					<p class="truncate font-medium text-stone-900 density-text">{item.name}</p>
 					<p class="text-xs text-stone-400 density-hide">{categoryLabel(item.category)}</p>
 				</button>
-				<div class="flex w-16 shrink-0 justify-end">
+				<span class="flex w-8 shrink-0 items-center justify-center">
+					{#if onListIds.has(item.id)}
+						<ShoppingCart class="h-3 w-3 text-stone-300" />
+					{/if}
+				</span>
+				<div class="flex w-8 shrink-0 items-center justify-end">
 					{#if item.quantityType === 'estimate'}
 						<EstimatePicker value={item.quantity} readonly />
 					{:else}
