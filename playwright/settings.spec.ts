@@ -38,16 +38,32 @@ test('SETT-009: display density toggle persists across navigation', async ({ pag
 	await expect(page.locator('html')).toHaveAttribute('data-display', 'comfortable');
 });
 
+async function addCategory(page: any, name: string, ttlDays: string) {
+	await page.getByRole('button', { name: 'Add category' }).click();
+	const sheet = page.locator('[role="dialog"]');
+	await sheet.waitFor();
+	await sheet.locator('input[name="name"]').fill(name);
+	await sheet.locator('input[name="ttlDays"]').fill(ttlDays);
+	await sheet.getByRole('button', { name: 'Save' }).click();
+	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
+}
+
+async function addCuisine(page: any, name: string) {
+	await page.getByRole('button', { name: 'Add cuisine' }).click();
+	const sheet = page.locator('[role="dialog"]');
+	await sheet.waitFor();
+	await sheet.locator('input[name="name"]').fill(name);
+	await sheet.getByRole('button', { name: 'Save' }).click();
+	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
+}
+
 test('SETT-002: add a custom category', async ({ page }) => {
 	await login(page);
 	const name = `CatTest-${Date.now()}`;
 	await page.goto('/settings/categories');
 
-	await page.getByPlaceholder('Name').fill(name);
-	await page.locator('input[name="ttlDays"]').fill('21');
-	await page.getByRole('button', { name: 'Add' }).click();
+	await addCategory(page, name, '21');
 
-	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
 	await expect(page.locator('li', { hasText: name }).first()).toContainText('21 day');
 
 	// Category appears in pantry add sheet
@@ -65,11 +81,7 @@ test('SETT-003: edit a category name and TTL', async ({ page }) => {
 	const updated = `CatEdited-${Date.now()}`;
 	await page.goto('/settings/categories');
 
-	// Add first
-	await page.getByPlaceholder('Name').fill(original);
-	await page.locator('input[name="ttlDays"]').fill('10');
-	await page.getByRole('button', { name: 'Add' }).click();
-	await expect(page.locator('li', { hasText: original }).first()).toBeVisible();
+	await addCategory(page, original, '10');
 
 	// Edit via bottom sheet
 	await page.locator('li', { hasText: original }).first()
@@ -90,13 +102,14 @@ test('SETT-004: delete an unused category', async ({ page }) => {
 	const name = `CatDel-${Date.now()}`;
 	await page.goto('/settings/categories');
 
-	await page.getByPlaceholder('Name').fill(name);
-	await page.locator('input[name="ttlDays"]').fill('7');
-	await page.getByRole('button', { name: 'Add' }).click();
-	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
+	await addCategory(page, name, '7');
 
+	// Open edit sheet and delete
 	await page.locator('li', { hasText: name }).first()
-		.locator('button[aria-label^="Delete"]').click();
+		.locator('button[type="button"]').click();
+	const sheet = page.locator('[role="dialog"]');
+	await sheet.waitFor();
+	await sheet.getByRole('button', { name: 'Delete category' }).click();
 
 	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
 });
@@ -111,17 +124,16 @@ test('SETT-005: cannot delete a category in use', async ({ page }) => {
 	await dialog.waitFor();
 	const itemName = `InUseCat-${Date.now()}`;
 	await dialog.getByPlaceholder('What did you buy?').fill(itemName);
-	// Note which category is selected
-	const categoryId = await dialog.locator('#sheet-category').inputValue();
 	await dialog.getByRole('button', { name: 'Add item' }).click();
 	await expect(page.locator('li', { hasText: itemName }).first()).toBeVisible();
 
-	// Go to settings and find that category's delete button
+	// Go to settings — find a row with usage count and open its edit sheet
 	await page.goto('/settings/categories');
-	// Find the row that corresponds to the inferred category — it should show usage count
-	// and have a disabled delete button
 	const usedRow = page.locator('li').filter({ has: page.locator('span', { hasText: /\d+ item/ }) }).first();
-	await expect(usedRow.locator('button[aria-label^="Delete"]')).toBeDisabled();
+	await usedRow.locator('button[type="button"]').click();
+	const sheet = page.locator('[role="dialog"]');
+	await sheet.waitFor();
+	await expect(sheet.getByRole('button', { name: /In use by/ })).toBeDisabled();
 });
 
 test('SETT-006: add a custom cuisine', async ({ page }) => {
@@ -129,10 +141,7 @@ test('SETT-006: add a custom cuisine', async ({ page }) => {
 	const name = `CuisineTest-${Date.now()}`;
 	await page.goto('/settings/cuisines');
 
-	await page.getByPlaceholder('e.g. Ethiopian').fill(name);
-	await page.getByRole('button', { name: 'Add' }).click();
-
-	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
+	await addCuisine(page, name);
 
 	// Cuisine appears in recipe add sheet
 	await page.goto('/recipes');
@@ -149,9 +158,7 @@ test('SETT-007: edit a cuisine name', async ({ page }) => {
 	const updated = `CuisineEdited-${Date.now()}`;
 	await page.goto('/settings/cuisines');
 
-	await page.getByPlaceholder('e.g. Ethiopian').fill(original);
-	await page.getByRole('button', { name: 'Add' }).click();
-	await expect(page.locator('li', { hasText: original }).first()).toBeVisible();
+	await addCuisine(page, original);
 
 	// Edit via bottom sheet
 	await page.locator('li', { hasText: original }).first()
@@ -180,8 +187,11 @@ test('SETT-008: cannot delete a cuisine in use', async ({ page }) => {
 	await dialog.getByRole('button', { name: 'Add recipe' }).click();
 	await expect(page.locator('li', { hasText: recipeName }).first()).toBeVisible();
 
-	// Go to settings/cuisines — Italian's delete button should be disabled
+	// Go to settings/cuisines — open Italian's edit sheet, delete should be disabled
 	await page.goto('/settings/cuisines');
 	const italianRow = page.locator('li').filter({ hasText: 'Italian' }).first();
-	await expect(italianRow.locator('button[aria-label^="Delete"]')).toBeDisabled();
+	await italianRow.locator('button[type="button"]').click();
+	const sheet = page.locator('[role="dialog"]');
+	await sheet.waitFor();
+	await expect(sheet.getByRole('button', { name: /In use by/ })).toBeDisabled();
 });

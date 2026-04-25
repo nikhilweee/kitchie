@@ -6,7 +6,7 @@
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
-	import { ShoppingCart, Pencil, Trash2 } from 'lucide-svelte';
+	import { ShoppingCart, Pencil } from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -60,14 +60,6 @@
 							aria-label="Rename {list.name}">
 							<Pencil class="h-3.5 w-3.5" />
 						</button>
-						<form method="POST" action="?/delete" use:enhance>
-							<input type="hidden" name="id" value={list.id} />
-							<button type="submit"
-								class="flex h-7 w-7 shrink-0 items-center justify-center text-stone-300 hover:text-red-400 transition-colors"
-								aria-label="Delete {list.name}">
-								<Trash2 class="h-3.5 w-3.5" />
-							</button>
-						</form>
 					</li>
 				{/each}
 			</ul>
@@ -89,7 +81,7 @@
 		<h2 class="mb-4 text-base font-semibold text-stone-900">
 			{sheetMode === 'rename' ? 'Rename cart' : 'New cart'}
 		</h2>
-		<label class="mb-1 block text-xs font-medium text-stone-500" for="list-name">List name</label>
+		<label class="mb-1 block text-xs font-medium text-stone-500" for="list-name">Cart name</label>
 		<input
 			id="list-name"
 			bind:this={nameEl}
@@ -110,4 +102,16 @@
 			</button>
 		</div>
 	</form>
+	{#if sheetMode === 'rename' && renameTarget}
+		<form method="POST" action="?/delete" use:enhance={() => async ({ update }) => {
+			await update();
+			closeSheet();
+		}}>
+			<input type="hidden" name="id" value={renameTarget.id} />
+			<button type="submit" data-shortcut="delete"
+				class="mt-2 w-full py-2 text-xs text-stone-400 hover:text-red-400 transition-colors">
+				Delete cart
+			</button>
+		</form>
+	{/if}
 </BottomSheet>
