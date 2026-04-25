@@ -6,7 +6,7 @@
 	import { toDateTimeLocalStr } from '$lib/date-format';
 	import SmallEstimatePicker from '$lib/components/SmallEstimatePicker.svelte';
 	import SmallCountPicker from '$lib/components/SmallCountPicker.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
+	import PageShell from '$lib/components/PageShell.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import BottomSheet from '$lib/components/BottomSheet.svelte';
@@ -14,14 +14,14 @@
 	import type { MealType } from '$lib/server/db/schema';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
+	import ListRow from '$lib/components/ListRow.svelte';
 	import { X, Utensils, ChefHat, ChevronRight } from 'lucide-svelte';
-	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { createToast } from '$lib/toast.svelte';
 
 
 	let { data }: { data: PageData } = $props();
 
-	let sidebarOpen = $state(false);
+
 
 	const toast = createToast();
 	const showToast = toast.show;
@@ -231,42 +231,32 @@
 
 <Toast message={toast.message} />
 
-<div class="flex min-h-svh flex-col bg-stone-50">
-	<PageHeader title="Meals" onhamburger={() => (sidebarOpen = true)} />
+<PageShell title="Meals" mainClass="px-4 py-4 pb-36">
+	{#if data.entries.length === 0}
+		<EmptyState icon={Utensils} heading="No meals logged yet" detail="Tap the button below to log your first meal." />
+	{:else}
+		{#each grouped as [day, entries] (day)}
+			<section class="mb-6">
+				<h2 class="mb-2 text-xs font-semibold tracking-wider text-stone-400 uppercase">
+					{isToday(day) ? 'Today' : day}
+				</h2>
+				<ul class="space-y-2">
+					{#each entries as entry (entry.id)}
+						<ListRow>
+							<button type="button" onclick={() => openEdit(entry)} class="min-w-0 flex-1 text-left">
+								<p class="truncate font-medium text-stone-900 density-text">{entry.name}</p>
+								<p class="text-xs text-stone-400 density-hide">{MEAL_TYPE_LABELS[entry.mealType as MealType]}</p>
+							</button>
+							<span class="shrink-0 text-xs text-stone-400">{formatTime(entry.loggedAt)}</span>
+						</ListRow>
+					{/each}
+				</ul>
+			</section>
+		{/each}
+	{/if}
+</PageShell>
 
-	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
-		{#if data.entries.length === 0}
-			<EmptyState icon={Utensils} heading="No meals logged yet" detail="Tap the button below to log your first meal." />
-		{:else}
-			{#each grouped as [day, entries] (day)}
-				<section class="mb-6">
-					<h2 class="mb-2 text-xs font-semibold tracking-wider text-stone-400 uppercase">
-						{isToday(day) ? 'Today' : day}
-					</h2>
-					<ul class="space-y-2">
-						{#each entries as entry (entry.id)}
-							<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs density-li">
-								<button
-									type="button"
-									onclick={() => openEdit(entry)}
-									class="min-w-0 flex-1 text-left"
-								>
-									<p class="truncate font-medium text-stone-900 density-text">{entry.name}</p>
-									<p class="text-xs text-stone-400 density-hide">{MEAL_TYPE_LABELS[entry.mealType as MealType]}</p>
-								</button>
-								<span class="shrink-0 text-xs text-stone-400">{formatTime(entry.loggedAt)}</span>
-							</li>
-						{/each}
-					</ul>
-				</section>
-			{/each}
-		{/if}
-	</main>
-
-	<AddButton label="Add Meal" onclick={openAdd} />
-</div>
-
-<Sidebar open={sidebarOpen} onclose={() => (sidebarOpen = false)} />
+<AddButton label="Add Meal" onclick={openAdd} />
 
 <!-- ── Add / Edit meal sheet ─────────────────────────────────────────────── -->
 <BottomSheet open={!!sheetMode} onclose={closeSheet}>

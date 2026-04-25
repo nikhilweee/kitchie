@@ -3,12 +3,12 @@
 	import type { PageData } from './$types';
 	import { daysUntilExpiry } from '$lib/expiry';
 	import { guessQuantityType } from '$lib/quantity';
+	import ListRow from '$lib/components/ListRow.svelte';
 	import EstimatePicker from '$lib/components/EstimatePicker.svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
+	import PageShell from '$lib/components/PageShell.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import BottomSheet from '$lib/components/BottomSheet.svelte';
-	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { guessCategory } from '$lib/infer';
 	import { UNITS, guessUnit } from '$lib/units';
 	import { toDateStr } from '$lib/date-format';
@@ -64,7 +64,6 @@
 	// ── Sheet mode: 'add' | 'edit' | null ────────────────────────────────────
 	let sheetMode = $state<'add' | 'edit' | null>(null);
 	let editingItem = $state<Item | null>(null);
-	let sidebarOpen = $state(false);
 	let confirmingDelete = $state(false);
 
 	// Shared form state
@@ -417,12 +416,8 @@
 }} />
 
 <Toast message={toast.message} />
-<Sidebar open={sidebarOpen} onclose={() => (sidebarOpen = false)} />
 
-<div class="flex min-h-svh flex-col bg-stone-50">
-	<PageHeader title="Pantry" onhamburger={() => (sidebarOpen = true)} />
-
-	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
+<PageShell title="Pantry" mainClass="px-4 py-4 pb-36">
 		{#if data.items.length === 0}
 			<EmptyState icon={ShoppingBasket} heading="Pantry is empty" detail="Add items after your next shopping trip." />
 		{:else}
@@ -530,13 +525,13 @@
 				{/each}
 			{/if}
 		{/if}
-	</main>
+</PageShell>
 
-	{#if !selectionMode}
-		<AddButton label="Add to Pantry" onclick={openAdd} />
-	{/if}
+{#if !selectionMode}
+	<AddButton label="Add to Pantry" onclick={openAdd} />
+{/if}
 
-	{#if selectionMode && selectedIds.size > 0}
+{#if selectionMode && selectedIds.size > 0}
 		<div class="fixed bottom-14 left-0 right-0 z-10 px-4 pb-2">
 			<div class="mx-auto flex w-full max-w-lg items-center gap-2">
 				<form method="POST" action="?/bulkConsume" use:enhance={() => async ({ update }) => {
@@ -574,7 +569,6 @@
 			</div>
 		</div>
 	{/if}
-</div>
 
 <BottomSheet open={listPickerOpen} onclose={() => (listPickerOpen = false)}>
 	<h2 class="mb-4 text-base font-semibold text-stone-900">Add to cart</h2>
@@ -608,7 +602,7 @@
 {#snippet itemList(items: Item[])}
 	<ul class="space-y-2">
 		{#each items as item (item.id)}
-			<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs density-li">
+			<ListRow>
 				{#if selectionMode}
 					<button type="button" onclick={() => toggleItem(item.id)}
 						class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors
@@ -654,7 +648,7 @@
 						{expiryLabel(item.expiryDate)}
 					</span>
 				{/if}
-			</li>
+			</ListRow>
 		{/each}
 	</ul>
 {/snippet}

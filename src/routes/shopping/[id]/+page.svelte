@@ -2,20 +2,17 @@
 	import { enhance } from '$app/forms';
 	import type { PageData } from './$types';
 	import { onMount, untrack } from 'svelte';
-	import PageHeader from '$lib/components/PageHeader.svelte';
+	import PageShell from '$lib/components/PageShell.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import SmallEstimatePicker from '$lib/components/SmallEstimatePicker.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import { createToast } from '$lib/toast.svelte';
-	import Sidebar from '$lib/components/Sidebar.svelte';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import { ShoppingCart, X, CheckCheck } from 'lucide-svelte';
 	import { estimateLabel } from '$lib/quantity';
 	import SmallCountPicker from '$lib/components/SmallCountPicker.svelte';
 
 	let { data }: { data: PageData } = $props();
-
-	let sidebarOpen = $state(false);
 
 	// FAB scroll-hide
 	let fabHidden = $state(false);
@@ -108,12 +105,8 @@
 <svelte:head><title>Kitchie | {data.list.name}</title></svelte:head>
 
 <Toast message={toast.message} />
-<Sidebar open={sidebarOpen} onclose={() => (sidebarOpen = false)} />
 
-<div class="flex min-h-svh flex-col bg-stone-50">
-	<PageHeader title={data.list.name} onhamburger={() => (sidebarOpen = true)} back="/shopping" />
-
-	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4">
+<PageShell title={data.list.name} back="/shopping">
 		<!-- Inline search / add bar -->
 		<div class="relative mb-4" use:clickOutside={() => (dropdownOpen = false)}>
 			<input
@@ -241,27 +234,26 @@
 				{/if}
 			{/if}
 		{/if}
-	</main>
+</PageShell>
 
-	<!-- FAB: Checkout when items are picked up -->
-	{#if shoppedItems.length > 0}
-		<div class="fixed bottom-14 left-0 right-0 z-10 px-4 pb-2 transition-transform duration-200 {fabHidden ? 'translate-y-28' : ''}">
-			<div class="mx-auto w-full max-w-lg">
-				<form method="POST" action="?/finish" use:enhance={() => async ({ update }) => {
-					await update({ reset: false });
-					showToast('Added to pantry');
-				}} class="flex">
-					{#each checkoutItems as item (item.id)}
-						<input type="hidden" name="itemId" value={item.id} />
-						<input type="hidden" name="pantryItemId" value={item.pantryItemId ?? ''} />
-						<input type="hidden" name="newQuantity" value={item.newQuantity} />
-					{/each}
-					<button type="submit"
-						class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-orange-500 py-4 text-base font-semibold text-white shadow-lg hover:bg-orange-600 active:scale-95 density-fab">
-						Checkout
-					</button>
-				</form>
-			</div>
+<!-- FAB: Checkout when items are picked up -->
+{#if shoppedItems.length > 0}
+	<div class="fixed bottom-14 left-0 right-0 z-10 px-4 pb-2 transition-transform duration-200 {fabHidden ? 'translate-y-28' : ''}">
+		<div class="mx-auto w-full max-w-lg">
+			<form method="POST" action="?/finish" use:enhance={() => async ({ update }) => {
+				await update({ reset: false });
+				showToast('Added to pantry');
+			}} class="flex">
+				{#each checkoutItems as item (item.id)}
+					<input type="hidden" name="itemId" value={item.id} />
+					<input type="hidden" name="pantryItemId" value={item.pantryItemId ?? ''} />
+					<input type="hidden" name="newQuantity" value={item.newQuantity} />
+				{/each}
+				<button type="submit"
+					class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-orange-500 py-4 text-base font-semibold text-white shadow-lg hover:bg-orange-600 active:scale-95 density-fab">
+					Checkout
+				</button>
+			</form>
 		</div>
-	{/if}
-</div>
+	</div>
+{/if}

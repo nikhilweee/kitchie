@@ -1,11 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import PageHeader from '$lib/components/PageHeader.svelte';
+	import PageShell from '$lib/components/PageShell.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import BottomSheet from '$lib/components/BottomSheet.svelte';
 	import FormActions from '$lib/components/FormActions.svelte';
-	import Sidebar from '$lib/components/Sidebar.svelte';
 	import type { PageData } from './$types';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
@@ -13,6 +12,7 @@
 	import { createSort } from '$lib/sort.svelte';
 	import { RECIPE_COURSE_LABELS, RECIPE_COURSES, type RecipeCourse } from '$lib/recipe-course';
 	import PrepTimePicker, { PREP_TIME_LABELS } from '$lib/components/PrepTimePicker.svelte';
+	import ListRow from '$lib/components/ListRow.svelte';
 	import { X, ListFilter, Search, ChefHat } from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
@@ -25,7 +25,6 @@
 	let activeMealTypes = $state<Set<RecipeCourse>>(new Set());
 	let activeCuisines = $state<Set<string>>(new Set());
 	let filterOpen = $state(false);
-	let sidebarOpen = $state(false);
 
 	function toggleMealType(t: RecipeCourse) {
 		const next = new Set(activeMealTypes);
@@ -186,12 +185,8 @@
 }} />
 
 <Toast message={toast.message} />
-<Sidebar open={sidebarOpen} onclose={() => (sidebarOpen = false)} />
 
-<div class="flex min-h-svh flex-col bg-stone-50">
-	<PageHeader title="Recipes" onhamburger={() => (sidebarOpen = true)} />
-
-	<main class="mx-auto w-full max-w-lg flex-1 px-4 py-4 pb-36">
+<PageShell title="Recipes" mainClass="px-4 py-4 pb-36">
 		{#if anyRecipes}
 			<div class="relative mb-4 flex gap-2" use:clickOutside={() => (filterOpen = false)}>
 				<div class="relative flex-1">
@@ -270,30 +265,23 @@
 		{:else}
 			<ul class="space-y-2">
 				{#each filteredRecipes as recipe (recipe.id)}
-					<li class="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-xs density-li">
-						<button
-							type="button"
-							onclick={() => openEdit(recipe)}
-							class="min-w-0 flex-1 text-left"
-						>
-							<p class="truncate font-medium text-stone-900 density-text">{recipe.name}</p>
-							<p class="text-xs text-stone-400 density-hide">
-								{recipe.items.length === 0
-									? 'No ingredients'
-									: recipe.items.map((i) => i.itemName).join(', ')}
-								{#if recipe.prepTime}
-									· {PREP_TIME_LABELS[recipe.prepTime]}
-								{/if}
-							</p>
-						</button>
-					</li>
+					<ListRow onclick={() => openEdit(recipe)}>
+						<p class="truncate font-medium text-stone-900 density-text">{recipe.name}</p>
+						<p class="text-xs text-stone-400 density-hide">
+							{recipe.items.length === 0
+								? 'No ingredients'
+								: recipe.items.map((i) => i.itemName).join(', ')}
+							{#if recipe.prepTime}
+								· {PREP_TIME_LABELS[recipe.prepTime]}
+							{/if}
+						</p>
+					</ListRow>
 				{/each}
 			</ul>
 		{/if}
-	</main>
+</PageShell>
 
-	<AddButton label="Add Recipe" onclick={openAdd} />
-</div>
+<AddButton label="Add Recipe" onclick={openAdd} />
 
 <!-- ── Add / Edit sheet ───────────────────────────────────────────────────── -->
 <BottomSheet open={!!sheetMode} onclose={closeSheet}>

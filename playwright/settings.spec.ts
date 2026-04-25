@@ -83,9 +83,8 @@ test('SETT-003: edit a category name and TTL', async ({ page }) => {
 
 	await addCategory(page, original, '10');
 
-	// Edit via bottom sheet
-	await page.locator('li', { hasText: original }).first()
-		.locator('button[type="button"]').click();
+	// Tap row to open edit sheet
+	await page.locator('li', { hasText: original }).first().click();
 	const sheet = page.locator('[role="dialog"]');
 	await sheet.waitFor();
 	await sheet.locator('input[name="name"]').fill(updated);
@@ -104,9 +103,8 @@ test('SETT-004: delete an unused category', async ({ page }) => {
 
 	await addCategory(page, name, '7');
 
-	// Open edit sheet and delete
-	await page.locator('li', { hasText: name }).first()
-		.locator('button[type="button"]').click();
+	// Tap row to open edit sheet, then delete
+	await page.locator('li', { hasText: name }).first().click();
 	const sheet = page.locator('[role="dialog"]');
 	await sheet.waitFor();
 	await sheet.getByRole('button', { name: 'Delete category' }).click();
@@ -127,10 +125,10 @@ test('SETT-005: cannot delete a category in use', async ({ page }) => {
 	await dialog.getByRole('button', { name: 'Add item' }).click();
 	await expect(page.locator('li', { hasText: itemName }).first()).toBeVisible();
 
-	// Go to settings — find a row with usage count and open its edit sheet
+	// Go to settings — find a row with usage count and tap it to open edit sheet
 	await page.goto('/settings/categories');
 	const usedRow = page.locator('li').filter({ has: page.locator('span', { hasText: /\d+ item/ }) }).first();
-	await usedRow.locator('button[type="button"]').click();
+	await usedRow.click();
 	const sheet = page.locator('[role="dialog"]');
 	await sheet.waitFor();
 	await expect(sheet.getByRole('button', { name: /In use by/ })).toBeDisabled();
@@ -160,9 +158,8 @@ test('SETT-007: edit a cuisine name', async ({ page }) => {
 
 	await addCuisine(page, original);
 
-	// Edit via bottom sheet
-	await page.locator('li', { hasText: original }).first()
-		.locator('button[type="button"]').click();
+	// Tap row to open edit sheet
+	await page.locator('li', { hasText: original }).first().click();
 	const sheet = page.locator('[role="dialog"]');
 	await sheet.waitFor();
 	await sheet.locator('input[name="name"]').fill(updated);
@@ -187,10 +184,10 @@ test('SETT-008: cannot delete a cuisine in use', async ({ page }) => {
 	await dialog.getByRole('button', { name: 'Add recipe' }).click();
 	await expect(page.locator('li', { hasText: recipeName }).first()).toBeVisible();
 
-	// Go to settings/cuisines — open Italian's edit sheet, delete should be disabled
+	// Go to settings/cuisines — tap Italian's row to open edit sheet, delete should be disabled
 	await page.goto('/settings/cuisines');
 	const italianRow = page.locator('li').filter({ hasText: 'Italian' }).first();
-	await italianRow.locator('button[type="button"]').click();
+	await italianRow.click();
 	const sheet = page.locator('[role="dialog"]');
 	await sheet.waitFor();
 	await expect(sheet.getByRole('button', { name: /In use by/ })).toBeDisabled();
