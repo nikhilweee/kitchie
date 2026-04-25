@@ -192,3 +192,19 @@ test('SETT-008: cannot delete a cuisine in use', async ({ page }) => {
 	await sheet.waitFor();
 	await expect(sheet.getByRole('button', { name: /In use by/ })).toBeDisabled();
 });
+
+test('SETT-010: delete an unused cuisine', async ({ page }) => {
+	await login(page);
+	const name = `CuisineDel-${Date.now()}`;
+	await page.goto('/settings/cuisines');
+
+	await addCuisine(page, name);
+
+	// Tap row to open edit sheet, then delete
+	await page.locator('li', { hasText: name }).first().click();
+	const sheet = page.locator('[role="dialog"]');
+	await sheet.waitFor();
+	await sheet.getByRole('button', { name: 'Delete cuisine' }).click();
+
+	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
+});

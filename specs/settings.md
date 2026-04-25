@@ -35,3 +35,7 @@
 ## SETT-009
 **Requirement:** The Display settings page (/settings/display) lets the user toggle between Comfortable and Slim density; the selection is reflected immediately via the `data-display` attribute on `<html>` and persists across navigation via localStorage.  
 **Test:** `playwright/settings.spec.ts` — "SETT-009: display density toggle persists across navigation"
+
+## SETT-010
+**Requirement:** A user can delete a cuisine that has no recipes using it.  
+**Test:** `playwright/settings.spec.ts` — "SETT-010: delete an unused cuisine"
