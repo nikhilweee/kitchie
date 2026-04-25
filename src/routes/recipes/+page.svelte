@@ -13,7 +13,8 @@
 	import { RECIPE_COURSE_LABELS, RECIPE_COURSES, type RecipeCourse } from '$lib/recipe-course';
 	import PrepTimePicker, { PREP_TIME_LABELS } from '$lib/components/PrepTimePicker.svelte';
 	import ListRow from '$lib/components/ListRow.svelte';
-	import { X, ListFilter, Search, ChefHat } from 'lucide-svelte';
+	import SearchFilterBar from '$lib/components/SearchFilterBar.svelte';
+	import { Search, ChefHat } from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -21,10 +22,8 @@
 	type Cuisine = PageData['cuisines'][0];
 
 	let search = $state('');
-	let searchEl = $state<HTMLInputElement | undefined>(undefined);
 	let activeMealTypes = $state<Set<RecipeCourse>>(new Set());
 	let activeCuisines = $state<Set<string>>(new Set());
-	let filterOpen = $state(false);
 
 	function toggleMealType(t: RecipeCourse) {
 		const next = new Set(activeMealTypes);
@@ -176,78 +175,39 @@
 </script>
 
 <svelte:head><title>Kitchie | Recipes</title></svelte:head>
-<svelte:window onkeydown={(e) => {
-	if (e.key !== '/') return;
-	const active = document.activeElement;
-	if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
-	e.preventDefault();
-	searchEl?.focus();
-}} />
 
 <Toast message={toast.message} />
 
 <PageShell title="Recipes" mainClass="px-4 py-4 pb-36">
 		{#if anyRecipes}
-			<div class="relative mb-4 flex gap-2" use:clickOutside={() => (filterOpen = false)}>
-				<div class="relative flex-1">
-					<input
-						type="text"
-						bind:this={searchEl}
-						bind:value={search}
-						onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); searchEl?.blur(); } }}
-						placeholder="Search recipes…"
-						autocomplete="off"
-						class="block w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none {search ? 'pr-8' : ''}"
-					/>
-					{#if search}
-						<button
-							type="button"
-							onclick={() => (search = '')}
-							class="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
-							aria-label="Clear search"
-						>
-							<X class="h-4 w-4" />
+			<SearchFilterBar
+				bind:search
+				placeholder="Search recipes…"
+				activeFilterCount={activeFilterCount}
+				onClearFilters={() => { s.by = 'recent'; s.dir = 'desc'; activeCuisines = new Set(); }}
+			>
+				{#snippet filterOptions()}
+					<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Sort</div>
+					{#each SORT_FIELDS as f (f.field)}
+						<button type="button" onclick={() => s.cycle(f.field)}
+							class="flex w-full items-center gap-2 px-3 py-2 hover:bg-stone-50">
+							<span class="flex h-4 w-4 shrink-0 items-center justify-center text-xs {s.by === f.field ? 'text-orange-500' : 'text-stone-300'}">
+								{s.by === f.field ? (s.dir === 'asc' ? '↑' : '↓') : '•'}
+							</span>
+							<span class="text-sm {s.by === f.field ? 'font-medium text-stone-900' : 'text-stone-700'}">{f.label}</span>
 						</button>
-					{/if}
-				</div>
-				<button
-					type="button"
-					onclick={() => (filterOpen = !filterOpen)}
-					class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors {activeFilterCount > 0 ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 bg-white text-stone-500 hover:border-stone-400'}"
-					aria-label="Filters"
-				>
-					<ListFilter class="h-4 w-4" />
-					{#if activeFilterCount > 0}
-						<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">{activeFilterCount}</span>
-					{/if}
-				</button>
-				{#if filterOpen}
-					<div class="absolute top-full right-0 z-20 mt-1 w-64 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
-						<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Sort</div>
-						{#each SORT_FIELDS as f (f.field)}
-							<button type="button" onclick={() => s.cycle(f.field)}
-								class="flex w-full items-center gap-2 px-3 py-2 hover:bg-stone-50">
-								<span class="flex h-4 w-4 shrink-0 items-center justify-center text-xs {s.by === f.field ? 'text-orange-500' : 'text-stone-300'}">
-									{s.by === f.field ? (s.dir === 'asc' ? '↑' : '↓') : '•'}
-								</span>
-								<span class="text-sm {s.by === f.field ? 'font-medium text-stone-900' : 'text-stone-700'}">{f.label}</span>
-							</button>
+					{/each}
+					<div class="border-t border-stone-100 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Cuisine</div>
+					<div class="max-h-48 overflow-y-auto">
+						{#each data.cuisines as c (c.id)}
+							<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
+								<input type="checkbox" checked={activeCuisines.has(c.id)} onchange={() => toggleCuisine(c.id)} class="accent-orange-500" />
+								<span class="text-sm text-stone-700">{c.name}</span>
+							</label>
 						{/each}
-						<div class="border-t border-stone-100 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Cuisine</div>
-						<div class="max-h-48 overflow-y-auto">
-							{#each data.cuisines as c (c.id)}
-								<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
-									<input type="checkbox" checked={activeCuisines.has(c.id)} onchange={() => toggleCuisine(c.id)} class="accent-orange-500" />
-									<span class="text-sm text-stone-700">{c.name}</span>
-								</label>
-							{/each}
-						</div>
-						<div class="border-t border-stone-100 p-2">
-							<button type="button" onclick={() => { s.by = 'recent'; s.dir = 'desc'; activeCuisines = new Set(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
-						</div>
 					</div>
-				{/if}
-			</div>
+				{/snippet}
+			</SearchFilterBar>
 			<div class="mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
 				{#each RECIPE_COURSES as t (t)}
 					<button type="button" onclick={() => toggleMealType(t)}

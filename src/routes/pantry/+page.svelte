@@ -6,6 +6,7 @@
 	import ListRow from '$lib/components/ListRow.svelte';
 	import EstimatePicker from '$lib/components/EstimatePicker.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
+	import SearchFilterBar from '$lib/components/SearchFilterBar.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import BottomSheet from '$lib/components/BottomSheet.svelte';
@@ -16,7 +17,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import { createToast } from '$lib/toast.svelte';
 	import { createSort } from '$lib/sort.svelte';
-	import { ListFilter, ShoppingBasket, Search, Trash2, X, ShoppingCart } from 'lucide-svelte';
+	import { ShoppingBasket, Search, Trash2, ShoppingCart } from 'lucide-svelte';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 
 	// ── Bulk selection ─────────────────────────────────────────────────────────
@@ -262,10 +263,8 @@
 	// ── Search + filter ───────────────────────────────────────────────────────
 	type StatusFilter = 'expiring' | 'low' | 'normal' | 'done';
 	let search = $state('');
-	let searchEl = $state<HTMLInputElement | undefined>(undefined);
 	let activeStatus = $state<StatusFilter | null>(null);
 	let activeCategories = $state(new SvelteSet<string>());
-	let filterOpen = $state(false);
 	type SortField = 'name' | 'category' | 'expiry' | 'purchased';
 	const s = createSort<SortField>('expiry', 'asc');
 
@@ -407,13 +406,6 @@
 </script>
 
 <svelte:head><title>Kitchie | Pantry</title></svelte:head>
-<svelte:window onkeydown={(e) => {
-	if (e.key !== '/') return;
-	const active = document.activeElement;
-	if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) return;
-	e.preventDefault();
-	searchEl?.focus();
-}} />
 
 <Toast message={toast.message} />
 
@@ -421,67 +413,34 @@
 		{#if data.items.length === 0}
 			<EmptyState icon={ShoppingBasket} heading="Pantry is empty" detail="Add items after your next shopping trip." />
 		{:else}
-			<!-- Search + filter -->
-			<div class="relative mb-4 flex gap-2" use:clickOutside={() => (filterOpen = false)}>
-				<div class="relative flex-1">
-					<input
-						type="text"
-						bind:this={searchEl}
-						bind:value={search}
-						onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); searchEl?.blur(); } }}
-						placeholder="Search pantry…"
-						autocomplete="off"
-						class="block w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none {search ? 'pr-8' : ''}"
-					/>
-					{#if search}
-						<button
-							type="button"
-							onclick={() => (search = '')}
-							class="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
-							aria-label="Clear search"
-						>
-							<X class="h-4 w-4" />
+			<SearchFilterBar
+				bind:search
+				placeholder="Search pantry…"
+				activeFilterCount={activeFilterCount}
+				onClearFilters={() => { s.by = 'expiry'; s.dir = 'asc'; activeCategories = new SvelteSet(); }}
+			>
+				{#snippet filterOptions()}
+					<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Sort</div>
+					{#each SORT_FIELDS as f (f.field)}
+						<button type="button" onclick={() => s.cycle(f.field)}
+							class="flex w-full items-center gap-2 px-3 py-2 hover:bg-stone-50">
+							<span class="flex h-4 w-4 shrink-0 items-center justify-center text-xs {s.by === f.field ? 'text-orange-500' : 'text-stone-300'}">
+								{s.by === f.field ? (s.dir === 'asc' ? '↑' : '↓') : '•'}
+							</span>
+							<span class="text-sm {s.by === f.field ? 'font-medium text-stone-900' : 'text-stone-700'}">{f.label}</span>
 						</button>
-					{/if}
-				</div>
-				<button
-					type="button"
-					onclick={() => (filterOpen = !filterOpen)}
-					class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors {activeFilterCount > 0 ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 bg-white text-stone-500 hover:border-stone-400'}"
-					aria-label="Filters"
-				>
-					<ListFilter class="h-4 w-4" />
-					{#if activeFilterCount > 0}
-						<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">{activeFilterCount}</span>
-					{/if}
-				</button>
-				{#if filterOpen}
-					<div class="absolute top-full right-0 z-20 mt-1 w-64 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
-						<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Sort</div>
-						{#each SORT_FIELDS as f (f.field)}
-							<button type="button" onclick={() => s.cycle(f.field)}
-								class="flex w-full items-center gap-2 px-3 py-2 hover:bg-stone-50">
-								<span class="flex h-4 w-4 shrink-0 items-center justify-center text-xs {s.by === f.field ? 'text-orange-500' : 'text-stone-300'}">
-									{s.by === f.field ? (s.dir === 'asc' ? '↑' : '↓') : '•'}
-								</span>
-								<span class="text-sm {s.by === f.field ? 'font-medium text-stone-900' : 'text-stone-700'}">{f.label}</span>
-							</button>
+					{/each}
+					{#if presentCategories.length > 0}
+						<div class="border-t border-stone-100 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Category</div>
+						{#each presentCategories as cat (cat.id)}
+							<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
+								<input type="checkbox" checked={activeCategories.has(cat.id)} onchange={() => toggleCategory(cat.id)} class="accent-orange-500" />
+								<span class="text-sm text-stone-700">{cat.name}</span>
+							</label>
 						{/each}
-						{#if presentCategories.length > 0}
-							<div class="border-t border-stone-100 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Category</div>
-							{#each presentCategories as cat (cat.id)}
-								<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
-									<input type="checkbox" checked={activeCategories.has(cat.id)} onchange={() => toggleCategory(cat.id)} class="accent-orange-500" />
-									<span class="text-sm text-stone-700">{cat.name}</span>
-								</label>
-							{/each}
-						{/if}
-						<div class="border-t border-stone-100 p-2">
-							<button type="button" onclick={() => { s.by = 'expiry'; s.dir = 'asc'; activeCategories = new SvelteSet(); }} class="w-full rounded-lg py-1.5 text-xs text-stone-400 hover:bg-stone-50">Clear all</button>
-						</div>
-					</div>
-				{/if}
-			</div>
+					{/if}
+				{/snippet}
+			</SearchFilterBar>
 			<div class="mb-4 flex gap-2 overflow-x-auto scrollbar-none">
 				<button type="button" onclick={() => toggleStatus('normal')}
 					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'normal' ? 'border-green-600 bg-green-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
