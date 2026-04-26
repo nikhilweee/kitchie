@@ -56,7 +56,7 @@ export const actions: Actions = {
 
 		// Get all pantry items for this user to resolve names
 		const userPantry = await db.select().from(pantryItems).where(eq(pantryItems.userId, userId));
-		// Get existing shopping list items to avoid duplicates
+		// Get existing cart items to avoid duplicates
 		const existing = await db.select().from(shoppingListItems).where(eq(shoppingListItems.listId, listId));
 		const existingPantryIds = new Set(existing.map((i) => i.pantryItemId).filter(Boolean));
 		const existingNames = new Set(existing.map((i) => i.name.toLowerCase()));
@@ -150,7 +150,7 @@ export const actions: Actions = {
 				await createPantryItemFromName(userId, shoppingItem.name, newQty, allCats);
 			}
 
-			// Remove from shopping list
+			// Remove from cart
 			await db.delete(shoppingListItems)
 				.where(and(eq(shoppingListItems.id, shoppingItemId), eq(shoppingListItems.userId, userId)));
 		}

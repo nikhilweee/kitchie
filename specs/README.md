@@ -20,6 +20,8 @@ specs/
   meals.md        ← MEAL-NNN: meal logging and history
   pantry.md       ← PANT-NNN: pantry management and update flow
   recipes.md      ← RECP-NNN: recipe save, edit, filter
+  settings.md     ← SETT-NNN: categories, cuisines, display
+  carts.md        ← CART-NNN: carts
 ```
 
 ---
@@ -62,4 +64,4 @@ These entries are tracked but do not count as verified. Add a test before relyin
 | `PANT` | Pantry management and update flow |
 | `RECP` | Recipes |
 | `SETT` | Settings: categories and cuisines |
-| `SHOP` | Shopping lists |
+| `CART` | Carts |

@@ -590,7 +590,7 @@ test('PANT-022: bulk consume selected pantry items', async ({ page }) => {
 test('PANT-023: bulk add selected pantry items to a cart', async ({ page }) => {
 	await login(page);
 
-	// Create a shopping list
+	// Create a cart
 	await page.goto('/shopping');
 	await page.getByRole('button', { name: 'New cart' }).click();
 	await page.locator('[role="dialog"]').waitFor();
@@ -620,7 +620,7 @@ test('PANT-023: bulk add selected pantry items to a cart', async ({ page }) => {
 	// Pick the list
 	await page.getByRole('button', { name: listName }).click();
 
-	// Navigate to the shopping list and verify items are there
+	// Navigate to the cart and verify items are there
 	await page.goto('/shopping');
 	await page.locator('a', { hasText: listName }).first().click();
 	await expect(page.locator('li', { hasText: nameA }).first()).toBeVisible();

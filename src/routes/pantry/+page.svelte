@@ -834,7 +834,7 @@
 		</button>
 	</div>
 
-	<!-- Add to shopping list (edit mode only) -->
+	<!-- Add to cart (edit mode only) -->
 	{#if sheetMode === 'edit' && editingItem && data.lists.length > 0}
 		{@const itemId = editingItem.id}
 		<div class="mt-3 border-t border-stone-100 pt-3">

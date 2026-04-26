@@ -161,7 +161,7 @@ export const userCuisines = sqliteTable('user_cuisines', {
 });
 
 // ---------------------------------------------------------------------------
-// Shopping lists
+// Carts
 // ---------------------------------------------------------------------------
 
 export const shoppingLists = sqliteTable('shopping_lists', {

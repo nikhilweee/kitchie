@@ -1,0 +1,37 @@
+# Carts specs
+
+## CART-001
+**Requirement:** A user can rename an existing cart via a bottom sheet pre-filled with the current name.  
+**Test:** `playwright/carts.spec.ts` — "CART-001: rename a cart"
+
+## CART-002
+**Requirement:** A user can add a pantry item to a cart via the inline search bar on the list page; typing a name not in the pantry shows a free-text "Add X" option.  
+**Test:** `playwright/carts.spec.ts` — "CART-002: add items to a cart via inline search"
+
+## CART-003
+**Requirement:** Creating a new cart redirects to the cart detail page and shows an empty state.  
+**Test:** `playwright/carts.spec.ts` — "CART-003: create cart redirects to detail and shows empty state"
+
+## CART-004
+**Requirement:** A user can delete a cart from the rename sheet; it is removed from the cart list.  
+**Test:** `playwright/carts.spec.ts` — "CART-004: delete a cart"
+
+## CART-005
+**Requirement:** A user can remove an individual item from a cart using the X button.  
+**Test:** `playwright/carts.spec.ts` — "CART-005: remove an item from a cart"
+
+## CART-006
+**Requirement:** Marking an item as picked up moves it to the "Picked Up" section and reveals the Checkout button.  
+**Test:** `playwright/carts.spec.ts` — "CART-006: toggling item as shopped moves it to Picked Up and shows Checkout"
+
+## CART-007
+**Requirement:** Checking out writes all picked-up items to the pantry, removes them from the cart, and shows a confirmation toast.  
+**Test:** `playwright/carts.spec.ts` — "CART-007: checkout writes item to pantry and clears cart"
+
+## CART-008
+**Requirement:** The cart list page shows a "shopped/total" progress counter per cart that updates as items are checked off.  
+**Test:** `playwright/carts.spec.ts` — "CART-008: progress counter on list page reflects shopped vs total"
+
+## CART-009
+**Requirement:** The free-text "Add X" option is suppressed when the item name already exists in the cart, preventing duplicates.  
+**Test:** `playwright/carts.spec.ts` — "CART-009: duplicate item not added when already in cart"
