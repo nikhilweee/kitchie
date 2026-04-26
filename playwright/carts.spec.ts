@@ -198,3 +198,26 @@ test('CART-009: duplicate item not added when already in cart', async ({ page })
 	// Item still appears exactly once
 	await expect(page.locator('li', { hasText: item })).toHaveCount(1);
 });
+
+test('CART-011: FAB opens the new cart modal', async ({ page }) => {
+	await login(page);
+	await page.goto('/shopping');
+	await page.getByRole('button', { name: 'New cart' }).click();
+	await expect(page.locator('[role="dialog"]')).toBeVisible();
+	await expect(page.getByPlaceholder('e.g. Whole Foods, Costco…')).toBeVisible();
+	// Close without creating
+	await page.keyboard.press('Escape');
+	await expect(page.locator('[role="dialog"]')).not.toBeVisible();
+});
+
+test('CART-010: clicking a cart row on the list page navigates to the cart detail page', async ({ page }) => {
+	await login(page);
+	const name = await createCart(page);
+
+	// Go back to the list page and click the cart row (the <a> link, not the pencil)
+	await page.goto('/shopping');
+	await page.locator('li', { hasText: name }).first().locator('a').click();
+
+	await expect(page).toHaveURL(/\/shopping\/.+/);
+	await expect(page.getByRole('heading', { name })).toBeVisible();
+});

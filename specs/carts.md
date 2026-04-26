@@ -35,3 +35,11 @@
 ## CART-009
 **Requirement:** The free-text "Add X" option is suppressed when the item name already exists in the cart, preventing duplicates.  
 **Test:** `playwright/carts.spec.ts` — "CART-009: duplicate item not added when already in cart"
+
+## CART-011
+**Requirement:** The "New cart" FAB opens the create cart modal; dismissing it without submitting leaves no cart created.  
+**Test:** `playwright/carts.spec.ts` — "CART-011: FAB opens the new cart modal"
+
+## CART-010
+**Requirement:** Clicking a cart row on the list page navigates to that cart's detail page.  
+**Test:** `playwright/carts.spec.ts` — "CART-010: clicking a cart row on the list page navigates to the cart detail page"

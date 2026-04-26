@@ -86,7 +86,6 @@
 	<ul class="space-y-2">
 		{#each items as cuisine (cuisine.id)}
 			<ListRow
-				onclick={() => openEdit(cuisine)}
 				draggable={true}
 				ondragstart={() => onDragStart(cuisine.id)}
 				ondragover={(e) => onDragOver(e, cuisine.id)}
@@ -95,7 +94,9 @@
 				faded={draggedId === cuisine.id}
 			>
 				<GripVertical class="h-4 w-4 shrink-0 cursor-grab text-stone-300 active:cursor-grabbing" />
-				<p class="min-w-0 flex-1 text-sm font-medium text-stone-900 density-text">{cuisine.name}</p>
+				<button type="button" onclick={() => openEdit(cuisine)} class="min-w-0 flex-1 text-left">
+					<p class="text-sm font-medium text-stone-900 density-text">{cuisine.name}</p>
+				</button>
 				{#if cuisine.usageCount > 0}
 					<span class="shrink-0 text-xs text-stone-400">{cuisine.usageCount} recipe{cuisine.usageCount !== 1 ? 's' : ''}</span>
 				{/if}

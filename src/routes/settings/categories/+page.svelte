@@ -89,7 +89,6 @@
 	<ul class="space-y-2">
 		{#each items as cat (cat.id)}
 			<ListRow
-				onclick={() => openEdit(cat)}
 				draggable={true}
 				ondragstart={() => onDragStart(cat.id)}
 				ondragover={(e) => onDragOver(e, cat.id)}
@@ -98,10 +97,10 @@
 				faded={draggedId === cat.id}
 			>
 				<GripVertical class="h-4 w-4 shrink-0 cursor-grab text-stone-300 active:cursor-grabbing" />
-				<div class="min-w-0 flex-1">
+				<button type="button" onclick={() => openEdit(cat)} class="min-w-0 flex-1 text-left">
 					<p class="text-sm font-medium text-stone-900 density-text">{cat.name}</p>
 					<p class="text-xs text-stone-400 density-hide">{cat.ttlDays} day shelf life</p>
-				</div>
+				</button>
 				{#if cat.usageCount > 0}
 					<span class="shrink-0 text-xs text-stone-400">{cat.usageCount} item{cat.usageCount !== 1 ? 's' : ''}</span>
 				{/if}

@@ -8,6 +8,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import { createToast } from '$lib/toast.svelte';
 	import { clickOutside } from '$lib/actions/click-outside';
+	import ListRow from '$lib/components/ListRow.svelte';
 	import { ShoppingCart, X, CheckCheck } from 'lucide-svelte';
 	import { estimateLabel } from '$lib/quantity';
 	import SmallCountPicker from '$lib/components/SmallCountPicker.svelte';
@@ -166,7 +167,7 @@
 				<ul class="mb-4 space-y-2">
 					{#each activeItems as item (item.id)}
 						{@const fi = finishItems.find((f) => f.id === item.id)}
-						<li class="flex items-center gap-2 rounded-xl bg-white px-3 shadow-xs py-2.5 density-li-sm">
+						<ListRow class="gap-2 !px-3">
 							<form method="POST" action="?/toggleShopped" use:enhance={() => async ({ update }) => {
 								await update({ reset: false });
 							}}>
@@ -188,7 +189,7 @@
 									<X class="h-3.5 w-3.5" />
 								</button>
 							</form>
-						</li>
+						</ListRow>
 					{/each}
 				</ul>
 			{/if}
@@ -205,7 +206,7 @@
 					<ul class="space-y-2">
 						{#each shoppedItems as item (item.id)}
 							{@const fi = finishItems.find((f) => f.id === item.id)}
-							<li class="flex items-center gap-2 rounded-xl bg-white px-3 shadow-xs py-2.5 density-li-sm">
+							<ListRow class="gap-2 !px-3">
 								<form method="POST" action="?/toggleShopped" use:enhance={() => async ({ update }) => {
 									await update({ reset: false });
 								}}>
@@ -228,7 +229,7 @@
 										<X class="h-3.5 w-3.5" />
 									</button>
 								</form>
-							</li>
+							</ListRow>
 						{/each}
 					</ul>
 				{/if}

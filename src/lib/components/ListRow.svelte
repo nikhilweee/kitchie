@@ -2,7 +2,6 @@
 	import type { Snippet } from 'svelte';
 
 	let {
-		onclick,
 		draggable,
 		ondragstart,
 		ondragover,
@@ -12,7 +11,6 @@
 		class: extra = '',
 		children
 	}: {
-		onclick?: () => void;
 		draggable?: boolean;
 		ondragstart?: (e: DragEvent) => void;
 		ondragover?: (e: DragEvent) => void;
@@ -32,11 +30,5 @@
 	{ondrop}
 	{ondragend}
 >
-	{#if onclick}
-		<button type="button" {onclick} class="flex w-full items-center gap-3 text-left">
-			{@render children()}
-		</button>
-	{:else}
-		{@render children()}
-	{/if}
+	{@render children()}
 </li>

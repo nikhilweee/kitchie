@@ -14,7 +14,7 @@
 	import PrepTimePicker, { PREP_TIME_LABELS } from '$lib/components/PrepTimePicker.svelte';
 	import ListRow from '$lib/components/ListRow.svelte';
 	import SearchFilterBar from '$lib/components/SearchFilterBar.svelte';
-	import { Search, ChefHat } from 'lucide-svelte';
+	import { Search, ChefHat, X } from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -225,16 +225,18 @@
 		{:else}
 			<ul class="space-y-2">
 				{#each filteredRecipes as recipe (recipe.id)}
-					<ListRow onclick={() => openEdit(recipe)}>
-						<p class="truncate font-medium text-stone-900 density-text">{recipe.name}</p>
-						<p class="text-xs text-stone-400 density-hide">
-							{recipe.items.length === 0
-								? 'No ingredients'
-								: recipe.items.map((i) => i.itemName).join(', ')}
-							{#if recipe.prepTime}
-								· {PREP_TIME_LABELS[recipe.prepTime]}
-							{/if}
-						</p>
+					<ListRow>
+						<button type="button" onclick={() => openEdit(recipe)} class="min-w-0 flex-1 text-left">
+							<p class="truncate font-medium text-stone-900 density-text">{recipe.name}</p>
+							<p class="text-xs text-stone-400 density-hide">
+								{recipe.items.length === 0
+									? 'No ingredients'
+									: recipe.items.map((i) => i.itemName).join(', ')}
+								{#if recipe.prepTime}
+									· {PREP_TIME_LABELS[recipe.prepTime]}
+								{/if}
+							</p>
+						</button>
 					</ListRow>
 				{/each}
 			</ul>
