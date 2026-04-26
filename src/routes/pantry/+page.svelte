@@ -76,6 +76,7 @@
 	let quantity = $state(1);
 	let unit = $state('count');
 	let expiryDate = $state('');
+	let purchaseMode = $state<'relative' | 'exact'>('relative');
 	let expiryMode = $state<'relative' | 'exact'>('relative');
 	let expiryDays = $state(30);
 	let purchaseDate = $state(todayStr()); // persists across adds
@@ -119,8 +120,12 @@
 		return d.toISOString().split('T')[0];
 	});
 
+	const effectivePurchaseDate = $derived(
+		purchaseMode === 'relative' ? computedPurchaseDate : (purchaseDate || todayStr())
+	);
+
 	const computedExpiryDate = $derived.by(() => {
-		const base = new Date(expiryMode === 'relative' ? computedPurchaseDate : (purchaseDate || todayStr()));
+		const base = new Date(effectivePurchaseDate);
 		base.setDate(base.getDate() + expiryDays);
 		return base.toISOString().split('T')[0];
 	});
@@ -162,6 +167,7 @@
 		quantityType = 'estimate';
 		quantity = 1;
 		unit = 'count';
+		purchaseMode = 'relative';
 		expiryMode = 'relative';
 		expiryDays = closestDuration(categoryById(defaultCategoryId())?.ttlDays ?? 30);
 		purchaseDaysAgo = 0;
@@ -183,6 +189,7 @@
 		purchaseDate = toDateStr(item.purchaseDate);
 		expiryDate = toDateStr(item.expiryDate);
 		categoryLocked = true;
+		purchaseMode = 'exact';
 		if (item.expiryOverridden) {
 			expiryMode = 'exact';
 			expiryLocked = true;
@@ -662,6 +669,7 @@
 		</div>
 
 		<div class="mt-3 space-y-3">
+			<!-- Category -->
 			<div>
 				<label for="sheet-category" class="mb-1 block text-xs font-medium text-stone-500">Category</label>
 				<select
@@ -677,59 +685,32 @@
 				</select>
 			</div>
 
+			<!-- Quantity -->
 			<div>
-				<div class="mb-2 flex items-center justify-between">
+				<div class="mb-1 flex items-center justify-between">
+					<span class="text-xs font-medium text-stone-500">Quantity</span>
 					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
-						<button
-							type="button"
-							onclick={() => { quantityType = 'estimate'; quantity = 1; }}
+						<button type="button" onclick={() => { quantityType = 'count'; quantity = 1; }}
+							class="px-3 py-1.5 transition-colors {quantityType === 'count' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+						>Count</button>
+						<button type="button" onclick={() => { quantityType = 'estimate'; quantity = 1; }}
 							class="px-3 py-1.5 transition-colors {quantityType === 'estimate' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
 						>Estimate</button>
-						<button
-							type="button"
-							onclick={() => { quantityType = 'count'; quantity = 1; }}
-							class="px-3 py-1.5 transition-colors {quantityType === 'count' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
-						>Quantity</button>
-					</div>
-					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
-						<button type="button"
-							onclick={() => { expiryMode = 'exact'; expiryDate = computedExpiryDate; expiryLocked = true; }}
-							class="px-3 py-1.5 transition-colors {expiryMode === 'exact' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
-						>Date</button>
-						<button type="button"
-							onclick={() => { expiryMode = 'relative'; expiryLocked = false; }}
-							class="px-3 py-1.5 transition-colors {expiryMode === 'relative' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
-						>Duration</button>
 					</div>
 				</div>
 				<input type="hidden" name="quantityType" value={quantityType} />
 				{#if quantityType === 'count'}
 					<div class="grid grid-cols-2 gap-2">
 						<div class="flex items-center overflow-hidden rounded-xl border border-stone-300 bg-stone-50">
-							<button
-								type="button"
-								onclick={() => (quantity = Math.max(0, quantity - 1))}
-								class="flex h-full w-10 shrink-0 items-center justify-center text-stone-500 hover:bg-stone-100"
-							>−</button>
-							<input
-								name="quantity"
-								type="number"
-								bind:value={quantity}
-								min="0"
-								step="1"
-								class="w-0 min-w-0 flex-1 bg-transparent text-center text-sm text-stone-900 focus:outline-none"
-							/>
-							<button
-								type="button"
-								onclick={() => quantity++}
-								class="flex h-full w-10 shrink-0 items-center justify-center text-stone-500 hover:bg-stone-100"
-							>+</button>
+							<button type="button" onclick={() => (quantity = Math.max(0, quantity - 1))}
+								class="flex h-full w-10 shrink-0 items-center justify-center text-stone-500 hover:bg-stone-100">−</button>
+							<input name="quantity" type="number" bind:value={quantity} min="0" step="1"
+								class="w-0 min-w-0 flex-1 bg-transparent text-center text-sm text-stone-900 focus:outline-none" />
+							<button type="button" onclick={() => quantity++}
+								class="flex h-full w-10 shrink-0 items-center justify-center text-stone-500 hover:bg-stone-100">+</button>
 						</div>
-						<select
-							name="unit"
-							bind:value={unit}
-							class="rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-						>
+						<select name="unit" bind:value={unit}
+							class="rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none">
 							{#each UNITS as u (u.value)}
 								<option value={u.value}>{u.label}</option>
 							{/each}
@@ -741,60 +722,61 @@
 				{/if}
 			</div>
 
-			{#if expiryMode === 'relative'}
-				<input type="hidden" name="purchaseDate" value={computedPurchaseDate} />
-				<input type="hidden" name="expiryDate" value={computedExpiryDate} />
-				<input type="hidden" name="expiryOverridden" value="false" />
-				<div class="grid grid-cols-2 gap-2">
-					<div>
-						<p class="mb-1 text-xs font-medium text-stone-500">Purchased</p>
-						<select
-							bind:value={purchaseDaysAgo}
-							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-						>
-							{#each PURCHASE_OPTIONS as opt (opt.days)}
-								<option value={opt.days}>{opt.label}</option>
-							{/each}
-						</select>
-					</div>
-					<div>
-						<p class="mb-1 text-xs font-medium text-stone-500">Expires</p>
-						<select
-							bind:value={expiryDays}
-							onchange={() => (expiryLocked = true)}
-							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-						>
-							{#each EXPIRY_OPTIONS as opt (opt.days)}
-								<option value={opt.days}>{opt.label}</option>
-							{/each}
-						</select>
+			<!-- Purchase Date -->
+			<div>
+				<div class="mb-1 flex items-center justify-between">
+					<span class="text-xs font-medium text-stone-500">Purchase Date</span>
+					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
+						<button type="button" onclick={() => (purchaseMode = 'exact')}
+							class="px-3 py-1.5 transition-colors {purchaseMode === 'exact' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+						>Date</button>
+						<button type="button" onclick={() => (purchaseMode = 'relative')}
+							class="px-3 py-1.5 transition-colors {purchaseMode === 'relative' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+						>Duration</button>
 					</div>
 				</div>
-			{:else}
-				<input type="hidden" name="expiryOverridden" value="true" />
-				<div class="grid grid-cols-2 gap-2">
-					<div>
-						<label for="sheet-purchased" class="mb-1 block text-xs font-medium text-stone-500">Purchased</label>
-						<input
-							id="sheet-purchased"
-							name="purchaseDate"
-							type="date"
-							bind:value={purchaseDate}
-							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
-						/>
-					</div>
-					<div>
-						<label for="sheet-expiry" class="mb-1 block text-xs font-medium text-stone-500">Expires</label>
-						<input
-							id="sheet-expiry"
-							name="expiryDate"
-							type="date"
-							bind:value={expiryDate}
-							class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
-						/>
+				{#if purchaseMode === 'relative'}
+					<input type="hidden" name="purchaseDate" value={computedPurchaseDate} />
+					<select bind:value={purchaseDaysAgo}
+						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none">
+						{#each PURCHASE_OPTIONS as opt (opt.days)}
+							<option value={opt.days}>{opt.label}</option>
+						{/each}
+					</select>
+				{:else}
+					<input name="purchaseDate" type="date" bind:value={purchaseDate}
+						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none" />
+				{/if}
+			</div>
+
+			<!-- Expiry Date -->
+			<div>
+				<div class="mb-1 flex items-center justify-between">
+					<span class="text-xs font-medium text-stone-500">Expiry Date</span>
+					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
+						<button type="button" onclick={() => { expiryMode = 'exact'; expiryDate = computedExpiryDate; expiryLocked = true; }}
+							class="px-3 py-1.5 transition-colors {expiryMode === 'exact' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+						>Date</button>
+						<button type="button" onclick={() => { expiryMode = 'relative'; expiryLocked = false; }}
+							class="px-3 py-1.5 transition-colors {expiryMode === 'relative' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+						>Duration</button>
 					</div>
 				</div>
-			{/if}
+				{#if expiryMode === 'relative'}
+					<input type="hidden" name="expiryDate" value={computedExpiryDate} />
+					<input type="hidden" name="expiryOverridden" value="false" />
+					<select bind:value={expiryDays} onchange={() => (expiryLocked = true)}
+						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none">
+						{#each EXPIRY_OPTIONS as opt (opt.days)}
+							<option value={opt.days}>{opt.label}</option>
+						{/each}
+					</select>
+				{:else}
+					<input type="hidden" name="expiryOverridden" value="true" />
+					<input name="expiryDate" type="date" bind:value={expiryDate}
+						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none" />
+				{/if}
+			</div>
 		</div>
 
 		{#if sheetMode === 'edit' && editingItem && editingItem.status !== 'active'}
