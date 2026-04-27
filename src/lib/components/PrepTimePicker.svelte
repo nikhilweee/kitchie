@@ -1,5 +1,12 @@
 <script module lang="ts">
-	export const PREP_TIME_LABELS: Record<number, string> = { 1: 'Quick', 2: 'Easy', 3: 'Medium', 4: 'Long' };
+	export const PREP_TIME_LABELS: Record<number, string> = { 1: 'Quick', 2: 'Medium', 3: 'Long' };
+
+	function zoneColor(zone: number, level: number | null): string {
+		if (!level || zone > level) return 'bg-stone-200';
+		if (level === 1) return 'bg-green-500';
+		if (level === 2) return 'bg-yellow-400';
+		return 'bg-red-500';
+	}
 </script>
 
 <script lang="ts">
@@ -18,19 +25,17 @@
 {/if}
 
 <div
-	class="grid h-[42px] w-full grid-cols-4 overflow-hidden rounded-xl border border-stone-200"
+	class="grid h-[42px] w-full grid-cols-3 overflow-hidden rounded-xl border border-stone-200"
 	role="group"
 	aria-label="Prep time"
 >
-	{#each [1, 2, 3, 4] as n (n)}
+	{#each [1, 2, 3] as n (n)}
 		<button
 			type="button"
 			onclick={() => select(n)}
 			aria-pressed={value === n}
 			aria-label={PREP_TIME_LABELS[n]}
-			class="h-full text-xs font-medium transition-colors {value === n
-				? 'bg-stone-800 text-white'
-				: 'bg-white text-stone-400 hover:bg-stone-100'} {n > 1 ? 'border-l border-stone-200' : ''}"
-		>{PREP_TIME_LABELS[n]}</button>
+			class="h-full transition-colors {zoneColor(n, value)} {value === n ? 'opacity-100' : 'opacity-60 hover:opacity-80'}"
+		></button>
 	{/each}
 </div>

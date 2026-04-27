@@ -291,8 +291,8 @@ test('RECP-011: recipe prep time saved and sort by prep time works', async ({ pa
 
 	await page.goto('/recipes');
 	await addRecipe(page, quickRecipe, { prepTime: 'Quick' });
-	// Verify prep time label shown in list row
-	await expect(page.locator('li', { hasText: quickRecipe }).first().locator('p.text-xs')).toContainText('Quick');
+	// Verify prep time bar indicator shown on list row
+	await expect(page.locator('li', { hasText: quickRecipe }).first().locator('div[aria-label]')).toBeVisible();
 
 	await addRecipe(page, longRecipe, { prepTime: 'Long' });
 
@@ -307,6 +307,30 @@ test('RECP-011: recipe prep time saved and sort by prep time works', async ({ pa
 	const longIdx = await allItems.evaluateAll((els, long) =>
 		els.findIndex((el) => el.textContent?.includes(long)), longRecipe);
 	expect(quickIdx).toBeLessThan(longIdx);
+});
+
+test('RECP-012: recipes are grouped by course by default', async ({ page }) => {
+	await login(page);
+	const ts = Date.now();
+	const breakfastName = `RecpBreakfast-${ts}`;
+	const mainName = `RecpMain-${ts}`;
+
+	await page.goto('/recipes');
+	await addRecipe(page, breakfastName, { mealType: 'breakfast' });
+	await addRecipe(page, mainName, { mealType: 'main' });
+
+	// Reload to ensure grouping is fresh, then check headers
+	await page.goto('/recipes');
+	await expect(page.locator('h2', { hasText: 'Breakfast' }).first()).toBeVisible();
+	await expect(page.locator('h2', { hasText: 'Main Course' }).first()).toBeVisible();
+
+	// Breakfast group should appear before Main Course group
+	const headers = page.locator('h2');
+	const breakfastIdx = await headers.evaluateAll((els) =>
+		els.findIndex((el) => el.textContent?.trim() === 'Breakfast'));
+	const mainIdx = await headers.evaluateAll((els) =>
+		els.findIndex((el) => el.textContent?.trim() === 'Main Course'));
+	expect(breakfastIdx).toBeLessThan(mainIdx);
 });
 
 test('RECP-010: ?edit=<id> deep-link opens recipe edit sheet', async ({ page }) => {

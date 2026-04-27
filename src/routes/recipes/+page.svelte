@@ -41,12 +41,13 @@
 		return data.cuisines.find((c) => c.id === id)?.name ?? '';
 	}
 
-	type SortField = 'name' | 'prep' | 'recent';
-	const s = createSort<SortField>('recent', 'desc', (f) => f === 'recent' ? 'desc' : 'asc');
+	type SortField = 'name' | 'prep' | 'recent' | 'course';
+	const s = createSort<SortField>('course', 'asc', (f) => f === 'recent' ? 'desc' : 'asc');
 
 	const SORT_FIELDS: { field: SortField; label: string }[] = [
-		{ field: 'name', label: 'Name' },
-		{ field: 'prep', label: 'Prep time' },
+		{ field: 'course', label: 'Course' },
+		{ field: 'name',   label: 'Name' },
+		{ field: 'prep',   label: 'Prep time' },
 		{ field: 'recent', label: 'Recent' },
 	];
 
@@ -62,16 +63,38 @@
 		})
 	);
 
+	const courseIdx = (r: Recipe) => {
+		const i = RECIPE_COURSES.indexOf(r.mealType as RecipeCourse);
+		return i === -1 ? 999 : i;
+	};
+
 	const filteredRecipes = $derived(
 		[...filteredBase].sort((a, b) => {
 			if (s.key === 'name-asc') return a.name.localeCompare(b.name);
 			if (s.key === 'name-desc') return b.name.localeCompare(a.name);
 			if (s.key === 'recent-asc') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
 			if (s.key === 'recent-desc') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+			if (s.key === 'course-asc') return courseIdx(a) - courseIdx(b) || a.name.localeCompare(b.name);
+			if (s.key === 'course-desc') return courseIdx(b) - courseIdx(a) || b.name.localeCompare(a.name);
 			const pa = a.prepTime ?? 999, pb = b.prepTime ?? 999;
 			return s.key === 'prep-asc' ? pa - pb : pb - pa;
 		})
 	);
+
+	type Group = { label: string; recipes: Recipe[] };
+
+	const groupedRecipes = $derived.by((): Group[] => {
+		if (s.by !== 'course') return [{ label: '', recipes: filteredRecipes }];
+		const order = [...RECIPE_COURSES, null] as (RecipeCourse | null)[];
+		const map = new Map<RecipeCourse | null, Recipe[]>(order.map((k) => [k, []]));
+		for (const r of filteredRecipes) {
+			const key = RECIPE_COURSES.includes(r.mealType as RecipeCourse) ? (r.mealType as RecipeCourse) : null;
+			map.get(key)!.push(r);
+		}
+		return [...map.entries()]
+			.filter(([, rs]) => rs.length > 0)
+			.map(([key, rs]) => ({ label: key ? RECIPE_COURSE_LABELS[key] : 'Other', recipes: rs }));
+	});
 
 	type PantryItem = PageData['pantryItems'][0];
 
@@ -184,7 +207,7 @@
 				bind:search
 				placeholder="Search recipes…"
 				activeFilterCount={activeFilterCount}
-				onClearFilters={() => { s.by = 'recent'; s.dir = 'desc'; activeCuisines = new Set(); }}
+				onClearFilters={() => { s.by = 'course'; s.dir = 'asc'; activeCuisines = new Set(); activeMealTypes = new Set(); }}
 			>
 				{#snippet filterOptions()}
 					<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Sort</div>
@@ -223,23 +246,33 @@
 				<EmptyState icon={ChefHat} heading="No recipes yet" detail="Save a recipe to pre-fill ingredients when logging meals." />
 			{/if}
 		{:else}
-			<ul class="space-y-2">
-				{#each filteredRecipes as recipe (recipe.id)}
-					<ListRow>
-						<button type="button" onclick={() => openEdit(recipe)} class="min-w-0 flex-1 text-left">
-							<p class="truncate font-medium text-stone-900 density-text">{recipe.name}</p>
-							<p class="text-xs text-stone-400 density-hide">
-								{recipe.items.length === 0
-									? 'No ingredients'
-									: recipe.items.map((i) => i.itemName).join(', ')}
-								{#if recipe.prepTime}
-									· {PREP_TIME_LABELS[recipe.prepTime]}
-								{/if}
-							</p>
-						</button>
-					</ListRow>
-				{/each}
-			</ul>
+			{#each groupedRecipes as group (group.label)}
+				<div class="mt-4 mb-1 flex items-center gap-3 px-4">
+					<h2 class="flex-1 text-xs font-semibold uppercase tracking-wider text-stone-400">{group.label}</h2>
+					<span class="shrink-0 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Prep</span>
+				</div>
+				<ul class="mb-2 space-y-2">
+					{#each group.recipes as recipe (recipe.id)}
+						<ListRow>
+							<button type="button" onclick={() => openEdit(recipe)} class="min-w-0 flex-1 text-left">
+								<p class="truncate font-medium text-stone-900 density-text">{recipe.name}</p>
+								<p class="text-xs text-stone-400 density-hide">
+									{recipe.items.length === 0 ? 'No ingredients' : recipe.items.map((i) => i.itemName).join(', ')}
+								</p>
+							</button>
+							{#if recipe.prepTime}
+								{@const v = Math.min(recipe.prepTime, 3)}
+								{@const color = v === 1 ? 'bg-green-500' : v === 2 ? 'bg-yellow-400' : 'bg-red-500'}
+								<div class="flex gap-0.5" aria-label={PREP_TIME_LABELS[v]}>
+									{#each [1, 2, 3] as bar (bar)}
+										<div class="h-3 w-1.5 rounded-sm {bar <= v ? color : 'bg-stone-200'}"></div>
+									{/each}
+								</div>
+							{/if}
+						</ListRow>
+					{/each}
+				</ul>
+			{/each}
 		{/if}
 </PageShell>
 
