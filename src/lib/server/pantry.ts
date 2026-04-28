@@ -7,7 +7,7 @@ import { calcExpiry } from '$lib/expiry';
 
 type Category = Awaited<ReturnType<typeof getOrSeedCategories>>[number];
 
-/** Update an existing pantry item's quantity, automatically setting consumed state. */
+/** Update an existing pantry item's quantity, automatically setting finished state. */
 export async function updatePantryQuantity(
 	pantryItemId: string,
 	newQty: number,
@@ -19,19 +19,19 @@ export async function updatePantryQuantity(
 		.update(pantryItems)
 		.set({
 			quantity: finalQty,
-			status: finalQty === 0 ? 'consumed' : 'active',
+			status: finalQty === 0 ? 'finished' : 'active',
 			finishedAt: finalQty === 0 ? new Date() : null,
 			...extra
 		})
 		.where(and(eq(pantryItems.id, pantryItemId), eq(pantryItems.userId, userId)));
 }
 
-/** Compute quantity/status/finishedAt fields for an insert, handling consumed state. */
+/** Compute quantity/status/finishedAt fields for an insert, handling finished state. */
 export function pantryStatusFields(qty: number) {
 	const finalQty = Math.max(0, qty);
 	return {
 		quantity: finalQty,
-		status: (finalQty === 0 ? 'consumed' : 'active') as 'consumed' | 'active',
+		status: (finalQty === 0 ? 'finished' : 'active') as 'finished' | 'active',
 		finishedAt: finalQty === 0 ? new Date() : null
 	};
 }

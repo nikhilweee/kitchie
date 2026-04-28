@@ -89,7 +89,7 @@ export const actions: Actions = {
 
 		const qtyFields = pantryStatusFields(quantity);
 
-		// When restoring a consumed/discarded item, check current status and reset dates
+		// When restoring a finished/trashed item, check current status and reset dates
 		const [current] = await db.select({ status: pantryItems.status }).from(pantryItems)
 			.where(and(eq(pantryItems.id, id), eq(pantryItems.userId, userId)));
 		const isRestoring = current && current.status !== 'active' && qtyFields.status === 'active';
@@ -108,6 +108,20 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
+	consume: async ({ request, locals }) => {
+		const userId = locals.user!.id;
+		const data = await request.formData();
+		const id = getString(data, 'id');
+		if (!id) return fail(400, {});
+
+		await db
+			.update(pantryItems)
+			.set({ quantity: 0, status: 'finished', finishedAt: new Date() })
+			.where(and(eq(pantryItems.id, id), eq(pantryItems.userId, userId)));
+
+		return { success: true };
+	},
+
 	discard: async ({ request, locals }) => {
 		const userId = locals.user!.id;
 		const data = await request.formData();
@@ -117,7 +131,7 @@ export const actions: Actions = {
 
 		await db
 			.update(pantryItems)
-			.set({ status: 'discarded', finishedAt: new Date() })
+			.set({ status: 'trashed', finishedAt: new Date() })
 			.where(and(eq(pantryItems.id, id), eq(pantryItems.userId, userId)));
 
 		return { success: true };
@@ -187,7 +201,7 @@ export const actions: Actions = {
 		if (!ids.length) return fail(400, {});
 
 		await db.update(pantryItems)
-			.set({ quantity: 0, status: 'consumed', finishedAt: new Date() })
+			.set({ quantity: 0, status: 'finished', finishedAt: new Date() })
 			.where(and(inArray(pantryItems.id, ids), eq(pantryItems.userId, userId)));
 
 		return { success: true };

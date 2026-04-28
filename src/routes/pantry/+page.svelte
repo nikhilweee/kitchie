@@ -17,7 +17,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import { createToast } from '$lib/toast.svelte';
 	import { createSort } from '$lib/sort.svelte';
-	import { ShoppingBasket, Search, Trash2, ShoppingCart } from 'lucide-svelte';
+	import { ShoppingBasket, Search, Trash2, ShoppingCart, Flag } from 'lucide-svelte';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 
 	// ── Bulk selection ─────────────────────────────────────────────────────────
@@ -503,7 +503,7 @@
 				<form method="POST" action="?/bulkConsume" use:enhance={() => async ({ update }) => {
 					const count = selectedIds.size;
 					await update({ reset: false });
-					showToast(`${count} item${count !== 1 ? 's' : ''} consumed`);
+					showToast(`${count} item${count !== 1 ? 's' : ''} finished`);
 					exitSelection();
 				}} class="contents">
 					{#each [...selectedIds] as id}
@@ -602,7 +602,7 @@
 					{/if}
 				</div>
 				{#if item.status !== 'active'}
-					<span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {item.status === 'consumed' ? 'bg-stone-100 text-stone-400' : 'bg-red-50 text-red-400'}">
+					<span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {item.status === 'finished' ? 'bg-stone-100 text-stone-400' : 'bg-red-50 text-red-400'}">
 						{item.status}
 					</span>
 				{:else if s.by === 'purchased'}
@@ -669,22 +669,6 @@
 		</div>
 
 		<div class="mt-3 space-y-3">
-			<!-- Category -->
-			<div>
-				<label for="sheet-category" class="mb-1 block text-xs font-medium text-stone-500">Category</label>
-				<select
-					id="sheet-category"
-					name="category"
-					bind:value={categoryId}
-					onchange={() => (categoryLocked = true)}
-					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-				>
-					{#each data.categories as cat (cat.id)}
-						<option value={cat.id}>{cat.name}</option>
-					{/each}
-				</select>
-			</div>
-
 			<!-- Quantity -->
 			<div>
 				<div class="mb-1 flex items-center justify-between">
@@ -722,33 +706,6 @@
 				{/if}
 			</div>
 
-			<!-- Purchase Date -->
-			<div>
-				<div class="mb-1 flex items-center justify-between">
-					<span class="text-xs font-medium text-stone-500">Purchase Date</span>
-					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
-						<button type="button" onclick={() => (purchaseMode = 'exact')}
-							class="px-3 py-1.5 transition-colors {purchaseMode === 'exact' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
-						>Date</button>
-						<button type="button" onclick={() => (purchaseMode = 'relative')}
-							class="px-3 py-1.5 transition-colors {purchaseMode === 'relative' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
-						>Duration</button>
-					</div>
-				</div>
-				{#if purchaseMode === 'relative'}
-					<input type="hidden" name="purchaseDate" value={computedPurchaseDate} />
-					<select bind:value={purchaseDaysAgo}
-						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none">
-						{#each PURCHASE_OPTIONS as opt (opt.days)}
-							<option value={opt.days}>{opt.label}</option>
-						{/each}
-					</select>
-				{:else}
-					<input name="purchaseDate" type="date" bind:value={purchaseDate}
-						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none" />
-				{/if}
-			</div>
-
 			<!-- Expiry Date -->
 			<div>
 				<div class="mb-1 flex items-center justify-between">
@@ -762,20 +719,81 @@
 						>Duration</button>
 					</div>
 				</div>
-				{#if expiryMode === 'relative'}
-					<input type="hidden" name="expiryDate" value={computedExpiryDate} />
-					<input type="hidden" name="expiryOverridden" value="false" />
-					<select bind:value={expiryDays} onchange={() => (expiryLocked = true)}
-						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none">
-						{#each EXPIRY_OPTIONS as opt (opt.days)}
-							<option value={opt.days}>{opt.label}</option>
-						{/each}
-					</select>
-				{:else}
-					<input type="hidden" name="expiryOverridden" value="true" />
-					<input name="expiryDate" type="date" bind:value={expiryDate}
-						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none" />
-				{/if}
+				<div class="grid grid-cols-2 gap-2">
+					{#if sheetMode === 'edit' && editingItem}
+						<div class="flex items-center rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5">
+							<span class="text-sm text-stone-400">{toDateStr(editingItem.expiryDate)}</span>
+						</div>
+					{/if}
+					<div class="{sheetMode === 'edit' ? '' : 'col-span-2'}">
+						{#if expiryMode === 'relative'}
+							<input type="hidden" name="expiryDate" value={computedExpiryDate} />
+							<input type="hidden" name="expiryOverridden" value="false" />
+							<select bind:value={expiryDays} onchange={() => (expiryLocked = true)}
+								class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none">
+								{#each EXPIRY_OPTIONS as opt (opt.days)}
+									<option value={opt.days}>{opt.label}</option>
+								{/each}
+							</select>
+						{:else}
+							<input type="hidden" name="expiryOverridden" value="true" />
+							<input name="expiryDate" type="date" bind:value={expiryDate}
+								class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none" />
+						{/if}
+					</div>
+				</div>
+			</div>
+
+			<!-- Purchase Date -->
+			<div>
+				<div class="mb-1 flex items-center justify-between">
+					<span class="text-xs font-medium text-stone-500">Purchase Date</span>
+					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
+						<button type="button" onclick={() => (purchaseMode = 'exact')}
+							class="px-3 py-1.5 transition-colors {purchaseMode === 'exact' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+						>Date</button>
+						<button type="button" onclick={() => (purchaseMode = 'relative')}
+							class="px-3 py-1.5 transition-colors {purchaseMode === 'relative' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+						>Duration</button>
+					</div>
+				</div>
+				<div class="grid grid-cols-2 gap-2">
+					{#if sheetMode === 'edit' && editingItem}
+						<div class="flex items-center rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5">
+							<span class="text-sm text-stone-400">{toDateStr(editingItem.purchaseDate)}</span>
+						</div>
+					{/if}
+					<div class="{sheetMode === 'edit' ? '' : 'col-span-2'}">
+						{#if purchaseMode === 'relative'}
+							<input type="hidden" name="purchaseDate" value={computedPurchaseDate} />
+							<select bind:value={purchaseDaysAgo}
+								class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none">
+								{#each PURCHASE_OPTIONS as opt (opt.days)}
+									<option value={opt.days}>{opt.label}</option>
+								{/each}
+							</select>
+						{:else}
+							<input name="purchaseDate" type="date" bind:value={purchaseDate}
+								class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none" />
+						{/if}
+					</div>
+				</div>
+			</div>
+
+			<!-- Category -->
+			<div>
+				<label for="sheet-category" class="mb-1 block text-xs font-medium text-stone-500">Category</label>
+				<select
+					id="sheet-category"
+					name="category"
+					bind:value={categoryId}
+					onchange={() => (categoryLocked = true)}
+					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
+				>
+					{#each data.categories as cat (cat.id)}
+						<option value={cat.id}>{cat.name}</option>
+					{/each}
+				</select>
 			</div>
 		</div>
 
@@ -796,6 +814,19 @@
 			</button>
 		{/if}
 		{#if sheetMode === 'edit' && editingItem && editingItem.status === 'active'}
+			<form method="POST" action="?/consume" class="flex-1"
+				use:enhance={() => async ({ result, update }) => {
+					await update({ reset: false });
+					if (result.type === 'success') { closeSheet(); showToast('Consumed'); }
+				}}
+			>
+				<input type="hidden" name="id" value={editingItem.id} />
+				<button type="submit"
+					class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors text-sm font-medium density-sheet-btn">
+					<Flag class="h-4 w-4" />
+					Finish
+				</button>
+			</form>
 			<form method="POST" action="?/discard" class="flex-1"
 				use:enhance={() => async ({ result, update }) => {
 					await update({ reset: false });
@@ -811,7 +842,7 @@
 			</form>
 		{/if}
 		<button type="submit" form="pantry-item-form" data-shortcut="primary" disabled={!nameInput.trim()}
-			class="flex-1 rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40 transition-colors density-sheet-btn">
+			class="flex-[2] rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40 transition-colors density-sheet-btn">
 			{sheetMode === 'edit' ? 'Save' : 'Add item'}
 		</button>
 	</div>

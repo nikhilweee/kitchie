@@ -53,16 +53,16 @@
 **Test:** `playwright/pantry.spec.ts` — "PANT-013: sorting by expiry groups items into time buckets"
 
 ## PANT-014
-**Requirement:** Setting a pantry item's quantity to 0 (count stepper or estimate picker set to empty) automatically marks it as consumed; it disappears from the default (active) list and appears under "Out of Stock".  
+**Requirement:** Setting a pantry item's quantity to 0 (count stepper or estimate picker set to empty) automatically marks it as finished; it disappears from the default (active) list and appears under "Out of Stock".  
 **Test:** `playwright/pantry.spec.ts` — "PANT-014 + PANT-015: qty=0 auto-consumes; qty>0 restores to active"
 
 ## PANT-015
-**Requirement:** Setting a consumed pantry item's quantity to a value greater than 0 restores it to active status.  
+**Requirement:** Setting a finished pantry item's quantity to a value greater than 0 restores it to active status.  
 **Test:** `playwright/pantry.spec.ts` — "PANT-014 + PANT-015: qty=0 auto-consumes; qty>0 restores to active"
 
 ## PANT-016
-**Requirement:** The "Out of Stock" filter chip shows only consumed and discarded items, each with a status badge.  
-**Test:** `playwright/pantry.spec.ts` — "PANT-016: Out of Stock filter chip shows consumed and discarded items with badge"
+**Requirement:** The "Out of Stock" filter chip shows only finished and trashed items, each with a status badge.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-016: Out of Stock filter chip shows finished and trashed items with badge"
 
 ## PANT-017
 **Requirement:** The Trash button in the edit sheet discards an active pantry item (soft delete; preserved for history).  
@@ -77,15 +77,15 @@
 **Test:** `playwright/pantry.spec.ts` — "PANT-019: ?edit=<id> deep-link opens pantry item edit sheet"
 
 ## PANT-020
-**Requirement:** Setting an existing pantry item's quantity to 0 in the meals "Update pantry" flow marks it as consumed; it disappears from the active list and appears under "Out of Stock".  
-**Test:** `playwright/pantry.spec.ts` — "PANT-020: setting an existing pantry item to qty=0 in meals update flow marks it consumed"
+**Requirement:** Setting an existing pantry item's quantity to 0 in the meals "Update pantry" flow marks it as finished; it disappears from the active list and appears under "Out of Stock".  
+**Test:** `playwright/pantry.spec.ts` — "PANT-020: setting an existing pantry item to qty=0 in meals update flow marks it finished"
 
 ## PANT-021
-**Requirement:** A free-text ingredient added in the meals "Update pantry" flow with quantity 0 is created as a consumed pantry item; it does not appear in the active list and appears under "Out of Stock".  
-**Test:** `playwright/pantry.spec.ts` — "PANT-021: free-text item created with qty=0 in meals update flow is marked consumed"
+**Requirement:** A free-text ingredient added in the meals "Update pantry" flow with quantity 0 is created as a finished pantry item; it does not appear in the active list and appears under "Out of Stock".  
+**Test:** `playwright/pantry.spec.ts` — "PANT-021: free-text item created with qty=0 in meals update flow is marked finished"
 
 ## PANT-022
-**Requirement:** Long-pressing a pantry item enters selection mode (auto-selecting that item); tapping additional items selects them; tapping "Consume" marks all selected items as consumed (they appear under "Out of Stock").  
+**Requirement:** Long-pressing a pantry item enters selection mode (auto-selecting that item); tapping additional items selects them; tapping "Consume" marks all selected items as finished (they appear under "Out of Stock").  
 **Test:** `playwright/pantry.spec.ts` — "PANT-022: bulk consume selected pantry items"
 
 ## PANT-023
@@ -95,3 +95,11 @@
 ## PANT-024
 **Requirement:** In selection mode, tapping the trash icon permanently deletes all selected pantry items.  
 **Test:** `playwright/pantry.spec.ts` — "PANT-024: bulk delete selected pantry items"
+
+## PANT-025
+**Requirement:** The pantry edit sheet has a Consumed button; tapping it marks the item as finished and removes it from the active list immediately.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-025: Consume button marks item as finished and removes it from active list"
+
+## PANT-026
+**Requirement:** An item marked as finished via the edit sheet Consumed button appears in the Out of Stock tab.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-026: Consumed item appears in Out of Stock tab"

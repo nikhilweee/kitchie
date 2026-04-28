@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013, PANT-014, PANT-015, PANT-016, PANT-017, PANT-018, PANT-019, PANT-020, PANT-021, PANT-022, PANT-023, PANT-024
+// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013, PANT-014, PANT-015, PANT-016, PANT-017, PANT-018, PANT-019, PANT-020, PANT-021, PANT-022, PANT-023, PANT-024, PANT-025, PANT-026
 
 async function addPantryItem(page: import('@playwright/test').Page, name: string) {
 	await page.click('button:has-text("Add to Pantry")');
@@ -32,9 +32,9 @@ test('PANT-002: category and quantity type inferred from name; user can override
 	const dialog = page.locator('[role="dialog"]');
 	await dialog.waitFor();
 
-	// "Eggs-{ts}" → count type inferred
+	// "Eggs-{ts}" → count type inferred; "Count" toggle should be active
 	await dialog.getByPlaceholder('What did you buy?').fill(`Eggs-${Date.now()}`);
-	await expect(dialog.getByRole('button', { name: 'Quantity' })).toHaveClass(/bg-stone-800/);
+	await expect(dialog.getByRole('button', { name: 'Count' })).toHaveClass(/bg-stone-800/);
 
 	// Override to estimate
 	await dialog.getByRole('button', { name: 'Estimate' }).click();
@@ -52,13 +52,14 @@ test('PANT-003: expiry date auto-calculated from category; user can override', a
 	await dialog.waitFor();
 	await dialog.getByPlaceholder('What did you buy?').fill(`Milk-${Date.now()}`);
 
-	// In duration mode (default), "Duration" pill is active and a select is visible
-	await expect(dialog.getByRole('button', { name: 'Duration' })).toHaveClass(/bg-stone-800/);
-	const expirySelect = dialog.locator('p:has-text("Expires") + select, p:has-text("Expires") ~ select').first();
-	await expect(expirySelect).toBeVisible();
+	// In duration mode (default), expiry "Duration" pill is active and a select is visible
+	// Expiry Date appears before Purchase Date, so first() picks the expiry toggle
+	await expect(dialog.getByRole('button', { name: 'Duration' }).first()).toHaveClass(/bg-stone-800/);
+	// The expiry duration select has options like "in 1d", "in 1w", etc.
+	await expect(dialog.locator('select option:has-text("in 1d")').first()).toBeAttached();
 
 	// User can switch to Date mode and set an exact date
-	await dialog.getByRole('button', { name: 'Date' }).click();
+	await dialog.getByRole('button', { name: 'Date' }).first().click();
 	const expiryInput = dialog.locator('input[name="expiryDate"]');
 	await expiryInput.fill('2099-12-31');
 	await expect(expiryInput).toHaveValue('2099-12-31');
@@ -389,7 +390,7 @@ test('PANT-014 + PANT-015: qty=0 auto-consumes; qty>0 restores to active', async
 	await page.getByRole('button', { name: 'Out of Stock' }).click(); // deselect
 });
 
-test('PANT-016: Out of Stock filter chip shows consumed and discarded items with badge', async ({ page }) => {
+test('PANT-016: Out of Stock filter chip shows finished and trashed items with badge', async ({ page }) => {
 	await login(page);
 	const name = `PantOOS-${Date.now()}`;
 	await page.goto('/pantry');
@@ -402,11 +403,11 @@ test('PANT-016: Out of Stock filter chip shows consumed and discarded items with
 	// Default view: item gone
 	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
 
-	// Out of Stock filter: item visible with discarded badge
+	// Out of Stock filter: item visible with trashed badge
 	await page.getByRole('button', { name: 'Out of Stock' }).click();
 	const row = page.locator('li', { hasText: name }).first();
 	await expect(row).toBeVisible();
-	await expect(row.getByText('discarded', { exact: true })).toBeVisible();
+	await expect(row.getByText('trashed', { exact: true })).toBeVisible();
 });
 
 test('PANT-017: Trash button discards an active item', async ({ page }) => {
@@ -446,7 +447,7 @@ test('PANT-018: Delete permanently requires two-tap confirmation', async ({ page
 	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
 });
 
-test('PANT-020: setting an existing pantry item to qty=0 in meals update flow marks it consumed', async ({ page }) => {
+test('PANT-020: setting an existing pantry item to qty=0 in meals update flow marks it finished', async ({ page }) => {
 	await login(page);
 	const ts = Date.now();
 	const itemName = `Apple-${ts}`; // count type
@@ -488,7 +489,7 @@ test('PANT-020: setting an existing pantry item to qty=0 in meals update flow ma
 	await expect(page.locator('li', { hasText: itemName }).first()).toBeVisible();
 });
 
-test('PANT-021: free-text item created with qty=0 in meals update flow is marked consumed', async ({ page }) => {
+test('PANT-021: free-text item created with qty=0 in meals update flow is marked finished', async ({ page }) => {
 	await login(page);
 	const ts = Date.now();
 	const itemName = `CustomIngr-${ts}`; // no keyword → estimate type
@@ -521,7 +522,7 @@ test('PANT-021: free-text item created with qty=0 in meals update flow is marked
 	await flowDialog.getByRole('button', { name: 'Skip' }).click();
 	await page.waitForURL('/meals');
 
-	// Item should NOT appear in active pantry list (it was created as consumed)
+	// Item should NOT appear in active pantry list (it was created as finished)
 	await page.goto('/pantry');
 	await expect(page.locator('li', { hasText: itemName })).toHaveCount(0);
 
@@ -648,4 +649,37 @@ test('PANT-024: bulk delete selected pantry items', async ({ page }) => {
 	// Both items should be gone
 	await expect(page.locator('li', { hasText: nameA })).toHaveCount(0);
 	await expect(page.locator('li', { hasText: nameB })).toHaveCount(0);
+});
+
+test('PANT-025: Consume button marks item as finished and removes it from active list', async ({ page }) => {
+	await login(page);
+	const name = `ConsumeItem-${Date.now()}`;
+	await page.goto('/pantry');
+	await addPantryItem(page, name);
+
+	// Open edit sheet and click Consumed
+	await page.locator('li', { hasText: name }).first().locator('button').first().click();
+	const dialog = page.locator('[role="dialog"]');
+	await dialog.waitFor();
+	await dialog.locator('button:has-text("Finish")').click();
+
+	// Item no longer in active list
+	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
+});
+
+test('PANT-026: Consumed item appears in Out of Stock tab', async ({ page }) => {
+	await login(page);
+	const name = `OOSItem-${Date.now()}`;
+	await page.goto('/pantry');
+	await addPantryItem(page, name);
+
+	// Consume via edit sheet
+	await page.locator('li', { hasText: name }).first().locator('button').first().click();
+	const dialog = page.locator('[role="dialog"]');
+	await dialog.waitFor();
+	await dialog.locator('button:has-text("Finish")').click();
+
+	// Switch to Out of Stock tab — item should be listed there
+	await page.getByRole('button', { name: 'Out of Stock' }).click();
+	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
 });
