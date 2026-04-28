@@ -4,7 +4,7 @@ import { STORAGE_STATE } from './playwright/global-setup';
 export default defineConfig({
 	testDir: 'playwright',
 	globalSetup: 'playwright/global-setup.ts',
-	workers: 2,
+	workers: 4,
 	use: {
 		baseURL: 'http://localhost:4173',
 		storageState: STORAGE_STATE,
