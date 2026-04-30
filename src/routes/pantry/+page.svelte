@@ -190,17 +190,8 @@
 		expiryDate = toDateStr(item.expiryDate);
 		categoryLocked = true;
 		purchaseMode = 'exact';
-		if (item.expiryOverridden) {
-			expiryMode = 'exact';
-			expiryLocked = true;
-		} else {
-			expiryMode = 'relative';
-			expiryLocked = false;
-			const diffDays = Math.round(
-				(new Date(item.expiryDate).getTime() - new Date(item.purchaseDate).getTime()) / 86400000
-			);
-			expiryDays = closestDuration(diffDays);
-		}
+		expiryMode = 'exact';
+		expiryLocked = true;
 		history.replaceState(history.state, '', `?edit=${item.id}`);
 	}
 
