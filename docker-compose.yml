@@ -1,8 +1,7 @@
 services:
   kitchie:
-    build: .
     container_name: kitchie
-    image: kitchie
+    image: ghcr.io/nikhilweee/kitchie:latest
     restart: unless-stopped
     volumes:
       - /mnt/storage/kitchie:/app/data
