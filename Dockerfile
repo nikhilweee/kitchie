@@ -5,7 +5,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-RUN DATABASE_URL=file::memory: npm run build
+RUN DATABASE_URL=":memory:" npm run build
 # Prune dev dependencies
 RUN npm prune --production
 
@@ -22,6 +22,8 @@ COPY --from=builder /app/drizzle ./drizzle
 
 # SQLite database lives in /app/data (mounted as a volume)
 RUN mkdir -p /app/data
+
+LABEL org.opencontainers.image.source=https://github.com/nikhilweee/kitchie
 
 ENV NODE_ENV=production
 ENV DATABASE_URL=/app/data/kitchie.db

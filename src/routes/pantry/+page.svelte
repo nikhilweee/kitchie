@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import type { PageData } from './$types';
 	import { daysUntilExpiry } from '$lib/expiry';
-	import { guessQuantityType } from '$lib/quantity';
 	import ListRow from '$lib/components/ListRow.svelte';
 	import EstimatePicker from '$lib/components/EstimatePicker.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
@@ -10,14 +11,10 @@
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import BottomSheet from '$lib/components/BottomSheet.svelte';
-	import { guessCategory } from '$lib/infer';
-	import { UNITS, guessUnit } from '$lib/units';
-	import { toDateStr } from '$lib/date-format';
-	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
 	import { createToast } from '$lib/toast.svelte';
 	import { createSort } from '$lib/sort.svelte';
-	import { ShoppingBasket, Search, Trash2, ShoppingCart, Flag } from 'lucide-svelte';
+	import { ShoppingBasket, Search, Trash2, ShoppingCart } from 'lucide-svelte';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 
 	// ── Bulk selection ─────────────────────────────────────────────────────────
@@ -55,181 +52,25 @@
 		selectionMode = false;
 		selectedIds = new SvelteSet();
 	}
-	import type { QuantityType } from '$lib/server/db/schema';
 
 	let { data }: { data: PageData } = $props();
 
 	type Item = PageData['items'][0];
-	type Category = PageData['categories'][0];
-
-	// ── Sheet mode: 'add' | 'edit' | null ────────────────────────────────────
-	let sheetMode = $state<'add' | 'edit' | null>(null);
-	let editingItem = $state<Item | null>(null);
-	let confirmingDelete = $state(false);
-
-	// Shared form state
-	let nameInput = $state('');
-	let nameEl = $state<HTMLInputElement | undefined>(undefined);
-	let showNameSuggestions = $state(false);
-	let categoryId = $state('');
-	let quantityType = $state<QuantityType>('estimate');
-	let quantity = $state(1);
-	let unit = $state('count');
-	let expiryDate = $state('');
-	let purchaseMode = $state<'relative' | 'exact'>('relative');
-	let expiryMode = $state<'relative' | 'exact'>('relative');
-	let expiryDays = $state(30);
-	let purchaseDate = $state(todayStr()); // persists across adds
-	let categoryLocked = $state(false);
-	let expiryLocked = $state(false);
-
-	const EXPIRY_OPTIONS = [
-		{ label: 'in 1d',  days: 1   },
-		{ label: 'in 3d',  days: 3   },
-		{ label: 'in 1w',  days: 7   },
-		{ label: 'in 2w',  days: 14  },
-		{ label: 'in 1m',  days: 30  },
-		{ label: 'in 2m',  days: 60  },
-		{ label: 'in 3m',  days: 90  },
-		{ label: 'in 6m',  days: 180 },
-		{ label: 'in 1y',  days: 365 },
-		{ label: 'in 2y',  days: 730 },
-	] as const;
-
-	const PURCHASE_OPTIONS = [
-		{ label: 'Today',   days: 0  },
-		{ label: '1d ago',  days: 1  },
-		{ label: '2d ago',  days: 2  },
-		{ label: '3d ago',  days: 3  },
-		{ label: '1w ago',  days: 7  },
-		{ label: '2w ago',  days: 14 },
-		{ label: '1m ago',  days: 30 },
-	] as const;
-
-	function closestDuration(ttlDays: number): number {
-		return EXPIRY_OPTIONS.reduce((prev, curr) =>
-			Math.abs(curr.days - ttlDays) < Math.abs(prev.days - ttlDays) ? curr : prev
-		).days;
-	}
-
-	let purchaseDaysAgo = $state(0);
-
-	const computedPurchaseDate = $derived.by(() => {
-		const d = new Date();
-		d.setDate(d.getDate() - purchaseDaysAgo);
-		return d.toISOString().split('T')[0];
-	});
-
-	const effectivePurchaseDate = $derived(
-		purchaseMode === 'relative' ? computedPurchaseDate : (purchaseDate || todayStr())
-	);
-
-	const computedExpiryDate = $derived.by(() => {
-		const base = new Date(effectivePurchaseDate);
-		base.setDate(base.getDate() + expiryDays);
-		return base.toISOString().split('T')[0];
-	});
 
 	// Toast
 	const toast = createToast();
-	const showToast = toast.show;
 
-	// Suggest existing pantry items when typing in add mode
-	const nameSuggestions = $derived(
-		sheetMode === 'add' && nameInput.trim().length > 0
-			? data.items.filter((i) =>
-					i.name.toLowerCase().includes(nameInput.trim().toLowerCase())
-				)
-			: []
-	);
-
-	function todayStr() {
-		return new Date().toISOString().split('T')[0];
-	}
-
-	function defaultCategoryId() {
-		return data.categories.find((c) => c.name === 'Other')?.id ?? data.categories[0]?.id ?? '';
-	}
-
-	function categoryById(id: string): Category | undefined {
-		return data.categories.find((c) => c.id === id);
-	}
-
-	function categoryLabel(id: string): string {
-		return categoryById(id)?.name ?? id;
-	}
-
-	function openAdd() {
-		sheetMode = 'add';
-		editingItem = null;
-		nameInput = '';
-		categoryId = defaultCategoryId();
-		quantityType = 'estimate';
-		quantity = 1;
-		unit = 'count';
-		purchaseMode = 'relative';
-		expiryMode = 'relative';
-		expiryDays = closestDuration(categoryById(defaultCategoryId())?.ttlDays ?? 30);
-		purchaseDaysAgo = 0;
-		expiryDate = '';
-		categoryLocked = false;
-		expiryLocked = false;
-		setTimeout(() => nameEl?.focus(), 50);
-	}
-
-	function openEdit(item: Item) {
-		sheetMode = 'edit';
-		editingItem = item;
-		confirmingDelete = false;
-		nameInput = item.name;
-		categoryId = item.category;
-		quantityType = item.quantityType as QuantityType;
-		quantity = item.quantity;
-		unit = item.unit ?? 'count';
-		purchaseDate = toDateStr(item.purchaseDate);
-		expiryDate = toDateStr(item.expiryDate);
-		categoryLocked = true;
-		purchaseMode = 'exact';
-		expiryMode = 'exact';
-		expiryLocked = true;
-		history.replaceState(history.state, '', `?edit=${item.id}`);
-	}
-
-	function closeSheet() {
-		sheetMode = null;
-		editingItem = null;
-		confirmingDelete = false;
-		history.replaceState(history.state, '', location.pathname);
-	}
-
-	// Deep-link: ?edit=<id> opens the edit sheet for that pantry item
+	// Read ?toast= param on arrival and show the message once
 	$effect(() => {
-		if (data.editId) {
-			const item = data.items.find((i) => i.id === data.editId);
-			if (item) openEdit(item);
+		const msg = page.url.searchParams.get('toast');
+		if (msg) {
+			toast.show(decodeURIComponent(msg.replace(/\+/g, ' ')));
+			history.replaceState(history.state, '', location.pathname);
 		}
 	});
 
-	function onNameInput() {
-		if (!categoryLocked) {
-			const inferredName = guessCategory(nameInput);
-			const matched = data.categories.find((c) => c.name === inferredName);
-			categoryId = matched?.id ?? defaultCategoryId();
-		}
-		quantityType = guessQuantityType(nameInput);
-		unit = guessUnit(nameInput);
-		if (!expiryLocked) {
-			const cat = categoryById(categoryId);
-			const ttlDays = cat?.ttlDays ?? 30;
-			expiryDays = closestDuration(ttlDays);
-		}
-		if (sheetMode === 'add') quantity = 1;
-	}
-
-	function onSheetSuccess() {
-		const msg = sheetMode === 'add' ? 'Added to pantry' : 'Pantry item updated';
-		closeSheet();
-		showToast(msg);
+	function categoryLabel(id: string): string {
+		return data.categories.find((c) => c.id === id)?.name ?? id;
 	}
 
 	function expiryLabel(iso: string) {
@@ -297,7 +138,6 @@
 		[...data.listMembership].map((key) => key.split(':')[1])
 	));
 
-
 	function sortItems(items: Item[]): Item[] {
 		if (!s.key) return items;
 		return [...items].sort((a, b) => {
@@ -307,7 +147,6 @@
 				const catCmp = categoryLabel(a.category).localeCompare(categoryLabel(b.category));
 				const dir = s.key === 'category-asc' ? 1 : -1;
 				if (catCmp !== 0) return catCmp * dir;
-				// asc: secondary by expiry asc; desc: secondary by name desc
 				if (s.key === 'category-asc')
 					return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
 				return b.name.localeCompare(a.name);
@@ -345,7 +184,6 @@
 			return [...map.entries()].map(([label, items]) => ({ label, items }));
 		}
 
-		// purchased-asc or purchased-desc
 		if (s.key === 'purchased-asc' || s.key === 'purchased-desc') {
 			const PURCHASE_BUCKET_ORDER = ['Today', 'This Week', 'Earlier'];
 			const bucketFor = (item: Item) => {
@@ -384,10 +222,8 @@
 		sortItems(data.items.filter((i) => {
 			if (search.trim() && !i.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
 			if (activeStatus === 'done') {
-				// Out of Stock: show non-active items only
 				if (i.status === 'active') return false;
 			} else {
-				// All other views: active items only
 				if (i.status !== 'active') return false;
 				if (activeStatus !== null && itemStatus(i) !== activeStatus) return false;
 			}
@@ -400,7 +236,6 @@
 	const presentCategories = $derived(
 		data.categories.filter((cat) => data.items.some((i) => i.category === cat.id))
 	);
-
 </script>
 
 <svelte:head><title>Kitchie | Pantry</title></svelte:head>
@@ -485,7 +320,7 @@
 </PageShell>
 
 {#if !selectionMode}
-	<AddButton label="Add to Pantry" onclick={openAdd} />
+	<AddButton label="Add to Pantry" onclick={() => goto('/pantry/add')} />
 {/if}
 
 {#if selectionMode && selectedIds.size > 0}
@@ -494,7 +329,7 @@
 				<form method="POST" action="?/bulkConsume" use:enhance={() => async ({ update }) => {
 					const count = selectedIds.size;
 					await update({ reset: false });
-					showToast(`${count} item${count !== 1 ? 's' : ''} finished`);
+					toast.show(`${count} item${count !== 1 ? 's' : ''} finished`);
 					exitSelection();
 				}} class="contents">
 					{#each [...selectedIds] as id}
@@ -512,7 +347,7 @@
 				<form method="POST" action="?/bulkTrash" use:enhance={() => async ({ update }) => {
 					const count = selectedIds.size;
 					await update({ reset: false });
-					showToast(`${count} item${count !== 1 ? 's' : ''} deleted`);
+					toast.show(`${count} item${count !== 1 ? 's' : ''} deleted`);
 					exitSelection();
 				}} class="contents">
 					{#each [...selectedIds] as id}
@@ -538,7 +373,7 @@
 					<form method="POST" action="/shopping/{list.id}?/addItems"
 						use:enhance={() => async ({ update }) => {
 							await update({ reset: false });
-							showToast(`Added to ${list.name}`);
+							toast.show(`Added to ${list.name}`);
 							listPickerOpen = false;
 							exitSelection();
 						}}>
@@ -572,7 +407,7 @@
 					onpointerdown={() => startLongPress(item.id)}
 					onpointerup={cancelLongPress}
 					onpointerleave={cancelLongPress}
-					onclick={() => selectionMode ? toggleItem(item.id) : openEdit(item)}
+					onclick={() => selectionMode ? toggleItem(item.id) : goto(`/pantry/${item.id}`)}
 					class="min-w-0 flex-1 text-left"
 				>
 					<p class="truncate font-medium text-stone-900 density-text">{item.name}</p>
@@ -609,289 +444,3 @@
 		{/each}
 	</ul>
 {/snippet}
-
-<!-- ── Add / Edit sheet ───────────────────────────────────────────────────── -->
-<BottomSheet open={!!sheetMode} onclose={closeSheet}>
-	<form
-		id="pantry-item-form"
-		method="POST"
-		action={sheetMode === 'add' ? '?/add' : '?/update'}
-		use:enhance={() => async ({ result, update }) => {
-			await update({ reset: false });
-			if (result.type === 'success') onSheetSuccess();
-		}}
-	>
-		{#if sheetMode === 'edit' && editingItem}
-			<input type="hidden" name="id" value={editingItem.id} />
-		{/if}
-
-		<button type="submit" class="sr-only" tabindex="-1" aria-hidden="true"></button>
-
-		<div class="relative" use:clickOutside={() => (showNameSuggestions = false)}>
-			<input
-				bind:this={nameEl}
-				bind:value={nameInput}
-				oninput={onNameInput}
-				onfocus={() => (showNameSuggestions = true)}
-				name="name"
-				type="text"
-				placeholder="What did you buy?"
-				autocapitalize="sentences"
-				autocomplete="off"
-				required
-				class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none density-sheet-name"
-			/>
-			{#if showNameSuggestions && nameSuggestions.length > 0}
-				<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
-					{#each nameSuggestions as item (item.id)}
-						<li>
-							<button
-								type="button"
-								onmousedown={() => openEdit(item)}
-								class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
-							>
-								<span class="flex-1 font-medium">{item.name}</span>
-								<span class="shrink-0 text-xs text-stone-400">{categoryLabel(item.category)} · already in pantry</span>
-							</button>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</div>
-
-		<div class="mt-3 space-y-3">
-			<!-- Quantity -->
-			<div>
-				<div class="mb-1 flex items-center justify-between">
-					<span class="text-xs font-medium text-stone-500">Quantity</span>
-					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
-						<button type="button" onclick={() => { quantityType = 'count'; quantity = 1; }}
-							class="px-3 py-1.5 transition-colors {quantityType === 'count' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
-						>Count</button>
-						<button type="button" onclick={() => { quantityType = 'estimate'; quantity = 1; }}
-							class="px-3 py-1.5 transition-colors {quantityType === 'estimate' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
-						>Estimate</button>
-					</div>
-				</div>
-				<input type="hidden" name="quantityType" value={quantityType} />
-				{#if quantityType === 'count'}
-					<div class="grid grid-cols-2 gap-2">
-						<div class="flex items-center overflow-hidden rounded-xl border border-stone-300 bg-stone-50">
-							<button type="button" onclick={() => (quantity = Math.max(0, quantity - 1))}
-								class="flex h-full w-10 shrink-0 items-center justify-center text-stone-500 hover:bg-stone-100">−</button>
-							<input name="quantity" type="number" bind:value={quantity} min="0" step="1"
-								class="w-0 min-w-0 flex-1 bg-transparent text-center text-sm text-stone-900 focus:outline-none" />
-							<button type="button" onclick={() => quantity++}
-								class="flex h-full w-10 shrink-0 items-center justify-center text-stone-500 hover:bg-stone-100">+</button>
-						</div>
-						<select name="unit" bind:value={unit}
-							class="rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none">
-							{#each UNITS as u (u.value)}
-								<option value={u.value}>{u.label}</option>
-							{/each}
-						</select>
-					</div>
-				{:else}
-					<EstimatePicker bind:value={quantity} />
-					<input type="hidden" name="quantity" value={quantity} />
-				{/if}
-			</div>
-
-			<!-- Expiry Date -->
-			<div>
-				<div class="mb-1 flex items-center justify-between">
-					<span class="text-xs font-medium text-stone-500">Expiry Date</span>
-					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
-						<button type="button" onclick={() => { expiryMode = 'exact'; expiryDate = computedExpiryDate; expiryLocked = true; }}
-							class="px-3 py-1.5 transition-colors {expiryMode === 'exact' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
-						>Date</button>
-						<button type="button" onclick={() => { expiryMode = 'relative'; expiryLocked = false; }}
-							class="px-3 py-1.5 transition-colors {expiryMode === 'relative' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
-						>Duration</button>
-					</div>
-				</div>
-				<div class="grid grid-cols-2 gap-2">
-					{#if sheetMode === 'edit' && editingItem}
-						<div class="flex items-center rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5">
-							<span class="text-sm text-stone-400">{toDateStr(editingItem.expiryDate)}</span>
-						</div>
-					{/if}
-					<div class="{sheetMode === 'edit' ? '' : 'col-span-2'}">
-						{#if expiryMode === 'relative'}
-							<input type="hidden" name="expiryDate" value={computedExpiryDate} />
-							<input type="hidden" name="expiryOverridden" value="false" />
-							<select bind:value={expiryDays} onchange={() => (expiryLocked = true)}
-								class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none">
-								{#each EXPIRY_OPTIONS as opt (opt.days)}
-									<option value={opt.days}>{opt.label}</option>
-								{/each}
-							</select>
-						{:else}
-							<input type="hidden" name="expiryOverridden" value="true" />
-							<input name="expiryDate" type="date" bind:value={expiryDate}
-								class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none" />
-						{/if}
-					</div>
-				</div>
-			</div>
-
-			<!-- Purchase Date -->
-			<div>
-				<div class="mb-1 flex items-center justify-between">
-					<span class="text-xs font-medium text-stone-500">Purchase Date</span>
-					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
-						<button type="button" onclick={() => (purchaseMode = 'exact')}
-							class="px-3 py-1.5 transition-colors {purchaseMode === 'exact' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
-						>Date</button>
-						<button type="button" onclick={() => (purchaseMode = 'relative')}
-							class="px-3 py-1.5 transition-colors {purchaseMode === 'relative' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
-						>Duration</button>
-					</div>
-				</div>
-				<div class="grid grid-cols-2 gap-2">
-					{#if sheetMode === 'edit' && editingItem}
-						<div class="flex items-center rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5">
-							<span class="text-sm text-stone-400">{toDateStr(editingItem.purchaseDate)}</span>
-						</div>
-					{/if}
-					<div class="{sheetMode === 'edit' ? '' : 'col-span-2'}">
-						{#if purchaseMode === 'relative'}
-							<input type="hidden" name="purchaseDate" value={computedPurchaseDate} />
-							<select bind:value={purchaseDaysAgo}
-								class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none">
-								{#each PURCHASE_OPTIONS as opt (opt.days)}
-									<option value={opt.days}>{opt.label}</option>
-								{/each}
-							</select>
-						{:else}
-							<input name="purchaseDate" type="date" bind:value={purchaseDate}
-								class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none" />
-						{/if}
-					</div>
-				</div>
-			</div>
-
-			<!-- Category -->
-			<div>
-				<label for="sheet-category" class="mb-1 block text-xs font-medium text-stone-500">Category</label>
-				<select
-					id="sheet-category"
-					name="category"
-					bind:value={categoryId}
-					onchange={() => (categoryLocked = true)}
-					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-				>
-					{#each data.categories as cat (cat.id)}
-						<option value={cat.id}>{cat.name}</option>
-					{/each}
-				</select>
-			</div>
-		</div>
-
-		{#if sheetMode === 'edit' && editingItem && editingItem.status !== 'active'}
-			<p class="mt-3 rounded-xl bg-stone-100 px-4 py-2.5 text-center text-xs text-stone-500">
-				Set a quantity and save to restore this item to your pantry.
-			</p>
-		{/if}
-
-	</form>
-
-	<!-- Primary action row (outside main form to allow sibling Discard form) -->
-	<div class="mt-4 flex gap-2">
-		{#if sheetMode === 'add'}
-			<button type="button" onclick={closeSheet}
-				class="flex-1 rounded-xl border border-stone-300 py-3 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors density-sheet-btn">
-				Cancel
-			</button>
-		{/if}
-		{#if sheetMode === 'edit' && editingItem && editingItem.status === 'active'}
-			<form method="POST" action="?/consume" class="flex-1"
-				use:enhance={() => async ({ result, update }) => {
-					await update({ reset: false });
-					if (result.type === 'success') { closeSheet(); showToast('Consumed'); }
-				}}
-			>
-				<input type="hidden" name="id" value={editingItem.id} />
-				<button type="submit"
-					class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors text-sm font-medium density-sheet-btn">
-					<Flag class="h-4 w-4" />
-					Finish
-				</button>
-			</form>
-			<form method="POST" action="?/discard" class="flex-1"
-				use:enhance={() => async ({ result, update }) => {
-					await update({ reset: false });
-					if (result.type === 'success') { closeSheet(); showToast('Trashed'); }
-				}}
-			>
-				<input type="hidden" name="id" value={editingItem.id} />
-				<button type="submit" data-shortcut="delete"
-					class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-200 text-red-400 hover:bg-red-50 transition-colors text-sm font-medium density-sheet-btn">
-					<Trash2 class="h-4 w-4" />
-					Trash
-				</button>
-			</form>
-		{/if}
-		<button type="submit" form="pantry-item-form" data-shortcut="primary" disabled={!nameInput.trim()}
-			class="flex-[2] rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40 transition-colors density-sheet-btn">
-			{sheetMode === 'edit' ? 'Save' : 'Add item'}
-		</button>
-	</div>
-
-	<!-- Add to cart (edit mode only) -->
-	{#if sheetMode === 'edit' && editingItem && data.lists.length > 0}
-		{@const itemId = editingItem.id}
-		<div class="mt-3 border-t border-stone-100 pt-3">
-			<p class="mb-2 text-xs font-medium text-stone-400">Carts</p>
-			<div class="space-y-1.5">
-				{#each data.lists as list (list.id)}
-					{@const onList = data.listMembership.has(`${list.id}:${itemId}`)}
-					<form method="POST" action={onList ? '?/removeFromList' : '?/addToList'}
-						use:enhance={() => {
-							const wasOnList = onList;
-							return async ({ result, update }) => {
-								await update({ reset: false });
-								if (result.type === 'success') showToast(wasOnList ? `Removed from ${list.name}` : `Added to ${list.name}`);
-							};
-						}}>
-						<input type="hidden" name="itemId" value={itemId} />
-						<input type="hidden" name="listId" value={list.id} />
-						<button type="submit"
-							class="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors {onList ? 'border-orange-300 bg-orange-50 text-orange-700 hover:border-red-300 hover:bg-red-50 hover:text-red-600' : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-orange-300 hover:bg-orange-50'}">
-							<span class="text-xs">{onList ? '✓' : '+'}</span>
-							{list.name}
-						</button>
-					</form>
-				{/each}
-			</div>
-		</div>
-	{/if}
-
-	<!-- Danger zone: delete permanently (edit mode only, two-tap) -->
-	{#if sheetMode === 'edit' && editingItem}
-		{#if !confirmingDelete}
-			<button type="button" onclick={() => (confirmingDelete = true)}
-				class="mt-2 w-full py-2 text-xs text-stone-400 hover:text-red-400 transition-colors">
-				Delete permanently
-			</button>
-		{:else}
-			<div class="mt-2 flex gap-2">
-				<button type="button" onclick={() => (confirmingDelete = false)}
-					class="flex-1 rounded-xl border border-stone-300 py-2.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors density-sheet-btn">
-					Cancel
-				</button>
-				<form method="POST" action="?/delete" class="flex-1"
-					use:enhance={() => async ({ result, update }) => {
-						await update({ reset: false });
-						if (result.type === 'success') { closeSheet(); showToast('Item deleted'); }
-					}}
-				>
-					<input type="hidden" name="id" value={editingItem.id} />
-					<button type="submit" class="w-full rounded-xl bg-red-500 py-2.5 text-sm font-medium text-white hover:bg-red-600 transition-colors density-sheet-btn">
-						Yes, delete
-					</button>
-				</form>
-			</div>
-		{/if}
-	{/if}
-</BottomSheet>
