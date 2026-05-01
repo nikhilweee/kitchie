@@ -49,28 +49,24 @@ test('RECP-001: save ingredients as recipe after meal log + pantry update', asyn
 
 	await ensurePantryItem(page, itemName);
 
-	// Log a meal with updatePantry ON
+	// Log a meal with updatePantry ON → lands on /meals/<id>/update
 	await page.goto('/meals');
 	await page.click('button:has-text("Add Meal")');
-	const mealDialog = page.locator('[role="dialog"]');
-	await mealDialog.waitFor();
-	await mealDialog.getByPlaceholder('What did you eat?').fill(mealName);
-	await mealDialog.locator('input[name="updatePantry"]').setChecked(true, { force: true });
-	await mealDialog.getByRole('button', { name: 'Log meal' }).click();
-
-	await page.waitForURL(/\?update=/);
-	const flowDialog = page.locator('[role="dialog"]');
-	await flowDialog.getByRole('heading', { name: 'Update pantry' }).waitFor();
+	await page.waitForURL('/meals/add');
+	await page.getByPlaceholder('What did you eat?').fill(mealName);
+	await page.locator('input[name="updatePantry"]').setChecked(true, { force: true });
+	await page.getByRole('button', { name: 'Log meal' }).click();
+	await page.waitForURL(/\/meals\/.+\/update/);
 
 	// Add item and advance to recipe step
-	await flowDialog.getByPlaceholder('Search or type an ingredient…').fill(itemName);
-	await flowDialog.locator('ul button', { hasText: itemName }).click();
-	await expect(flowDialog.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
-	await flowDialog.getByRole('button', { name: 'Next' }).click();
+	await page.getByPlaceholder('Search or type an ingredient…').fill(itemName);
+	await page.locator('ul button', { hasText: itemName }).click();
+	await expect(page.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
+	await page.getByRole('button', { name: 'Next' }).click();
 
 	// Save recipe
-	await expect(flowDialog.getByRole('heading', { name: 'Save as recipe?' })).toBeVisible();
-	await flowDialog.getByRole('button', { name: 'Save recipe' }).click();
+	await expect(page.getByRole('heading', { name: 'Save as recipe?' })).toBeVisible();
+	await page.getByRole('button', { name: 'Save recipe' }).click();
 	await page.waitForURL('/meals');
 
 	// Recipe appears on /recipes
@@ -90,25 +86,21 @@ test('RECP-002: duplicate recipe name is skipped; no second recipe created', asy
 	await page.goto('/recipes');
 	await addRecipe(page, mealName, { ingredientName: itemName });
 
-	// Log a meal with the same name + updatePantry ON
+	// Log a meal with the same name + updatePantry ON → lands on /meals/<id>/update
 	await page.goto('/meals');
 	await page.click('button:has-text("Add Meal")');
-	const mealDialog = page.locator('[role="dialog"]');
-	await mealDialog.waitFor();
-	await mealDialog.getByPlaceholder('What did you eat?').fill(mealName);
-	await mealDialog.locator('input[name="updatePantry"]').setChecked(true, { force: true });
-	await mealDialog.getByRole('button', { name: 'Log meal' }).click();
-
-	await page.waitForURL(/\?update=/);
-	const flowDialog = page.locator('[role="dialog"]');
-	await flowDialog.getByRole('heading', { name: 'Update pantry' }).waitFor();
+	await page.waitForURL('/meals/add');
+	await page.getByPlaceholder('What did you eat?').fill(mealName);
+	await page.locator('input[name="updatePantry"]').setChecked(true, { force: true });
+	await page.getByRole('button', { name: 'Log meal' }).click();
+	await page.waitForURL(/\/meals\/.+\/update/);
 
 	// Add item and try to save recipe
-	await flowDialog.getByPlaceholder('Search or type an ingredient…').fill(itemName);
-	await flowDialog.locator('ul button', { hasText: itemName }).click();
-	await expect(flowDialog.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
-	await flowDialog.getByRole('button', { name: 'Next' }).click();
-	await flowDialog.getByRole('button', { name: 'Save recipe' }).click();
+	await page.getByPlaceholder('Search or type an ingredient…').fill(itemName);
+	await page.locator('ul button', { hasText: itemName }).click();
+	await expect(page.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
+	await page.getByRole('button', { name: 'Next' }).click();
+	await page.getByRole('button', { name: 'Save recipe' }).click();
 	await page.waitForURL('/meals');
 
 	// Only one recipe with this name should exist
@@ -134,29 +126,25 @@ test('RECP-003: update recipe from flow when ingredients changed', async ({ page
 	// Log meal by selecting the recipe suggestion (so recipeId is submitted)
 	await page.goto('/meals');
 	await page.click('button:has-text("Add Meal")');
-	const mealDialog = page.locator('[role="dialog"]');
-	await mealDialog.waitFor();
-	await mealDialog.getByPlaceholder('What did you eat?').fill(mealName);
-	const suggestion = mealDialog.locator('ul button', { hasText: mealName });
+	await page.waitForURL('/meals/add');
+	await page.getByPlaceholder('What did you eat?').fill(mealName);
+	const suggestion = page.locator('ul button', { hasText: mealName });
 	await suggestion.waitFor();
 	await suggestion.click();
-	await mealDialog.locator('input[name="updatePantry"]').setChecked(true, { force: true });
-	await mealDialog.getByRole('button', { name: 'Log meal' }).click();
-
-	await page.waitForURL(/\?update=.*&recipe=/);
-	const flowDialog = page.locator('[role="dialog"]');
-	await flowDialog.getByRole('heading', { name: 'Update pantry' }).waitFor();
+	await page.locator('input[name="updatePantry"]').setChecked(true, { force: true });
+	await page.getByRole('button', { name: 'Log meal' }).click();
+	await page.waitForURL(/\/meals\/.+\/update/);
 
 	// ingredientA is pre-selected (from recipe); remove it, add ingredientB
-	await flowDialog.locator(`button[aria-label="Remove ${ingredientA}"]`).click();
-	await flowDialog.getByPlaceholder('Search or type an ingredient…').fill(ingredientB);
-	await flowDialog.locator('ul button', { hasText: ingredientB }).click();
-	await expect(flowDialog.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
+	await page.locator(`button[aria-label="Remove ${ingredientA}"]`).click();
+	await page.getByPlaceholder('Search or type an ingredient…').fill(ingredientB);
+	await page.locator('ul button', { hasText: ingredientB }).click();
+	await expect(page.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
 
 	// Next → "Update recipe?" step
-	await flowDialog.getByRole('button', { name: 'Next' }).click();
-	await expect(flowDialog.getByRole('heading', { name: 'Update recipe?' })).toBeVisible();
-	await flowDialog.getByRole('button', { name: 'Update recipe' }).click();
+	await page.getByRole('button', { name: 'Next' }).click();
+	await expect(page.getByRole('heading', { name: 'Update recipe?' })).toBeVisible();
+	await page.getByRole('button', { name: 'Update recipe' }).click();
 	await page.waitForURL('/meals');
 
 	// Recipe ingredients updated: ingredientB now listed, ingredientA gone
@@ -242,21 +230,17 @@ test('RECP-008: recipe suggestion pre-populates pantry update with recipe ingred
 	// Log a meal by selecting the recipe suggestion
 	await page.goto('/meals');
 	await page.click('button:has-text("Add Meal")');
-	const mealDialog = page.locator('[role="dialog"]');
-	await mealDialog.waitFor();
-	await mealDialog.getByPlaceholder('What did you eat?').fill(mealName);
-	const suggestion = mealDialog.locator('ul button', { hasText: mealName });
+	await page.waitForURL('/meals/add');
+	await page.getByPlaceholder('What did you eat?').fill(mealName);
+	const suggestion = page.locator('ul button', { hasText: mealName });
 	await suggestion.waitFor();
 	await suggestion.click();
-	await mealDialog.locator('input[name="updatePantry"]').setChecked(true, { force: true });
-	await mealDialog.getByRole('button', { name: 'Log meal' }).click();
-
-	await page.waitForURL(/\?update=.*&recipe=/);
-	const flowDialog = page.locator('[role="dialog"]');
-	await flowDialog.getByRole('heading', { name: 'Update pantry' }).waitFor();
+	await page.locator('input[name="updatePantry"]').setChecked(true, { force: true });
+	await page.getByRole('button', { name: 'Log meal' }).click();
+	await page.waitForURL(/\/meals\/.+\/update/);
 
 	// pantryItemName should be pre-selected from the recipe
-	await expect(flowDialog.locator('li', { hasText: pantryItemName }).first()).toBeVisible();
+	await expect(page.locator('li', { hasText: pantryItemName }).first()).toBeVisible();
 });
 
 test('RECP-009: recipe cuisine saved and filtered', async ({ page }) => {

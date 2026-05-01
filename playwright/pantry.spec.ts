@@ -3,6 +3,17 @@ import { login } from './helpers/auth';
 
 // Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013, PANT-014, PANT-015, PANT-016, PANT-017, PANT-018, PANT-019, PANT-020, PANT-021, PANT-022, PANT-023, PANT-024, PANT-025, PANT-026
 
+// Navigate to /meals/add, fill name, check updatePantry, submit → lands on /meals/<id>/update
+async function logMealWithUpdate(page: import('@playwright/test').Page, mealName: string) {
+	await page.goto('/meals');
+	await page.click('button:has-text("Add Meal")');
+	await page.waitForURL('/meals/add');
+	await page.getByPlaceholder('What did you eat?').fill(mealName);
+	await page.locator('input[name="updatePantry"]').setChecked(true, { force: true });
+	await page.getByRole('button', { name: 'Log meal' }).click();
+	await page.waitForURL(/\/meals\/.+\/update/);
+}
+
 async function addPantryItem(page: import('@playwright/test').Page, name: string) {
 	await page.click('button:has-text("Add to Pantry")');
 	await page.waitForURL('/pantry/add');
@@ -137,30 +148,20 @@ test('PANT-009: finalizing pantry update step writes updated quantities', async 
 	await page.goto('/pantry');
 	await addPantryItem(page, itemName);
 
-	// Log a meal with updatePantry ON
-	await page.goto('/meals');
-	await page.click('button:has-text("Add Meal")');
-	const mealDialog = page.locator('[role="dialog"]');
-	await mealDialog.waitFor();
-	await mealDialog.getByPlaceholder('What did you eat?').fill(mealName);
-	await mealDialog.locator('input[name="updatePantry"]').setChecked(true, { force: true });
-	await mealDialog.getByRole('button', { name: 'Log meal' }).click();
-
-	await page.waitForURL(/\?update=/);
-	const flowDialog = page.locator('[role="dialog"]');
-	await flowDialog.getByRole('heading', { name: 'Update pantry' }).waitFor();
+	// Log a meal with updatePantry ON → lands on /meals/<id>/update
+	await logMealWithUpdate(page, mealName);
 
 	// Search, add item, set quantity to half
-	await flowDialog.getByPlaceholder('Search or type an ingredient…').fill(itemName);
-	await flowDialog.locator('ul button', { hasText: itemName }).click();
-	await expect(flowDialog.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
+	await page.getByPlaceholder('Search or type an ingredient…').fill(itemName);
+	await page.locator('ul button', { hasText: itemName }).click();
+	await expect(page.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
 
-	const picker = flowDialog.locator('[aria-label="Quantity level"]').first();
+	const picker = page.locator('[aria-label="Quantity level"]').first();
 	await picker.locator('button[aria-label="Half"]').click();
 
 	// Next → Skip recipe
-	await flowDialog.getByRole('button', { name: 'Next' }).click();
-	await flowDialog.getByRole('button', { name: 'Skip' }).click();
+	await page.getByRole('button', { name: 'Next' }).click();
+	await page.getByRole('button', { name: 'Skip' }).click();
 	await page.waitForURL('/meals');
 
 	// Verify pantry item now shows half (zone 2 lit, zone 3 unlit)
@@ -178,27 +179,17 @@ test('PANT-010: free-text ingredient in pantry update step creates a new pantry 
 	const customItem = `CustomIngr-${ts}`;
 	const mealName = `Meal-${ts}`;
 
-	// Log a meal with updatePantry ON
-	await page.goto('/meals');
-	await page.click('button:has-text("Add Meal")');
-	const mealDialog = page.locator('[role="dialog"]');
-	await mealDialog.waitFor();
-	await mealDialog.getByPlaceholder('What did you eat?').fill(mealName);
-	await mealDialog.locator('input[name="updatePantry"]').setChecked(true, { force: true });
-	await mealDialog.getByRole('button', { name: 'Log meal' }).click();
-
-	await page.waitForURL(/\?update=/);
-	const flowDialog = page.locator('[role="dialog"]');
-	await flowDialog.getByRole('heading', { name: 'Update pantry' }).waitFor();
+	// Log a meal with updatePantry ON → lands on /meals/<id>/update
+	await logMealWithUpdate(page, mealName);
 
 	// Type a custom ingredient that doesn't exist in pantry
-	await flowDialog.getByPlaceholder('Search or type an ingredient…').fill(customItem);
-	await flowDialog.locator('li button', { hasText: `Add "${customItem}" as ingredient` }).click();
-	await expect(flowDialog.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
+	await page.getByPlaceholder('Search or type an ingredient…').fill(customItem);
+	await page.locator('li button', { hasText: `Add "${customItem}" as ingredient` }).click();
+	await expect(page.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
 
 	// Next → Skip recipe
-	await flowDialog.getByRole('button', { name: 'Next' }).click();
-	await flowDialog.getByRole('button', { name: 'Skip' }).click();
+	await page.getByRole('button', { name: 'Next' }).click();
+	await page.getByRole('button', { name: 'Skip' }).click();
 	await page.waitForURL('/meals');
 
 	// Verify the new item was created in pantry (all items shown by default)
@@ -224,26 +215,16 @@ test('PANT-008: count item shows correct quantity in update-pantry step', async 
 	await page.getByRole('button', { name: 'Add item' }).click();
 	await expect(page.locator('li', { hasText: itemName }).first()).toBeVisible();
 
-	// 2. Log a meal
-	await page.goto('/meals');
-	await page.click('button:has-text("Add Meal")');
-	const mealDialog = page.locator('[role="dialog"]');
-	await mealDialog.waitFor();
-	await mealDialog.getByPlaceholder('What did you eat?').fill(`Snack-${ts}`);
-	await mealDialog.getByRole('button', { name: 'Log meal' }).click();
-
-	// Wait for the pantry update content to render
-	await page.waitForURL(/\?update=/);
-	const flowDialog = page.locator('[role="dialog"]');
-	await flowDialog.getByRole('heading', { name: 'Update pantry' }).waitFor();
+	// 2. Log a meal with updatePantry ON → lands on /meals/<id>/update
+	await logMealWithUpdate(page, `Snack-${ts}`);
 
 	// 3. Search for the item and add it
-	await flowDialog.getByPlaceholder('Search or type an ingredient…').fill(itemName);
-	await flowDialog.locator('ul button', { hasText: itemName }).click();
-	await expect(flowDialog.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
+	await page.getByPlaceholder('Search or type an ingredient…').fill(itemName);
+	await page.locator('ul button', { hasText: itemName }).click();
+	await expect(page.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
 
 	// 4. Assert the quantity display shows 5 (the pantry stock) — shown as "5 ct" with unit abbreviation
-	const itemRow = flowDialog.locator('li', { hasText: itemName }).last();
+	const itemRow = page.locator('li', { hasText: itemName }).last();
 	await expect(itemRow.locator('[role="group"][aria-label="Quantity"]')).toContainText('5');
 });
 
@@ -264,26 +245,16 @@ test('PANT-008: estimate item shows correct zone in update-pantry step', async (
 	await page.getByRole('button', { name: 'Add item' }).click();
 	await expect(page.locator('li', { hasText: itemName }).first()).toBeVisible();
 
-	// 2. Log a meal
-	await page.goto('/meals');
-	await page.click('button:has-text("Add Meal")');
-	const mealDialog = page.locator('[role="dialog"]');
-	await mealDialog.waitFor();
-	await mealDialog.getByPlaceholder('What did you eat?').fill(`Salad-${ts}`);
-	await mealDialog.getByRole('button', { name: 'Log meal' }).click();
-
-	// Wait for pantry update content to render
-	await page.waitForURL(/\?update=/);
-	const flowDialog = page.locator('[role="dialog"]');
-	await flowDialog.getByRole('heading', { name: 'Update pantry' }).waitFor();
+	// 2. Log a meal with updatePantry ON → lands on /meals/<id>/update
+	await logMealWithUpdate(page, `Salad-${ts}`);
 
 	// 3. Search for the item and add it
-	await flowDialog.getByPlaceholder('Search or type an ingredient…').fill(itemName);
-	await flowDialog.locator('ul button', { hasText: itemName }).click();
-	await expect(flowDialog.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
+	await page.getByPlaceholder('Search or type an ingredient…').fill(itemName);
+	await page.locator('ul button', { hasText: itemName }).click();
+	await expect(page.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
 
 	// 4. SmallEstimatePicker should show half: zone 2 lit, zone 3 unlit
-	const itemPicker = flowDialog.locator('li', { hasText: itemName }).last()
+	const itemPicker = page.locator('li', { hasText: itemName }).last()
 		.locator('[aria-label="Quantity level"]');
 	await expect(itemPicker.locator('button[aria-label="Half"]')).not.toHaveClass(/bg-stone-200/);
 	await expect(itemPicker.locator('button[aria-label="Full"]')).toHaveClass(/bg-stone-200/);
@@ -449,27 +420,17 @@ test('PANT-020: setting an existing pantry item to qty=0 in meals update flow ma
 	await page.goto('/pantry');
 	await addPantryItem(page, itemName);
 
-	// Log a meal with updatePantry ON
-	await page.goto('/meals');
-	await page.click('button:has-text("Add Meal")');
-	const mealDialog = page.locator('[role="dialog"]');
-	await mealDialog.waitFor();
-	await mealDialog.getByPlaceholder('What did you eat?').fill(mealName);
-	await mealDialog.locator('input[name="updatePantry"]').setChecked(true, { force: true });
-	await mealDialog.getByRole('button', { name: 'Log meal' }).click();
-
-	await page.waitForURL(/\?update=/);
-	const flowDialog = page.locator('[role="dialog"]');
-	await flowDialog.getByRole('heading', { name: 'Update pantry' }).waitFor();
+	// Log a meal with updatePantry ON → lands on /meals/<id>/update
+	await logMealWithUpdate(page, mealName);
 
 	// Add item and set qty to 0
-	await flowDialog.getByPlaceholder('Search or type an ingredient…').fill(itemName);
-	await flowDialog.locator('ul button', { hasText: itemName }).click();
-	await flowDialog.locator('li', { hasText: itemName }).last().locator('button:has-text("−")').click(); // 1 → 0
+	await page.getByPlaceholder('Search or type an ingredient…').fill(itemName);
+	await page.locator('ul button', { hasText: itemName }).click();
+	await page.locator('li', { hasText: itemName }).last().locator('button:has-text("−")').click(); // 1 → 0
 
 	// Items selected → button says "Next" (recipe step follows) → Skip
-	await flowDialog.getByRole('button', { name: 'Next' }).click();
-	await flowDialog.getByRole('button', { name: 'Skip' }).click();
+	await page.getByRole('button', { name: 'Next' }).click();
+	await page.getByRole('button', { name: 'Skip' }).click();
 	await page.waitForURL('/meals');
 
 	// Item should be gone from active pantry list
@@ -487,31 +448,21 @@ test('PANT-021: free-text item created with qty=0 in meals update flow is marked
 	const itemName = `CustomIngr-${ts}`; // no keyword → estimate type
 	const mealName = `Meal-${ts}`;
 
-	// Log a meal with updatePantry ON (item does not exist in pantry)
-	await page.goto('/meals');
-	await page.click('button:has-text("Add Meal")');
-	const mealDialog = page.locator('[role="dialog"]');
-	await mealDialog.waitFor();
-	await mealDialog.getByPlaceholder('What did you eat?').fill(mealName);
-	await mealDialog.locator('input[name="updatePantry"]').setChecked(true, { force: true });
-	await mealDialog.getByRole('button', { name: 'Log meal' }).click();
-
-	await page.waitForURL(/\?update=/);
-	const flowDialog = page.locator('[role="dialog"]');
-	await flowDialog.getByRole('heading', { name: 'Update pantry' }).waitFor();
+	// Log a meal with updatePantry ON → lands on /meals/<id>/update
+	await logMealWithUpdate(page, mealName);
 
 	// Type a free-text ingredient that doesn't exist in pantry
-	await flowDialog.getByPlaceholder('Search or type an ingredient…').fill(itemName);
-	await flowDialog.locator('li button', { hasText: `Add "${itemName}" as ingredient` }).click();
+	await page.getByPlaceholder('Search or type an ingredient…').fill(itemName);
+	await page.locator('li button', { hasText: `Add "${itemName}" as ingredient` }).click();
 
 	// Free-text items default to estimate type — tap Low twice to reach empty (0)
-	const picker = flowDialog.locator('li', { hasText: itemName }).last().locator('[aria-label="Quantity level"]');
+	const picker = page.locator('li', { hasText: itemName }).last().locator('[aria-label="Quantity level"]');
 	await picker.locator('button[aria-label="Low"]').click();  // Full → Low
 	await picker.locator('button[aria-label="Low"]').click();  // Low → empty (value=0)
 
 	// Items selected → button says "Next" (recipe step follows) → Skip
-	await flowDialog.getByRole('button', { name: 'Next' }).click();
-	await flowDialog.getByRole('button', { name: 'Skip' }).click();
+	await page.getByRole('button', { name: 'Next' }).click();
+	await page.getByRole('button', { name: 'Skip' }).click();
 	await page.waitForURL('/meals');
 
 	// Item should NOT appear in active pantry list (it was created as finished)
@@ -582,7 +533,7 @@ test('PANT-023: bulk add selected pantry items to a cart', async ({ page }) => {
 	// Create a cart
 	await page.goto('/shopping');
 	await page.getByRole('button', { name: 'New cart' }).click();
-	await page.locator('[role="dialog"]').waitFor();
+	await page.waitForURL('/shopping/new');
 	const listName = `BulkList-${Date.now()}`;
 	await page.getByPlaceholder('e.g. Whole Foods, Costco…').fill(listName);
 	await page.getByRole('button', { name: 'Create cart' }).click();
