@@ -35,7 +35,7 @@
 			required
 			autocapitalize="sentences"
 			autofocus
-			class="mb-4 block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
+			class="mb-4 block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
 		/>
 
 		<label class="mb-1 block text-xs font-medium text-stone-500" for="cat-ttl">Default shelf life (days)</label>
@@ -46,7 +46,7 @@
 			min="1"
 			value="30"
 			required
-			class="mb-6 block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
+			class="mb-6 block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
 		/>
 
 		<div class="flex gap-2">

@@ -42,7 +42,7 @@
 			autocapitalize="sentences"
 			autofocus
 			value={data.cuisine.name}
-			class="mb-6 block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
+			class="mb-6 block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
 		/>
 	</form>
 
