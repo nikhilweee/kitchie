@@ -109,9 +109,7 @@ export const actions: Actions = {
 			.returning();
 
 		if (updatePantry) {
-			const params = new URLSearchParams({ update: meal.id });
-			if (recipeId) params.set('recipe', recipeId);
-			redirect(302, `/meals?${params}`);
+			redirect(302, `/meals/${meal.id}/update`);
 		}
 		redirect(302, '/meals');
 	},
@@ -279,6 +277,6 @@ export const actions: Actions = {
 			}
 		}
 
-		redirect(302, '/meals');
+		redirect(302, '/meals?toast=Pantry+updated');
 	}
 };

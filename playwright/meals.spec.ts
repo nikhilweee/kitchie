@@ -58,8 +58,8 @@ test('MEAL-004: "Update pantry" toggle redirects to /?update= after logging', as
 	// Ensure toggle is on (it defaults to on)
 	await page.locator('input[name="updatePantry"]').setChecked(true, { force: true });
 	await page.getByRole('button', { name: 'Log meal' }).click();
-	await page.waitForURL(/\?update=/);
-	await expect(page).toHaveURL(/\?update=/);
+	await page.waitForURL(/\/meals\/.+\/update/);
+	await expect(page).toHaveURL(/\/meals\/.+\/update/);
 });
 
 test('MEAL-005: edit a logged meal name', async ({ page }) => {
@@ -146,13 +146,12 @@ test('MEAL-009: meal edit page shows recipe link when recipeId is set', async ({
 	await page.locator('input[name="updatePantry"]').setChecked(true, { force: true });
 	await page.getByRole('button', { name: 'Log meal' }).click();
 
-	await page.waitForURL(/\?update=/);
-	const flowDialog = page.locator('[role="dialog"]');
-	await flowDialog.getByRole('heading', { name: 'Update pantry' }).waitFor();
-	await flowDialog.getByPlaceholder('Search or type an ingredient…').fill(itemName);
-	await flowDialog.locator('ul button', { hasText: itemName }).click();
-	await flowDialog.getByRole('button', { name: 'Next' }).click();
-	await flowDialog.getByRole('button', { name: 'Save recipe' }).click();
+	await page.waitForURL(/\/meals\/.+\/update/);
+	await page.getByPlaceholder('Search or type an ingredient…').waitFor();
+	await page.getByPlaceholder('Search or type an ingredient…').fill(itemName);
+	await page.locator('ul button', { hasText: itemName }).click();
+	await page.getByRole('button', { name: 'Next' }).click();
+	await page.getByRole('button', { name: 'Save recipe' }).click();
 	await page.waitForURL('/meals');
 
 	// Open the meal edit page — recipe link should be visible
