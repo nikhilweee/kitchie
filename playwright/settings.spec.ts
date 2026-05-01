@@ -40,20 +40,20 @@ test('SETT-009: display density toggle persists across navigation', async ({ pag
 
 async function addCategory(page: any, name: string, ttlDays: string) {
 	await page.getByRole('button', { name: 'Add category' }).click();
-	const sheet = page.locator('[role="dialog"]');
-	await sheet.waitFor();
-	await sheet.locator('input[name="name"]').fill(name);
-	await sheet.locator('input[name="ttlDays"]').fill(ttlDays);
-	await sheet.getByRole('button', { name: 'Save' }).click();
+	await page.waitForURL('/settings/categories/add');
+	await page.locator('input[name="name"]').fill(name);
+	await page.locator('input[name="ttlDays"]').fill(ttlDays);
+	await page.getByRole('button', { name: 'Save' }).click();
+	await page.waitForURL('/settings/categories');
 	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
 }
 
 async function addCuisine(page: any, name: string) {
 	await page.getByRole('button', { name: 'Add cuisine' }).click();
-	const sheet = page.locator('[role="dialog"]');
-	await sheet.waitFor();
-	await sheet.locator('input[name="name"]').fill(name);
-	await sheet.getByRole('button', { name: 'Save' }).click();
+	await page.waitForURL('/settings/cuisines/add');
+	await page.locator('input[name="name"]').fill(name);
+	await page.getByRole('button', { name: 'Save' }).click();
+	await page.waitForURL('/settings/cuisines');
 	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
 }
 
@@ -66,13 +66,10 @@ test('SETT-002: add a custom category', async ({ page }) => {
 
 	await expect(page.locator('li', { hasText: name }).first()).toContainText('21 day');
 
-	// Category appears in pantry add sheet
-	await page.goto('/pantry');
-	await page.click('button:has-text("Add to Pantry")');
-	const dialog = page.locator('[role="dialog"]');
-	await dialog.waitFor();
-	await expect(dialog.locator('#sheet-category option', { hasText: name })).toHaveCount(1);
-	await page.keyboard.press('Escape');
+	// Category appears in pantry add page
+	await page.goto('/pantry/add');
+	await expect(page.locator('#add-category option', { hasText: name })).toHaveCount(1);
+	await page.goto('/settings/categories');
 });
 
 test('SETT-003: edit a category name and TTL', async ({ page }) => {
@@ -83,13 +80,13 @@ test('SETT-003: edit a category name and TTL', async ({ page }) => {
 
 	await addCategory(page, original, '10');
 
-	// Tap row to open edit sheet
+	// Tap row to navigate to edit page
 	await page.locator('li', { hasText: original }).first().click();
-	const sheet = page.locator('[role="dialog"]');
-	await sheet.waitFor();
-	await sheet.locator('input[name="name"]').fill(updated);
-	await sheet.locator('input[name="ttlDays"]').fill('45');
-	await sheet.getByRole('button', { name: 'Save' }).click();
+	await page.waitForURL(/\/settings\/categories\/.+/);
+	await page.locator('input[name="name"]').fill(updated);
+	await page.locator('input[name="ttlDays"]').fill('45');
+	await page.getByRole('button', { name: 'Save' }).click();
+	await page.waitForURL('/settings/categories');
 
 	await expect(page.locator('li', { hasText: updated }).first()).toBeVisible();
 	await expect(page.locator('li', { hasText: updated }).first()).toContainText('45 day');
@@ -103,35 +100,32 @@ test('SETT-004: delete an unused category', async ({ page }) => {
 
 	await addCategory(page, name, '7');
 
-	// Tap row to open edit sheet, then delete
+	// Tap row to navigate to edit page, then delete
 	await page.locator('li', { hasText: name }).first().click();
-	const sheet = page.locator('[role="dialog"]');
-	await sheet.waitFor();
-	await sheet.getByRole('button', { name: 'Delete category' }).click();
+	await page.waitForURL(/\/settings\/categories\/.+/);
+	await page.getByRole('button', { name: 'Delete category' }).click();
+	await page.waitForURL('/settings/categories');
 
 	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
 });
 
 test('SETT-005: cannot delete a category in use', async ({ page }) => {
 	await login(page);
-	await page.goto('/pantry');
 
-	// Add a pantry item — it will infer a category
-	await page.click('button:has-text("Add to Pantry")');
-	const dialog = page.locator('[role="dialog"]');
-	await dialog.waitFor();
+	// Add a pantry item via /pantry/add
+	await page.goto('/pantry/add');
 	const itemName = `InUseCat-${Date.now()}`;
-	await dialog.getByPlaceholder('What did you buy?').fill(itemName);
-	await dialog.getByRole('button', { name: 'Add item' }).click();
+	await page.getByPlaceholder('What did you buy?').fill(itemName);
+	await page.getByRole('button', { name: 'Add item' }).click();
+	await page.waitForURL(/\/pantry/);
 	await expect(page.locator('li', { hasText: itemName }).first()).toBeVisible();
 
-	// Go to settings — find a row with usage count and tap it to open edit sheet
+	// Go to settings — find a row with usage count and navigate to edit page
 	await page.goto('/settings/categories');
 	const usedRow = page.locator('li').filter({ has: page.locator('span', { hasText: /\d+ item/ }) }).first();
 	await usedRow.click();
-	const sheet = page.locator('[role="dialog"]');
-	await sheet.waitFor();
-	await expect(sheet.getByRole('button', { name: /In use by/ })).toBeDisabled();
+	await page.waitForURL(/\/settings\/categories\/.+/);
+	await expect(page.getByRole('button', { name: /In use by/ })).toBeDisabled();
 });
 
 test('SETT-006: add a custom cuisine', async ({ page }) => {
@@ -141,13 +135,10 @@ test('SETT-006: add a custom cuisine', async ({ page }) => {
 
 	await addCuisine(page, name);
 
-	// Cuisine appears in recipe add sheet
-	await page.goto('/recipes');
-	await page.click('button:has-text("Add Recipe")');
-	const dialog = page.locator('[role="dialog"]');
-	await dialog.waitFor();
-	await expect(dialog.locator('#recipe-cuisine option', { hasText: name })).toHaveCount(1);
-	await page.keyboard.press('Escape');
+	// Cuisine appears in recipe add page
+	await page.goto('/recipes/add');
+	await expect(page.locator('#recipe-cuisine option', { hasText: name })).toHaveCount(1);
+	await page.goto('/settings/cuisines');
 });
 
 test('SETT-007: edit a cuisine name', async ({ page }) => {
@@ -158,12 +149,12 @@ test('SETT-007: edit a cuisine name', async ({ page }) => {
 
 	await addCuisine(page, original);
 
-	// Tap row to open edit sheet
+	// Tap row to navigate to edit page
 	await page.locator('li', { hasText: original }).first().click();
-	const sheet = page.locator('[role="dialog"]');
-	await sheet.waitFor();
-	await sheet.locator('input[name="name"]').fill(updated);
-	await sheet.getByRole('button', { name: 'Save' }).click();
+	await page.waitForURL(/\/settings\/cuisines\/.+/);
+	await page.locator('input[name="name"]').fill(updated);
+	await page.getByRole('button', { name: 'Save' }).click();
+	await page.waitForURL('/settings/cuisines');
 
 	await expect(page.locator('li', { hasText: updated }).first()).toBeVisible();
 	await expect(page.locator('li', { hasText: original })).toHaveCount(0);
@@ -174,23 +165,20 @@ test('SETT-008: cannot delete a cuisine in use', async ({ page }) => {
 	const ts = Date.now();
 	const recipeName = `InUseCuisine-${ts}`;
 
-	// Add a recipe with a cuisine
-	await page.goto('/recipes');
-	await page.click('button:has-text("Add Recipe")');
-	const dialog = page.locator('[role="dialog"]');
-	await dialog.waitFor();
-	await dialog.getByPlaceholder('Recipe name').fill(recipeName);
-	await dialog.locator('#recipe-cuisine').selectOption({ label: 'Italian' });
-	await dialog.getByRole('button', { name: 'Add recipe' }).click();
+	// Add a recipe with a cuisine via /recipes/add
+	await page.goto('/recipes/add');
+	await page.getByPlaceholder('Recipe name').fill(recipeName);
+	await page.locator('#recipe-cuisine').selectOption({ label: 'Italian' });
+	await page.getByRole('button', { name: 'Add recipe' }).click();
+	await page.waitForURL(/\/recipes/);
 	await expect(page.locator('li', { hasText: recipeName }).first()).toBeVisible();
 
-	// Go to settings/cuisines — tap Italian's row to open edit sheet, delete should be disabled
+	// Go to settings/cuisines — tap Italian's row to navigate to edit page, delete should be disabled
 	await page.goto('/settings/cuisines');
 	const italianRow = page.locator('li').filter({ hasText: 'Italian' }).first();
 	await italianRow.click();
-	const sheet = page.locator('[role="dialog"]');
-	await sheet.waitFor();
-	await expect(sheet.getByRole('button', { name: /In use by/ })).toBeDisabled();
+	await page.waitForURL(/\/settings\/cuisines\/.+/);
+	await expect(page.getByRole('button', { name: /In use by/ })).toBeDisabled();
 });
 
 test('SETT-010: delete an unused cuisine', async ({ page }) => {
@@ -200,11 +188,11 @@ test('SETT-010: delete an unused cuisine', async ({ page }) => {
 
 	await addCuisine(page, name);
 
-	// Tap row to open edit sheet, then delete
+	// Tap row to navigate to edit page, then delete
 	await page.locator('li', { hasText: name }).first().click();
-	const sheet = page.locator('[role="dialog"]');
-	await sheet.waitFor();
-	await sheet.getByRole('button', { name: 'Delete cuisine' }).click();
+	await page.waitForURL(/\/settings\/cuisines\/.+/);
+	await page.getByRole('button', { name: 'Delete cuisine' }).click();
+	await page.waitForURL('/settings/cuisines');
 
 	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
 });
