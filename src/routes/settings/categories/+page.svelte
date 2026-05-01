@@ -57,7 +57,7 @@
 
 <svelte:head><title>Kitchie | Categories</title></svelte:head>
 
-<PageShell title="Categories" back={true} mainClass="px-4 py-6 pb-28">
+<PageShell title="Categories"  mainClass="px-4 py-6 pb-28">
 	<!-- Hidden reorder form -->
 	<form bind:this={reorderForm} method="POST" action="?/reorder" use:enhance class="hidden">
 		<input type="hidden" name="ids" value="" />

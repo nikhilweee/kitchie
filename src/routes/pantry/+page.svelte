@@ -370,7 +370,7 @@
 		<ul class="space-y-2">
 			{#each data.lists as list (list.id)}
 				<li>
-					<form method="POST" action="/shopping/{list.id}?/addItems"
+					<form method="POST" action="/carts/{list.id}?/addItems"
 						use:enhance={() => async ({ update }) => {
 							await update({ reset: false });
 							toast.show(`Added to ${list.name}`);

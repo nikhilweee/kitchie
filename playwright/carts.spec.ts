@@ -4,12 +4,12 @@ import { login } from './helpers/auth';
 // Covers: CART-001 through CART-011
 
 async function createCart(page: any, name = `Cart-${Date.now()}`) {
-	await page.goto('/shopping');
+	await page.goto('/carts');
 	await page.getByRole('button', { name: 'New cart' }).click();
-	await page.waitForURL('/shopping/new');
+	await page.waitForURL('/carts/new');
 	await page.getByPlaceholder('e.g. Whole Foods, Costco…').fill(name);
 	await page.getByRole('button', { name: 'Create cart' }).click();
-	await page.waitForURL(/\/shopping\/.+/);
+	await page.waitForURL(/\/carts\/.+/);
 	return name;
 }
 
@@ -18,11 +18,11 @@ test('CART-001: rename a cart', async ({ page }) => {
 	const originalName = await createCart(page);
 
 	// Navigate back to list and open rename page via pencil button
-	await page.goto('/shopping');
+	await page.goto('/carts');
 	const listItem = page.locator('li', { hasText: originalName }).first();
 	await expect(listItem).toBeVisible();
 	await listItem.locator('button[type="button"]').click();
-	await page.waitForURL(/\/shopping\/.+\/edit/);
+	await page.waitForURL(/\/carts\/.+\/edit/);
 	await expect(page.getByPlaceholder('e.g. Whole Foods, Costco…')).toBeVisible();
 
 	// Rename it
@@ -31,7 +31,7 @@ test('CART-001: rename a cart', async ({ page }) => {
 	await input.clear();
 	await input.fill(newName);
 	await page.getByRole('button', { name: 'Save' }).click();
-	await page.waitForURL((url) => url.pathname === '/shopping');
+	await page.waitForURL((url) => url.pathname === '/carts');
 
 	// New name should appear; old name gone
 	await expect(page.locator('li', { hasText: newName }).first()).toBeVisible();
@@ -52,9 +52,9 @@ test('CART-002: add items to a cart via inline search', async ({ page }) => {
 	await expect(page.locator('li', { hasText: pantryItem }).first()).toBeVisible();
 
 	// Go to the cart and search for the pantry item
-	await page.goto('/shopping');
+	await page.goto('/carts');
 	await page.locator('li').locator('a').first().click();
-	await page.waitForURL(/\/shopping\/.+/);
+	await page.waitForURL(/\/carts\/.+/);
 	await page.getByPlaceholder('Search or type an item…').fill(pantryItem.slice(0, 6));
 	await page.getByRole('button', { name: pantryItem }).click();
 	await expect(page.locator('li', { hasText: pantryItem }).first()).toBeVisible();
@@ -71,7 +71,7 @@ test('CART-003: create cart redirects to detail and shows empty state', async ({
 	const name = await createCart(page);
 
 	// Should be on the detail page
-	await expect(page).toHaveURL(/\/shopping\/.+/);
+	await expect(page).toHaveURL(/\/carts\/.+/);
 	await expect(page.getByRole('heading', { name })).toBeVisible();
 	await expect(page.getByText('No items yet')).toBeVisible();
 });
@@ -81,14 +81,14 @@ test('CART-004: delete a cart', async ({ page }) => {
 	const name = await createCart(page);
 
 	// Go back to list and open rename/edit page
-	await page.goto('/shopping');
+	await page.goto('/carts');
 	const listItem = page.locator('li', { hasText: name }).first();
 	await listItem.locator('button[type="button"]').click();
-	await page.waitForURL(/\/shopping\/.+\/edit/);
+	await page.waitForURL(/\/carts\/.+\/edit/);
 
 	// Delete the cart
 	await page.getByRole('button', { name: 'Delete' }).click();
-	await page.waitForURL((url) => url.pathname === '/shopping');
+	await page.waitForURL((url) => url.pathname === '/carts');
 
 	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
 });
@@ -170,7 +170,7 @@ test('CART-008: progress counter on list page reflects shopped vs total', async 
 	await expect(page.locator('li', { hasText: itemB }).first()).toBeVisible();
 
 	// Go to list page — should show 0/2
-	await page.goto('/shopping');
+	await page.goto('/carts');
 	await expect(page.locator('li', { hasText: cartName }).first()).toContainText('0/2');
 
 	// Mark one item as shopped
@@ -178,7 +178,7 @@ test('CART-008: progress counter on list page reflects shopped vs total', async 
 	await page.getByRole('button', { name: `Mark ${itemA} as picked up` }).click();
 
 	// Go back — should show 1/2
-	await page.goto('/shopping');
+	await page.goto('/carts');
 	await expect(page.locator('li', { hasText: cartName }).first()).toContainText('1/2');
 });
 
@@ -206,20 +206,20 @@ test('CART-010: clicking a cart row on the list page navigates to the cart detai
 	const name = await createCart(page);
 
 	// Go back to the list page and click the cart row (the <a> link, not the pencil)
-	await page.goto('/shopping');
+	await page.goto('/carts');
 	await page.locator('li', { hasText: name }).first().locator('a').click();
 
-	await expect(page).toHaveURL(/\/shopping\/.+/);
+	await expect(page).toHaveURL(/\/carts\/.+/);
 	await expect(page.getByRole('heading', { name })).toBeVisible();
 });
 
-test('CART-011: FAB navigates to /shopping/new and ESC returns to list', async ({ page }) => {
+test('CART-011: FAB navigates to /carts/new and ESC returns to list', async ({ page }) => {
 	await login(page);
-	await page.goto('/shopping');
+	await page.goto('/carts');
 	await page.getByRole('button', { name: 'New cart' }).click();
-	await page.waitForURL('/shopping/new');
+	await page.waitForURL('/carts/new');
 	await expect(page.getByPlaceholder('e.g. Whole Foods, Costco…')).toBeVisible();
 	// ESC navigates back
 	await page.keyboard.press('Escape');
-	await page.waitForURL('/shopping');
+	await page.waitForURL('/carts');
 });

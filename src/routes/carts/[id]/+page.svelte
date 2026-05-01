@@ -107,7 +107,7 @@
 
 <Toast message={toast.message} />
 
-<PageShell title={data.list.name} back="/shopping">
+<PageShell title={data.list.name} back="/carts">
 		<!-- Inline search / add bar -->
 		<div class="relative mb-4" use:clickOutside={() => (dropdownOpen = false)}>
 			<input

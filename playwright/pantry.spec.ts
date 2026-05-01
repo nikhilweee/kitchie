@@ -531,13 +531,13 @@ test('PANT-023: bulk add selected pantry items to a cart', async ({ page }) => {
 	await login(page);
 
 	// Create a cart
-	await page.goto('/shopping');
+	await page.goto('/carts');
 	await page.getByRole('button', { name: 'New cart' }).click();
-	await page.waitForURL('/shopping/new');
+	await page.waitForURL('/carts/new');
 	const listName = `BulkList-${Date.now()}`;
 	await page.getByPlaceholder('e.g. Whole Foods, Costco…').fill(listName);
 	await page.getByRole('button', { name: 'Create cart' }).click();
-	await page.waitForURL(/\/shopping\/.+/);
+	await page.waitForURL(/\/carts\/.+/);
 
 	// Add two pantry items
 	await page.goto('/pantry');
@@ -561,7 +561,7 @@ test('PANT-023: bulk add selected pantry items to a cart', async ({ page }) => {
 	await page.getByRole('button', { name: listName }).click();
 
 	// Navigate to the cart and verify items are there
-	await page.goto('/shopping');
+	await page.goto('/carts');
 	await page.locator('a', { hasText: listName }).first().click();
 	await expect(page.locator('li', { hasText: nameA }).first()).toBeVisible();
 	await expect(page.locator('li', { hasText: nameB }).first()).toBeVisible();

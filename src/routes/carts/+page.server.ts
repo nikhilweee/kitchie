@@ -45,7 +45,7 @@ export const actions: Actions = {
 			.values({ userId, name })
 			.returning({ id: shoppingLists.id });
 
-		redirect(303, `/shopping/${list.id}`);
+		redirect(303, `/carts/${list.id}`);
 	},
 
 	rename: async ({ request, locals }) => {

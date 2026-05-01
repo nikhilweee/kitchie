@@ -23,14 +23,14 @@
 <svelte:head><title>Kitchie | Rename Cart</title></svelte:head>
 <svelte:window onkeydown={onKeydown} />
 
-<PageShell title="Rename Cart" back="/shopping" mainClass="px-4 py-4 pb-36">
+<PageShell title="Rename Cart" back="/carts" mainClass="px-4 py-4 pb-36">
 	<form
 		id="rename-form"
 		method="POST"
-		action="/shopping?/rename"
+		action="/carts?/rename"
 		use:enhance={() => async ({ result, update }) => {
 			await update({ reset: false });
-			if (result.type === 'success') goto('/shopping');
+			if (result.type === 'success') goto('/carts');
 		}}
 	>
 		<input type="hidden" name="id" value={data.list.id} />
@@ -50,11 +50,11 @@
 	<div class="mt-4 flex gap-2">
 		<form
 			method="POST"
-			action="/shopping?/delete"
+			action="/carts?/delete"
 			class="contents"
 			use:enhance={() => async ({ update }) => {
 				await update({ reset: false });
-				goto('/shopping');
+				goto('/carts');
 			}}
 		>
 			<input type="hidden" name="id" value={data.list.id} />
