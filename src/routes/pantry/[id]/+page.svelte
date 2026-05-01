@@ -114,7 +114,7 @@
 			autocapitalize="sentences"
 			autocomplete="off"
 			required
-			class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+			class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none density-sheet-name"
 		/>
 
 		<div class="mt-3 space-y-3">
@@ -250,43 +250,45 @@
 	</form>
 
 	<!-- Primary action row -->
-	<div class="mt-4 flex gap-2">
-		{#if item.status === 'active'}
-			<form method="POST" action="/pantry?/consume" class="flex-1"
-				use:enhance={() => async ({ result, update }) => {
-					await update({ reset: false });
-					if (result.type === 'success') {
-						goto('/pantry?toast=Consumed');
-					}
-				}}
-			>
-				<input type="hidden" name="id" value={item.id} />
-				<button type="submit"
-					class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors text-sm font-medium">
-					<Flag class="h-4 w-4" />
-					Finish
-				</button>
-			</form>
-			<form method="POST" action="/pantry?/discard" class="flex-1"
-				use:enhance={() => async ({ result, update }) => {
-					await update({ reset: false });
-					if (result.type === 'success') {
-						goto('/pantry?toast=Trashed');
-					}
-				}}
-			>
-				<input type="hidden" name="id" value={item.id} />
-				<button type="submit" data-shortcut="delete"
-					class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-200 text-red-400 hover:bg-red-50 transition-colors text-sm font-medium">
-					<Trash2 class="h-4 w-4" />
-					Trash
-				</button>
-			</form>
-		{/if}
+	<div class="mt-4 space-y-2">
 		<button type="submit" form="pantry-edit-form" data-shortcut="primary" disabled={!nameInput.trim()}
-			class="flex-[2] rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40 transition-colors">
+			class="w-full rounded-xl bg-orange-500 py-3 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40 transition-colors">
 			Save
 		</button>
+		{#if item.status === 'active'}
+			<div class="flex gap-2">
+				<form method="POST" action="/pantry?/consume" class="flex-1"
+					use:enhance={() => async ({ result, update }) => {
+						await update({ reset: false });
+						if (result.type === 'success') {
+							goto('/pantry?toast=Consumed');
+						}
+					}}
+				>
+					<input type="hidden" name="id" value={item.id} />
+					<button type="submit"
+						class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors text-sm font-medium">
+						<Flag class="h-4 w-4" />
+						Finish
+					</button>
+				</form>
+				<form method="POST" action="/pantry?/discard" class="flex-1"
+					use:enhance={() => async ({ result, update }) => {
+						await update({ reset: false });
+						if (result.type === 'success') {
+							goto('/pantry?toast=Trashed');
+						}
+					}}
+				>
+					<input type="hidden" name="id" value={item.id} />
+					<button type="submit" data-shortcut="delete"
+						class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-red-200 text-red-400 hover:bg-red-50 transition-colors text-sm font-medium">
+						<Trash2 class="h-4 w-4" />
+						Trash
+					</button>
+				</form>
+			</div>
+		{/if}
 	</div>
 
 	<!-- Add to cart (edit mode only) -->
