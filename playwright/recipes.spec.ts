@@ -3,7 +3,7 @@ import { login } from './helpers/auth';
 
 // Covers: RECP-001, RECP-002, RECP-003, RECP-004, RECP-005, RECP-006, RECP-007, RECP-008, RECP-009, RECP-010, RECP-011
 
-// Add a recipe through the manual sheet on /recipes.
+// Add a recipe through the add sub-page on /recipes/add.
 // If ingredientName is given, it must already exist as a pantry item.
 async function addRecipe(
 	page: import('@playwright/test').Page,
@@ -11,35 +11,33 @@ async function addRecipe(
 	opts?: { ingredientName?: string; mealType?: string; cuisine?: string; prepTime?: string }
 ) {
 	await page.click('button:has-text("Add Recipe")');
-	const dialog = page.locator('[role="dialog"]');
-	await dialog.waitFor();
-	await dialog.getByPlaceholder('Recipe name').fill(name);
+	await page.waitForURL('/recipes/add');
+	await page.getByPlaceholder('Recipe name').fill(name);
 	if (opts?.mealType) {
-		await dialog.locator('#recipe-meal-type').selectOption(opts.mealType);
+		await page.locator('#recipe-meal-type').selectOption(opts.mealType);
 	}
 	if (opts?.cuisine) {
-		await dialog.locator('#recipe-cuisine').selectOption({ label: opts.cuisine });
+		await page.locator('#recipe-cuisine').selectOption({ label: opts.cuisine });
 	}
 	if (opts?.prepTime) {
-		await dialog.getByRole('group', { name: 'Prep time' }).getByRole('button', { name: opts.prepTime }).click();
+		await page.getByRole('group', { name: 'Prep time' }).getByRole('button', { name: opts.prepTime }).click();
 	}
 	if (opts?.ingredientName) {
-		await dialog.getByPlaceholder('Search or type an ingredient…').fill(opts.ingredientName);
-		await dialog.locator('ul button', { hasText: opts.ingredientName }).click();
-		await expect(dialog.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
+		await page.getByPlaceholder('Search or type an ingredient…').fill(opts.ingredientName);
+		await page.locator('ul button', { hasText: opts.ingredientName }).click();
+		await expect(page.getByPlaceholder('Search or type an ingredient…')).toHaveValue('');
 	}
-	await dialog.getByRole('button', { name: 'Add recipe' }).click();
+	await page.getByRole('button', { name: 'Add recipe' }).click();
 	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
 }
 
-// Add a pantry item through /pantry, then return to the previous page.
+// Add a pantry item through /pantry/add, then return to the previous page.
 async function ensurePantryItem(page: import('@playwright/test').Page, name: string) {
 	await page.goto('/pantry');
 	await page.click('button:has-text("Add to Pantry")');
-	const dialog = page.locator('[role="dialog"]');
-	await dialog.waitFor();
-	await dialog.getByPlaceholder('What did you buy?').fill(name);
-	await dialog.getByRole('button', { name: 'Add item' }).click();
+	await page.waitForURL('/pantry/add');
+	await page.getByPlaceholder('What did you buy?').fill(name);
+	await page.getByRole('button', { name: 'Add item' }).click();
 	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
 }
 
@@ -204,12 +202,12 @@ test('RECP-006: edit a recipe manually', async ({ page }) => {
 	await page.goto('/recipes');
 	await addRecipe(page, original);
 
-	// Click the recipe row to open edit sheet
+	// Click the recipe row to navigate to edit page
 	await page.locator('li', { hasText: original }).first().locator('button').first().click();
-	const dialog = page.locator('[role="dialog"]');
-	await dialog.waitFor();
-	await dialog.getByPlaceholder('Recipe name').fill(updated);
-	await dialog.getByRole('button', { name: 'Save' }).click();
+	await page.waitForURL(/\/recipes\/.+/);
+	await page.getByPlaceholder('Recipe name').fill(updated);
+	await page.getByRole('button', { name: 'Save' }).click();
+	await page.waitForURL('/recipes');
 
 	await expect(page.locator('li', { hasText: updated }).first()).toBeVisible();
 	await expect(page.locator('li', { hasText: original })).toHaveCount(0);
@@ -221,11 +219,11 @@ test('RECP-007: delete a recipe', async ({ page }) => {
 	await page.goto('/recipes');
 	await addRecipe(page, name);
 
-	// Open edit sheet then delete via FormActions
+	// Open edit page then delete via FormActions
 	await page.locator('li', { hasText: name }).first().locator('button').click();
-	const dialog = page.locator('[role="dialog"]');
-	await dialog.waitFor();
-	await dialog.locator('button[formaction="?/delete"]').click();
+	await page.waitForURL(/\/recipes\/.+/);
+	await page.locator('button[formaction="/recipes?/delete"]').click();
+	await page.waitForURL('/recipes');
 
 	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
 });
@@ -333,25 +331,22 @@ test('RECP-012: recipes are grouped by course by default', async ({ page }) => {
 	expect(breakfastIdx).toBeLessThan(mainIdx);
 });
 
-test('RECP-010: ?edit=<id> deep-link opens recipe edit sheet', async ({ page }) => {
+test('RECP-010: /recipes/<id> deep-link opens recipe edit page', async ({ page }) => {
 	await login(page);
 	const name = `RecpLink-${Date.now()}`;
 	await page.goto('/recipes');
 	await addRecipe(page, name);
 
-	// Open edit sheet via click — URL updates to ?edit=<id>
+	// Click recipe row to navigate to edit page — URL becomes /recipes/<id>
 	await page.locator('li', { hasText: name }).first().locator('button').first().click();
-	await page.locator('[role="dialog"]').waitFor();
-	const url = page.url();
-	const editId = new URL(url).searchParams.get('edit');
+	await page.waitForURL(/\/recipes\/.+/);
+	const editId = new URL(page.url()).pathname.split('/').pop();
 	expect(editId).toBeTruthy();
 
 	// Navigate away then deep-link back
 	await page.keyboard.press('Escape');
+	await page.waitForURL((url) => url.pathname === '/recipes');
 	await page.goto('/meals');
-	await page.goto(`/recipes?edit=${editId}`);
-
-	const dialog = page.locator('[role="dialog"]');
-	await dialog.waitFor();
-	await expect(dialog.getByPlaceholder('Recipe name')).toHaveValue(name);
+	await page.goto(`/recipes/${editId}`);
+	await expect(page.getByPlaceholder('Recipe name')).toHaveValue(name);
 });
