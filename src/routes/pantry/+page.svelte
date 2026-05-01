@@ -285,7 +285,7 @@
 					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'low' ? 'border-yellow-500 bg-yellow-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>Running Low</button>
 				<button type="button" onclick={() => toggleStatus('done')}
-					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'done' ? 'border-stone-500 bg-stone-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'done' ? 'border-stone-500 bg-stone-500 text-white dark:text-stone-50' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>Out of Stock</button>
 			</div>
 			{#if selectionMode}
@@ -336,7 +336,7 @@
 						<input type="hidden" name="id" value={id} />
 					{/each}
 					<button type="submit"
-						class="flex-1 rounded-2xl bg-stone-700 py-4 text-base font-semibold text-white shadow-lg density-fab">
+						class="flex-1 rounded-2xl bg-stone-700 py-4 text-base font-semibold text-white dark:text-stone-50 shadow-lg density-fab">
 						Consume
 					</button>
 				</form>

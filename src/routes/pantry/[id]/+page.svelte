@@ -124,10 +124,10 @@
 					<span class="text-xs font-medium text-stone-500">Quantity</span>
 					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
 						<button type="button" onclick={() => { quantityType = 'count'; quantity = 1; }}
-							class="px-3 py-1.5 transition-colors {quantityType === 'count' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+							class="px-3 py-1.5 transition-colors {quantityType === 'count' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
 						>Count</button>
 						<button type="button" onclick={() => { quantityType = 'estimate'; quantity = 1; }}
-							class="px-3 py-1.5 transition-colors {quantityType === 'estimate' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+							class="px-3 py-1.5 transition-colors {quantityType === 'estimate' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
 						>Estimate</button>
 					</div>
 				</div>
@@ -161,10 +161,10 @@
 					<span class="text-xs font-medium text-stone-500">Expiry Date</span>
 					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
 						<button type="button" onclick={() => { expiryMode = 'exact'; expiryDate = computedExpiryDate; expiryLocked = true; }}
-							class="px-3 py-1.5 transition-colors {expiryMode === 'exact' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+							class="px-3 py-1.5 transition-colors {expiryMode === 'exact' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
 						>Date</button>
 						<button type="button" onclick={() => { expiryMode = 'relative'; expiryLocked = false; }}
-							class="px-3 py-1.5 transition-colors {expiryMode === 'relative' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+							class="px-3 py-1.5 transition-colors {expiryMode === 'relative' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
 						>Duration</button>
 					</div>
 				</div>
@@ -197,10 +197,10 @@
 					<span class="text-xs font-medium text-stone-500">Purchase Date</span>
 					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
 						<button type="button" onclick={() => (purchaseMode = 'exact')}
-							class="px-3 py-1.5 transition-colors {purchaseMode === 'exact' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+							class="px-3 py-1.5 transition-colors {purchaseMode === 'exact' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
 						>Date</button>
 						<button type="button" onclick={() => (purchaseMode = 'relative')}
-							class="px-3 py-1.5 transition-colors {purchaseMode === 'relative' ? 'bg-stone-800 text-white' : 'text-stone-500 hover:bg-stone-100'}"
+							class="px-3 py-1.5 transition-colors {purchaseMode === 'relative' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
 						>Duration</button>
 					</div>
 				</div>

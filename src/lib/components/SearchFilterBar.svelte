@@ -58,7 +58,7 @@
 	<button
 		type="button"
 		onclick={() => (filterOpen = !filterOpen)}
-		class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors {activeFilterCount > 0 ? 'border-stone-800 bg-stone-800 text-white' : 'border-stone-300 bg-white text-stone-500 hover:border-stone-400'}"
+		class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors {activeFilterCount > 0 ? 'border-stone-800 bg-stone-800 text-white dark:text-stone-50' : 'border-stone-300 bg-white text-stone-500 hover:border-stone-400'}"
 		aria-label="Filters"
 	>
 		<ListFilter class="h-4 w-4" />
