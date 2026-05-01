@@ -21,8 +21,8 @@
 	let quantityType = $state<QuantityType>(data.item.quantityType as QuantityType);
 	let quantity = $state(data.item.quantity);
 	let unit = $state(data.item.unit ?? 'count');
-	let purchaseDate = $state(toDateStr(data.item.purchaseDate));
-	let expiryDate = $state(toDateStr(data.item.expiryDate));
+	let purchaseDate = $state(data.item.purchaseDate.split('T')[0]);
+	let expiryDate = $state(data.item.expiryDate.split('T')[0]);
 
 	// Use a derived reference for template bindings that must stay reactive
 	const item = $derived(data.item);
@@ -114,7 +114,7 @@
 			autocapitalize="sentences"
 			autocomplete="off"
 			required
-			class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none density-sheet-name"
+			class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 dark:placeholder-stone-500 focus:border-orange-500 focus:outline-none density-sheet-name"
 		/>
 
 		<div class="mt-3 space-y-3">
@@ -124,10 +124,10 @@
 					<span class="text-xs font-medium text-stone-500">Quantity</span>
 					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
 						<button type="button" onclick={() => { quantityType = 'count'; quantity = 1; }}
-							class="px-3 py-1.5 transition-colors {quantityType === 'count' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
+							class="px-3 py-1.5 transition-colors {quantityType === 'count' ? 'bg-stone-800 text-white dark:bg-stone-500 dark:text-stone-950' : 'text-stone-500 hover:bg-stone-100 dark:text-stone-300'}"
 						>Count</button>
 						<button type="button" onclick={() => { quantityType = 'estimate'; quantity = 1; }}
-							class="px-3 py-1.5 transition-colors {quantityType === 'estimate' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
+							class="px-3 py-1.5 transition-colors {quantityType === 'estimate' ? 'bg-stone-800 text-white dark:bg-stone-500 dark:text-stone-950' : 'text-stone-500 hover:bg-stone-100 dark:text-stone-300'}"
 						>Estimate</button>
 					</div>
 				</div>
@@ -161,16 +161,16 @@
 					<span class="text-xs font-medium text-stone-500">Expiry Date</span>
 					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
 						<button type="button" onclick={() => { expiryMode = 'exact'; expiryDate = computedExpiryDate; expiryLocked = true; }}
-							class="px-3 py-1.5 transition-colors {expiryMode === 'exact' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
+							class="px-3 py-1.5 transition-colors {expiryMode === 'exact' ? 'bg-stone-800 text-white dark:bg-stone-500 dark:text-stone-950' : 'text-stone-500 hover:bg-stone-100 dark:text-stone-300'}"
 						>Date</button>
 						<button type="button" onclick={() => { expiryMode = 'relative'; expiryLocked = false; }}
-							class="px-3 py-1.5 transition-colors {expiryMode === 'relative' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
+							class="px-3 py-1.5 transition-colors {expiryMode === 'relative' ? 'bg-stone-800 text-white dark:bg-stone-500 dark:text-stone-950' : 'text-stone-500 hover:bg-stone-100 dark:text-stone-300'}"
 						>Duration</button>
 					</div>
 				</div>
 				<div class="grid grid-cols-2 gap-2">
 					<div class="flex items-center rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5">
-						<span class="text-sm text-stone-400">{toDateStr(item.expiryDate)}</span>
+						<span class="text-sm text-stone-300 dark:text-stone-500">{toDateStr(item.expiryDate)}</span>
 					</div>
 					<div>
 						{#if expiryMode === 'relative'}
@@ -185,7 +185,7 @@
 						{:else}
 							<input type="hidden" name="expiryOverridden" value="true" />
 							<input name="expiryDate" type="date" bind:value={expiryDate}
-								class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none" />
+								class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none" />
 						{/if}
 					</div>
 				</div>
@@ -197,16 +197,16 @@
 					<span class="text-xs font-medium text-stone-500">Purchase Date</span>
 					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
 						<button type="button" onclick={() => (purchaseMode = 'exact')}
-							class="px-3 py-1.5 transition-colors {purchaseMode === 'exact' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
+							class="px-3 py-1.5 transition-colors {purchaseMode === 'exact' ? 'bg-stone-800 text-white dark:bg-stone-500 dark:text-stone-950' : 'text-stone-500 hover:bg-stone-100 dark:text-stone-300'}"
 						>Date</button>
 						<button type="button" onclick={() => (purchaseMode = 'relative')}
-							class="px-3 py-1.5 transition-colors {purchaseMode === 'relative' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
+							class="px-3 py-1.5 transition-colors {purchaseMode === 'relative' ? 'bg-stone-800 text-white dark:bg-stone-500 dark:text-stone-950' : 'text-stone-500 hover:bg-stone-100 dark:text-stone-300'}"
 						>Duration</button>
 					</div>
 				</div>
 				<div class="grid grid-cols-2 gap-2">
 					<div class="flex items-center rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5">
-						<span class="text-sm text-stone-400">{toDateStr(item.purchaseDate)}</span>
+						<span class="text-sm text-stone-300 dark:text-stone-500">{toDateStr(item.purchaseDate)}</span>
 					</div>
 					<div>
 						{#if purchaseMode === 'relative'}
@@ -219,7 +219,7 @@
 							</select>
 						{:else}
 							<input name="purchaseDate" type="date" bind:value={purchaseDate}
-								class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none" />
+								class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none" />
 						{/if}
 					</div>
 				</div>
@@ -310,7 +310,7 @@
 						<input type="hidden" name="itemId" value={itemId} />
 						<input type="hidden" name="listId" value={list.id} />
 						<button type="submit"
-							class="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors {onList ? 'border-orange-300 bg-orange-50 text-orange-700 hover:border-red-300 hover:bg-red-50 hover:text-red-600' : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-orange-300 hover:bg-orange-50'}">
+							class="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors {onList ? 'border-orange-300 bg-orange-50 text-orange-700 hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:border-orange-700 dark:bg-orange-950 dark:text-orange-400 dark:hover:border-red-700 dark:hover:bg-red-950 dark:hover:text-red-400' : 'border-stone-200 bg-stone-50 text-stone-600 hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950'}">
 							<span class="text-xs">{onList ? '✓' : '+'}</span>
 							{list.name}
 						</button>

@@ -29,7 +29,7 @@
 					autocomplete="username"
 					autocapitalize="none"
 					required
-					class="block w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none"
+					class="block w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-stone-900 placeholder-stone-400 dark:placeholder-stone-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none"
 				/>
 			</div>
 
@@ -41,7 +41,7 @@
 					type="password"
 					autocomplete="current-password"
 					required
-					class="block w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none"
+					class="block w-full rounded-lg border border-stone-300 bg-white px-3 py-2.5 text-stone-900 placeholder-stone-400 dark:placeholder-stone-500 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 focus:outline-none"
 				/>
 			</div>
 

@@ -118,7 +118,7 @@
 				type="text"
 				placeholder="Search or type an item…"
 				autocomplete="off"
-				class="block w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none"
+				class="block w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 dark:placeholder-stone-500 focus:border-orange-500 focus:outline-none"
 			/>
 			{#if search.trim() && dropdownOpen}
 				<div class="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">

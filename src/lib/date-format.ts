@@ -1,5 +1,6 @@
 export function toDateStr(iso: string): string {
-	return iso.split('T')[0];
+	const [year, month, day] = iso.split('T')[0].split('-');
+	return `${month}/${day}/${year}`;
 }
 
 export function toDateTimeLocalStr(iso: string): string {

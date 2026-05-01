@@ -42,7 +42,7 @@
 			onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); searchEl?.blur(); } }}
 			{placeholder}
 			autocomplete="off"
-			class="block w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none {search ? 'pr-8' : ''}"
+			class="block w-full rounded-xl border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 dark:placeholder-stone-500 focus:border-orange-500 focus:outline-none {search ? 'pr-8' : ''}"
 		/>
 		{#if search}
 			<button
@@ -58,7 +58,7 @@
 	<button
 		type="button"
 		onclick={() => (filterOpen = !filterOpen)}
-		class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors {activeFilterCount > 0 ? 'border-stone-800 bg-stone-800 text-white dark:text-stone-50' : 'border-stone-300 bg-white text-stone-500 hover:border-stone-400'}"
+		class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors {activeFilterCount > 0 ? 'border-stone-800 bg-stone-800 text-white dark:bg-stone-500 dark:border-stone-500 dark:text-stone-950' : 'border-stone-300 bg-white text-stone-500 hover:border-stone-400'}"
 		aria-label="Filters"
 	>
 		<ListFilter class="h-4 w-4" />

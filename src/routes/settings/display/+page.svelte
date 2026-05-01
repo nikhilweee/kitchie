@@ -13,12 +13,12 @@
 			<button
 				type="button"
 				onclick={() => (display.value = 'comfortable')}
-				class="flex-1 py-3 transition-colors {display.value === 'comfortable' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
+				class="flex-1 py-3 transition-colors {display.value === 'comfortable' ? 'bg-stone-800 text-white dark:bg-stone-500 dark:text-stone-950' : 'text-stone-500 hover:bg-stone-100 dark:text-stone-300'}"
 			>Comfortable</button>
 			<button
 				type="button"
 				onclick={() => (display.value = 'slim')}
-				class="flex-1 py-3 transition-colors {display.value === 'slim' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
+				class="flex-1 py-3 transition-colors {display.value === 'slim' ? 'bg-stone-800 text-white dark:bg-stone-500 dark:text-stone-950' : 'text-stone-500 hover:bg-stone-100 dark:text-stone-300'}"
 			>Slim</button>
 		</div>
 		<p class="mt-2 text-xs text-stone-400">
@@ -32,12 +32,12 @@
 			<button
 				type="button"
 				onclick={() => (theme.value = 'light')}
-				class="flex-1 py-3 transition-colors {theme.value === 'light' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
+				class="flex-1 py-3 transition-colors {theme.value === 'light' ? 'bg-stone-800 text-white dark:bg-stone-500 dark:text-stone-950' : 'text-stone-500 hover:bg-stone-100 dark:text-stone-300'}"
 			>Light</button>
 			<button
 				type="button"
 				onclick={() => (theme.value = 'dark')}
-				class="flex-1 py-3 transition-colors {theme.value === 'dark' ? 'bg-stone-800 text-white dark:text-stone-50' : 'text-stone-500 hover:bg-stone-100'}"
+				class="flex-1 py-3 transition-colors {theme.value === 'dark' ? 'bg-stone-800 text-white dark:bg-stone-500 dark:text-stone-950' : 'text-stone-500 hover:bg-stone-100 dark:text-stone-300'}"
 			>Dark</button>
 		</div>
 	</div>

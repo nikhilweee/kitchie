@@ -174,7 +174,7 @@
 					bind:value={pantrySearch}
 					placeholder="Search or type an ingredient…"
 					autocomplete="off"
-					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-3 text-sm text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none"
+					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-3 text-sm text-stone-900 placeholder-stone-400 dark:placeholder-stone-500 focus:border-orange-500 focus:outline-none"
 				/>
 				{#if pantrySearch.trim()}
 					<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">

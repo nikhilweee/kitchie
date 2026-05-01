@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-@custom-variant dark (&:where([data-theme="dark"] *));
+@custom-variant dark ([data-theme="dark"] &);
 
 /* Dark mode: invert the stone color scale */
 html[data-theme="dark"] {

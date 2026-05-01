@@ -138,7 +138,7 @@
 			<div class="mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
 				{#each RECIPE_COURSES as t (t)}
 					<button type="button" onclick={() => toggleMealType(t)}
-						class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeMealTypes.has(t) ? 'border-stone-800 bg-stone-800 text-white dark:text-stone-50' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+						class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeMealTypes.has(t) ? 'border-stone-800 bg-stone-800 text-white dark:bg-stone-500 dark:border-stone-500 dark:text-stone-950' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 					>{RECIPE_COURSE_LABELS[t]}</button>
 				{/each}
 			</div>
