@@ -1,100 +1,31 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import type { PageData } from './$types';
-	import { MEAL_TYPE_LABELS, MEAL_TYPES, guessMealType, currentDateTimeStr } from '$lib/meal-type';
-	import { toDateTimeLocalStr } from '$lib/date-format';
+	import { MEAL_TYPE_LABELS } from '$lib/meal-type';
 	import SmallEstimatePicker from '$lib/components/SmallEstimatePicker.svelte';
 	import SmallCountPicker from '$lib/components/SmallCountPicker.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import BottomSheet from '$lib/components/BottomSheet.svelte';
-	import FormActions from '$lib/components/FormActions.svelte';
 	import type { MealType } from '$lib/server/db/schema';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import Toast from '$lib/components/Toast.svelte';
 	import ListRow from '$lib/components/ListRow.svelte';
-	import { X, Utensils, ChefHat, ChevronRight } from 'lucide-svelte';
+	import { X, Utensils } from 'lucide-svelte';
 	import { createToast } from '$lib/toast.svelte';
-
 
 	let { data }: { data: PageData } = $props();
 
-
-
 	const toast = createToast();
-	const showToast = toast.show;
 
-	// ── Add / Edit meal sheet ────────────────────────────────────────────────
-	type Entry = PageData['entries'][0];
-	let sheetMode = $state<'add' | 'edit' | null>(null);
-	let editingEntry = $state<Entry | null>(null);
-
-	let mealInput = $state('');
-	let mealDateTime = $state(currentDateTimeStr());
-	let mealType = $state<MealType>('snack');
-	let updatePantryToggle = $state(true);
-
-	interface Suggestion { name: string; type: 'meal' | 'recipe'; recipeId?: string; }
-	let suggestions = $state<Suggestion[]>([]);
-	let selectedRecipeId = $state<string | null>(null);
-	let inputEl = $state<HTMLInputElement | undefined>(undefined);
-	let debounceTimer: ReturnType<typeof setTimeout>;
-
-	function openAdd() {
-		sheetMode = 'add';
-		editingEntry = null;
-		mealInput = '';
-		mealDateTime = currentDateTimeStr();
-		mealType = guessMealType(new Date().getHours());
-		suggestions = [];
-		selectedRecipeId = null;
-		updatePantryToggle = true;
-		fetchSuggestions('');
-		setTimeout(() => inputEl?.focus(), 50);
-	}
-
-	function openEdit(entry: Entry) {
-		sheetMode = 'edit';
-		editingEntry = entry;
-		mealInput = entry.name;
-		mealDateTime = toDateTimeLocalStr(entry.loggedAt);
-		mealType = entry.mealType as MealType;
-		history.replaceState(history.state, '', `?edit=${entry.id}`);
-	}
-
-	function closeSheet() {
-		sheetMode = null;
-		editingEntry = null;
-		suggestions = [];
-		history.replaceState(history.state, '', location.pathname);
-	}
-
-	async function fetchSuggestions(q: string) {
-		const res = await fetch(`/api/suggestions?q=${encodeURIComponent(q)}`);
-		suggestions = await res.json();
-	}
-
-	function onNameInput() {
-		clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(() => fetchSuggestions(mealInput), 200);
-	}
-
-	function selectSuggestion(s: Suggestion) {
-		mealInput = s.name;
-		selectedRecipeId = s.recipeId ?? null;
-		suggestions = [];
-	}
-
-	// Close the add-meal sheet when the pantry flow takes over
-	$effect(() => { if (data.updateMeal) sheetMode = null; });
-
-	// Deep-link: ?edit=<id> opens the edit sheet for that meal
 	$effect(() => {
-		if (data.editId) {
-			const entry = data.entries.find((e) => e.id === data.editId);
-			if (entry) openEdit(entry);
+		const msg = page.url.searchParams.get('toast');
+		if (msg) {
+			toast.show(decodeURIComponent(msg.replace(/\+/g, ' ')));
+			history.replaceState(history.state, '', location.pathname);
 		}
 	});
 
@@ -204,6 +135,7 @@
 	}
 
 	// ── Meal log grouping ────────────────────────────────────────────────────
+	type Entry = PageData['entries'][0];
 	function groupByDay(entries: Entry[]) {
 		const groups = new Map<string, Entry[]>();
 		for (const e of entries) {
@@ -243,7 +175,7 @@
 				<ul class="space-y-2">
 					{#each entries as entry (entry.id)}
 						<ListRow>
-							<button type="button" onclick={() => openEdit(entry)} class="min-w-0 flex-1 text-left">
+							<button type="button" onclick={() => goto(`/meals/${entry.id}`)} class="min-w-0 flex-1 text-left">
 								<p class="truncate font-medium text-stone-900 density-text">{entry.name}</p>
 								<p class="text-xs text-stone-400 density-hide">{MEAL_TYPE_LABELS[entry.mealType as MealType]}</p>
 							</button>
@@ -256,124 +188,7 @@
 	{/if}
 </PageShell>
 
-<AddButton label="Add Meal" onclick={openAdd} />
-
-<!-- ── Add / Edit meal sheet ─────────────────────────────────────────────── -->
-<BottomSheet open={!!sheetMode} onclose={closeSheet}>
-	<form
-		method="POST"
-		action={sheetMode === 'add' ? '?/addMeal' : '?/updateMeal'}
-		use:enhance={() => async ({ result, update }) => {
-			if (sheetMode === 'edit') {
-				await update({ reset: false });
-				if (result.type === 'success') { closeSheet(); showToast('Meal updated'); }
-			} else {
-				await update();
-			}
-		}}
-	>
-		<button type="submit" class="sr-only" tabindex="-1" aria-hidden="true"></button>
-
-		{#if sheetMode === 'edit' && editingEntry}
-			<input type="hidden" name="id" value={editingEntry.id} />
-		{/if}
-		{#if sheetMode === 'add' && selectedRecipeId}
-			<input type="hidden" name="recipeId" value={selectedRecipeId} />
-		{/if}
-
-		<!-- Name -->
-		<div class="relative" use:clickOutside={() => (suggestions = [])}>
-			<input
-				bind:this={inputEl}
-				bind:value={mealInput}
-				oninput={onNameInput}
-				name="name"
-				type="text"
-				placeholder="What did you eat?"
-				autocomplete="off"
-				autocapitalize="sentences"
-				required
-				class="block w-full rounded-2xl border-2 border-stone-200 bg-stone-50 px-4 py-4 text-lg font-medium text-stone-900 placeholder-stone-400 focus:border-orange-500 focus:outline-none density-sheet-name"
-			/>
-			{#if sheetMode === 'add' && suggestions.length > 0}
-				<ul class="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
-					{#each suggestions as s (s.name)}
-						<li>
-							<button
-								type="button"
-								onclick={() => selectSuggestion(s)}
-								class="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
-							>
-								<span class="flex-1">{s.name}</span>
-								{#if s.type === 'recipe'}
-									<span class="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600">recipe</span>
-								{/if}
-							</button>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</div>
-
-		<!-- Date/time + Meal type -->
-		<div class="mt-3 space-y-2">
-			<div class="grid grid-cols-2 gap-2">
-				<div>
-					<label for="meal-datetime" class="mb-1 block text-xs font-medium text-stone-500">Date & time</label>
-					<input
-						id="meal-datetime"
-						type="datetime-local"
-						bind:value={mealDateTime}
-						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-					/>
-					<input type="hidden" name="datetime" value={mealDateTime ? new Date(mealDateTime).toISOString() : ''} />
-				</div>
-				<div>
-					<label for="meal-type" class="mb-1 block text-xs font-medium text-stone-500">Meal type</label>
-					<select
-						id="meal-type"
-						name="mealType"
-						bind:value={mealType}
-						class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
-					>
-						{#each MEAL_TYPES as t (t)}
-							<option value={t}>{MEAL_TYPE_LABELS[t]}</option>
-						{/each}
-					</select>
-				</div>
-			</div>
-		</div>
-
-		{#if sheetMode === 'edit' && editingEntry?.recipeId}
-			<a href="/recipes?edit={editingEntry.recipeId}"
-				class="mt-3 flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3 transition-colors hover:bg-stone-50">
-				<ChefHat class="h-4 w-4 shrink-0 text-stone-400" />
-				<span class="flex-1 text-sm font-medium text-stone-700">Recipe</span>
-				<span class="max-w-[40%] truncate text-sm text-stone-400">{editingEntry.name}</span>
-				<ChevronRight class="h-4 w-4 shrink-0 text-stone-300" />
-			</a>
-		{/if}
-
-		{#if sheetMode === 'add'}
-			<!-- Update pantry toggle -->
-			<label class="mt-3 flex cursor-pointer items-center gap-3">
-				<span class="flex-1 text-sm text-stone-600">Update pantry after logging</span>
-				<input type="checkbox" name="updatePantry" value="1" class="sr-only" bind:checked={updatePantryToggle} />
-				<div class="relative h-6 w-10 rounded-full transition-colors {updatePantryToggle ? 'bg-orange-500' : 'bg-stone-200'}">
-					<div class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform {updatePantryToggle ? 'translate-x-4' : ''}"></div>
-				</div>
-			</label>
-		{/if}
-
-		<FormActions
-			isEditing={sheetMode === 'edit'}
-			saveLabel={sheetMode === 'edit' ? 'Save' : 'Log meal'}
-			deleteAction="?/deleteMeal"
-			disabled={!mealInput.trim()}
-			oncancel={closeSheet}
-		/>
-	</form>
-</BottomSheet>
+<AddButton label="Add Meal" onclick={() => goto('/meals/add')} />
 
 <!-- ── Pantry update + recipe flow (steps 2–3, client state machine) ──────── -->
 <BottomSheet
