@@ -39,7 +39,7 @@
 {@render children()}
 
 {#if data.user}
-	<nav class="fixed bottom-0 left-0 right-0 z-20 border-t border-stone-200 bg-white">
+	<nav class="fixed bottom-0 left-0 right-0 z-20 border-t border-stone-200 bg-white" style="padding-bottom: env(safe-area-inset-bottom)">
 		<ul class="mx-auto flex max-w-lg">
 			{#each navItems as item (item.href)}
 				{@const active =

@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 
+html, body { overflow-x: hidden; }
+
 @custom-variant dark ([data-theme="dark"] &);
 
 /* Dark mode: invert the stone color scale */
