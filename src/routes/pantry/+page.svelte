@@ -14,7 +14,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import { createToast } from '$lib/toast.svelte';
 	import { createSort } from '$lib/sort.svelte';
-	import { ShoppingBasket, Search, Trash2, ShoppingCart } from 'lucide-svelte';
+	import { ShoppingBasket, Search, Trash2, ShoppingCart, UtensilsCrossed } from 'lucide-svelte';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
 
 	// ── Bulk selection ─────────────────────────────────────────────────────────
@@ -85,11 +85,12 @@
 
 	function purchaseLabel(iso: string) {
 		const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
-		if (days <= 0) return 'today';
-		if (days === 1) return '1d ago';
-		if (days < 30) return `${days}d ago`;
-		if (days < 365) return `${Math.round(days / 30)}m ago`;
-		return `${Math.round(days / 365)}y ago`;
+		const abs = Math.abs(days);
+		let value: number, unit: string;
+		if (abs < 30)       { value = abs;                   unit = 'd'; }
+		else if (abs < 365) { value = Math.round(abs / 30);  unit = 'm'; }
+		else                { value = Math.round(abs / 365); unit = 'y'; }
+		return days <= 0 ? `${value}${unit}` : `-${value}${unit}`;
 	}
 
 	function expiryColor(iso: string) {
@@ -307,10 +308,16 @@
 						<div class="mt-4 mb-1 flex items-center gap-3 px-4">
 							<h2 class="flex-1 text-xs font-semibold uppercase tracking-wider text-stone-400">{group.label}</h2>
 							<span class="w-8 shrink-0"></span>
+							{#if activeStatus === 'done'}
+							<span class="w-8 shrink-0"></span>
+							<span class="w-8 shrink-0"></span>
+							<span class="w-8 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Out</span>
+						{:else}
 							<span class="w-8 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Qty</span>
-							<span class="{s.by === 'purchased' ? 'w-12' : 'w-8'} shrink-0 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">
-								{s.by === 'purchased' ? 'Pur' : 'Exp'}
+							<span class="w-8 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+								{s.by === 'purchased' ? 'Buy' : 'Exp'}
 							</span>
+						{/if}
 						</div>
 					{/if}
 					{@render itemList(group.items)}
@@ -413,32 +420,46 @@
 					<p class="truncate font-medium text-stone-900 density-text">{item.name}</p>
 					<p class="text-xs text-stone-400 density-hide">{categoryLabel(item.category)}</p>
 				</button>
-				<span class="flex w-8 shrink-0 items-center justify-center">
-					{#if onListIds.has(item.id)}
-						<ShoppingCart class="h-3 w-3 text-stone-300" />
-					{/if}
-				</span>
-				<div class="flex w-8 shrink-0 items-center justify-end">
-					{#if item.quantityType === 'estimate'}
-						<EstimatePicker value={item.quantity} readonly />
-					{:else}
-						<span class="text-sm font-medium text-stone-600">
-							×{item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(1)}{item.unit && item.unit !== 'count' ? ' ' + item.unit : ''}
-						</span>
-					{/if}
-				</div>
 				{#if item.status !== 'active'}
-					<span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {item.status === 'finished' ? 'bg-stone-100 text-stone-400' : 'bg-red-50 text-red-400'}">
-						{item.status}
+					<span class="flex w-8 shrink-0 items-center justify-center">
+						{#if onListIds.has(item.id)}
+							<ShoppingCart class="h-3 w-3 text-stone-300" />
+						{/if}
 					</span>
-				{:else if s.by === 'purchased'}
-					<span class="w-12 shrink-0 text-right text-xs font-medium text-stone-400">
-						{purchaseLabel(item.purchaseDate)}
+					<div class="flex w-8 shrink-0 items-center justify-center">
+						{#if item.status === 'finished'}
+							<UtensilsCrossed class="h-3.5 w-3.5 text-stone-400" />
+						{:else}
+							<Trash2 class="h-3.5 w-3.5 text-red-400" />
+						{/if}
+					</div>
+					<span class="w-8 shrink-0 text-right text-xs font-medium text-stone-400">
+						{item.finishedAt ? purchaseLabel(new Date(item.finishedAt).toISOString()) : '—'}
 					</span>
 				{:else}
-					<span class="w-8 shrink-0 text-right text-xs font-medium {expiryColor(item.expiryDate)}">
-						{expiryLabel(item.expiryDate)}
+					<span class="flex w-8 shrink-0 items-center justify-center">
+						{#if onListIds.has(item.id)}
+							<ShoppingCart class="h-3 w-3 text-stone-300" />
+						{/if}
 					</span>
+					<div class="flex w-8 shrink-0 items-center justify-end">
+						{#if item.quantityType === 'estimate'}
+							<EstimatePicker value={item.quantity} readonly />
+						{:else}
+							<span class="text-sm font-medium text-stone-600">
+								×{item.quantity % 1 === 0 ? item.quantity : item.quantity.toFixed(1)}{item.unit && item.unit !== 'count' ? ' ' + item.unit : ''}
+							</span>
+						{/if}
+					</div>
+					{#if s.by === 'purchased'}
+						<span class="w-8 shrink-0 text-right text-xs font-medium text-stone-400">
+							{purchaseLabel(item.purchaseDate)}
+						</span>
+					{:else}
+						<span class="w-8 shrink-0 text-right text-xs font-medium {expiryColor(item.expiryDate)}">
+							{expiryLabel(item.expiryDate)}
+						</span>
+					{/if}
 				{/if}
 			</ListRow>
 		{/each}

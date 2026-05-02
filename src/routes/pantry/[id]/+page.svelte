@@ -9,7 +9,7 @@
 	import { createToast } from '$lib/toast.svelte';
 	import { toDateStr } from '$lib/date-format';
 	import { UNITS } from '$lib/units';
-	import { Flag, Trash2 } from 'lucide-svelte';
+	import { UtensilsCrossed, Trash2 } from 'lucide-svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -268,7 +268,7 @@
 					<input type="hidden" name="id" value={item.id} />
 					<button type="submit"
 						class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors text-sm font-medium">
-						<Flag class="h-4 w-4" />
+						<UtensilsCrossed class="h-4 w-4" />
 						Finish
 					</button>
 				</form>
