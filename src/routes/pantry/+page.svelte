@@ -13,9 +13,9 @@
 	import BottomSheet from '$lib/components/BottomSheet.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import { createToast } from '$lib/toast.svelte';
-	import { createSort } from '$lib/sort.svelte';
 	import { ShoppingBasket, Search, Trash2, ShoppingCart, UtensilsCrossed } from 'lucide-svelte';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
+	import { pf, pantrySort, syncPantrySort, resetPantryFilters, type PantrySortField } from '$lib/pantry-filters.svelte';
 
 	// ── Bulk selection ─────────────────────────────────────────────────────────
 	let selectionMode = $state(false);
@@ -69,6 +69,9 @@
 		}
 	});
 
+	// Sync sort changes back to localStorage
+	$effect(() => syncPantrySort(pantrySort.by, pantrySort.dir));
+
 	function categoryLabel(id: string): string {
 		return data.categories.find((c) => c.id === id)?.name ?? id;
 	}
@@ -101,31 +104,25 @@
 	}
 
 	// ── Search + filter ───────────────────────────────────────────────────────
-	type StatusFilter = 'expiring' | 'low' | 'normal' | 'done';
-	let search = $state('');
-	let activeStatus = $state<StatusFilter | null>(null);
-	let activeCategories = $state(new SvelteSet<string>());
-	type SortField = 'name' | 'category' | 'expiry' | 'purchased';
-	const s = createSort<SortField>('expiry', 'asc');
+	const s = pantrySort;
 
-	const SORT_FIELDS: { field: SortField; label: string }[] = [
+	const SORT_FIELDS: { field: PantrySortField; label: string }[] = [
 		{ field: 'name', label: 'Name' },
 		{ field: 'category', label: 'Category' },
 		{ field: 'expiry', label: 'Expiry date' },
 		{ field: 'purchased', label: 'Purchase date' },
 	];
 
-	function toggleStatus(s: StatusFilter) {
-		activeStatus = activeStatus === s ? null : s;
+	function toggleStatus(status: typeof pf.activeStatus) {
+		pf.activeStatus = pf.activeStatus === status ? null : status;
 	}
 
 	function toggleCategory(id: string) {
-		const next = new SvelteSet(activeCategories);
-		if (next.has(id)) next.delete(id); else next.add(id);
-		activeCategories = next;
+		const cats = pf.activeCategories;
+		pf.activeCategories = cats.includes(id) ? cats.filter((c) => c !== id) : [...cats, id];
 	}
 
-	function itemStatus(item: Item): StatusFilter {
+	function itemStatus(item: Item) {
 		const days = daysUntilExpiry(new Date(item.expiryDate));
 		const isLow = item.quantityType === 'estimate' ? item.quantity <= 0.15 : item.quantity <= 1;
 		if (days <= 3) return 'expiring';
@@ -133,7 +130,7 @@
 		return 'normal';
 	}
 
-	const activeFilterCount = $derived(activeCategories.size);
+	const activeFilterCount = $derived(pf.activeCategories.length);
 
 	const onListIds = $derived(new Set(
 		[...data.listMembership].map((key) => key.split(':')[1])
@@ -221,14 +218,14 @@
 
 	const filteredItems = $derived(
 		sortItems(data.items.filter((i) => {
-			if (search.trim() && !i.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
-			if (activeStatus === 'done') {
+			if (pf.search.trim() && !i.name.toLowerCase().includes(pf.search.trim().toLowerCase())) return false;
+			if (pf.activeStatus === 'done') {
 				if (i.status === 'active') return false;
 			} else {
 				if (i.status !== 'active') return false;
-				if (activeStatus !== null && itemStatus(i) !== activeStatus) return false;
+				if (pf.activeStatus !== null && itemStatus(i) !== pf.activeStatus) return false;
 			}
-			if (activeCategories.size > 0 && !activeCategories.has(i.category)) return false;
+			if (pf.activeCategories.length > 0 && !pf.activeCategories.includes(i.category)) return false;
 			return true;
 		}))
 	);
@@ -248,10 +245,11 @@
 			<EmptyState icon={ShoppingBasket} heading="Pantry is empty" detail="Add items after your next shopping trip." />
 		{:else}
 			<SearchFilterBar
-				bind:search
+				search={pf.search}
+				onsearch={(v) => (pf.search = v)}
 				placeholder="Search pantry…"
 				activeFilterCount={activeFilterCount}
-				onClearFilters={() => { s.by = 'expiry'; s.dir = 'asc'; activeCategories = new SvelteSet(); }}
+				onClearFilters={resetPantryFilters}
 			>
 				{#snippet filterOptions()}
 					<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Sort</div>
@@ -268,7 +266,7 @@
 						<div class="border-t border-stone-100 px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Category</div>
 						{#each presentCategories as cat (cat.id)}
 							<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
-								<input type="checkbox" checked={activeCategories.has(cat.id)} onchange={() => toggleCategory(cat.id)} class="accent-orange-500" />
+								<input type="checkbox" checked={pf.activeCategories.includes(cat.id)} onchange={() => toggleCategory(cat.id)} class="accent-orange-500" />
 								<span class="text-sm text-stone-700">{cat.name}</span>
 							</label>
 						{/each}
@@ -277,16 +275,16 @@
 			</SearchFilterBar>
 			<div class="mb-4 flex gap-2 overflow-x-auto scrollbar-none">
 				<button type="button" onclick={() => toggleStatus('normal')}
-					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'normal' ? 'border-green-600 bg-green-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {pf.activeStatus === 'normal' ? 'border-green-600 bg-green-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>In Stock</button>
 				<button type="button" onclick={() => toggleStatus('expiring')}
-					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'expiring' ? 'border-red-600 bg-red-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {pf.activeStatus === 'expiring' ? 'border-red-600 bg-red-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>Expiring Soon</button>
 				<button type="button" onclick={() => toggleStatus('low')}
-					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'low' ? 'border-yellow-500 bg-yellow-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {pf.activeStatus === 'low' ? 'border-yellow-500 bg-yellow-500 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>Running Low</button>
 				<button type="button" onclick={() => toggleStatus('done')}
-					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeStatus === 'done' ? 'border-stone-500 bg-stone-500 text-white dark:text-stone-50' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {pf.activeStatus === 'done' ? 'border-stone-500 bg-stone-500 text-white dark:text-stone-50' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>Out of Stock</button>
 			</div>
 			{#if selectionMode}
@@ -308,7 +306,7 @@
 						<div class="mt-4 mb-1 flex items-center gap-3 px-4">
 							<h2 class="flex-1 text-xs font-semibold uppercase tracking-wider text-stone-400">{group.label}</h2>
 							<span class="w-8 shrink-0"></span>
-							{#if activeStatus === 'done'}
+							{#if pf.activeStatus === 'done'}
 							<span class="w-8 shrink-0"></span>
 							<span class="w-8 shrink-0"></span>
 							<span class="w-8 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wider text-stone-400">Out</span>

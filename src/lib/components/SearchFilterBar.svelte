@@ -4,13 +4,15 @@
 	import { ListFilter, X } from 'lucide-svelte';
 
 	let {
-		search = $bindable(''),
+		search = '',
+		onsearch,
 		placeholder = 'Search…',
 		activeFilterCount = 0,
 		onClearFilters,
 		filterOptions
 	}: {
 		search?: string;
+		onsearch?: (v: string) => void;
 		placeholder?: string;
 		activeFilterCount?: number;
 		onClearFilters: () => void;
@@ -38,7 +40,8 @@
 		<input
 			type="text"
 			bind:this={searchEl}
-			bind:value={search}
+			value={search}
+			oninput={(e) => onsearch?.(e.currentTarget.value)}
 			onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); searchEl?.blur(); } }}
 			{placeholder}
 			autocomplete="off"
@@ -47,7 +50,7 @@
 		{#if search}
 			<button
 				type="button"
-				onclick={() => (search = '')}
+				onclick={() => onsearch?.('')}
 				class="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
 				aria-label="Clear search"
 			>

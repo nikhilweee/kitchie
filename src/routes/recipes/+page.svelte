@@ -6,8 +6,8 @@
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import { createToast } from '$lib/toast.svelte';
-	import { createSort } from '$lib/sort.svelte';
 	import { RECIPE_COURSE_LABELS, RECIPE_COURSES, type RecipeCourse } from '$lib/recipe-course';
+	import { rf, recipesSort, syncRecipesSort, resetRecipesFilters, type RecipesSortField } from '$lib/recipes-filters.svelte';
 	import PrepTimePicker, { PREP_TIME_LABELS } from '$lib/components/PrepTimePicker.svelte';
 	import ListRow from '$lib/components/ListRow.svelte';
 	import SearchFilterBar from '$lib/components/SearchFilterBar.svelte';
@@ -18,40 +18,36 @@
 
 	type Recipe = PageData['recipes'][0];
 
-	let search = $state('');
-	let activeMealTypes = $state<Set<RecipeCourse>>(new Set());
-	let activeCuisines = $state<Set<string>>(new Set());
+	const s = recipesSort;
 
-	function toggleMealType(t: RecipeCourse) {
-		const next = new Set(activeMealTypes);
-		if (next.has(t)) next.delete(t); else next.add(t);
-		activeMealTypes = next;
-	}
-
-	function toggleCuisine(id: string) {
-		const next = new Set(activeCuisines);
-		if (next.has(id)) next.delete(id); else next.add(id);
-		activeCuisines = next;
-	}
-
-	type SortField = 'name' | 'prep' | 'recent' | 'course';
-	const s = createSort<SortField>('course', 'asc', (f) => f === 'recent' ? 'desc' : 'asc');
-
-	const SORT_FIELDS: { field: SortField; label: string }[] = [
+	const SORT_FIELDS: { field: RecipesSortField; label: string }[] = [
 		{ field: 'course', label: 'Course' },
 		{ field: 'name',   label: 'Name' },
 		{ field: 'prep',   label: 'Prep time' },
 		{ field: 'recent', label: 'Recent' },
 	];
 
-	const activeFilterCount = $derived(activeCuisines.size);
+	// Sync sort changes back to localStorage
+	$effect(() => syncRecipesSort(recipesSort.by, recipesSort.dir));
+
+	function toggleMealType(t: RecipeCourse) {
+		const types = rf.activeMealTypes;
+		rf.activeMealTypes = types.includes(t) ? types.filter((x) => x !== t) : [...types, t];
+	}
+
+	function toggleCuisine(id: string) {
+		const cuisines = rf.activeCuisines;
+		rf.activeCuisines = cuisines.includes(id) ? cuisines.filter((x) => x !== id) : [...cuisines, id];
+	}
+
+	const activeFilterCount = $derived(rf.activeCuisines.length);
 	const anyRecipes = $derived(data.recipes.length > 0);
 
 	const filteredBase = $derived(
 		data.recipes.filter((r) => {
-			if (search.trim() && !r.name.toLowerCase().includes(search.trim().toLowerCase())) return false;
-			if (activeMealTypes.size > 0 && !activeMealTypes.has(r.mealType as RecipeCourse)) return false;
-			if (activeCuisines.size > 0 && !activeCuisines.has(r.cuisine ?? '')) return false;
+			if (rf.search.trim() && !r.name.toLowerCase().includes(rf.search.trim().toLowerCase())) return false;
+			if (rf.activeMealTypes.length > 0 && !rf.activeMealTypes.includes(r.mealType as RecipeCourse)) return false;
+			if (rf.activeCuisines.length > 0 && !rf.activeCuisines.includes(r.cuisine ?? '')) return false;
 			return true;
 		})
 	);
@@ -108,10 +104,11 @@
 <PageShell title="Recipes" mainClass="px-4 py-4 pb-36">
 		{#if anyRecipes}
 			<SearchFilterBar
-				bind:search
+				search={rf.search}
+				onsearch={(v) => (rf.search = v)}
 				placeholder="Search recipes…"
 				activeFilterCount={activeFilterCount}
-				onClearFilters={() => { s.by = 'course'; s.dir = 'asc'; activeCuisines = new Set(); activeMealTypes = new Set(); }}
+				onClearFilters={resetRecipesFilters}
 			>
 				{#snippet filterOptions()}
 					<div class="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Sort</div>
@@ -128,7 +125,7 @@
 					<div class="max-h-48 overflow-y-auto">
 						{#each data.cuisines as c (c.id)}
 							<label class="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-stone-50">
-								<input type="checkbox" checked={activeCuisines.has(c.id)} onchange={() => toggleCuisine(c.id)} class="accent-orange-500" />
+								<input type="checkbox" checked={rf.activeCuisines.includes(c.id)} onchange={() => toggleCuisine(c.id)} class="accent-orange-500" />
 								<span class="text-sm text-stone-700">{c.name}</span>
 							</label>
 						{/each}
@@ -138,13 +135,13 @@
 			<div class="mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
 				{#each RECIPE_COURSES as t (t)}
 					<button type="button" onclick={() => toggleMealType(t)}
-						class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {activeMealTypes.has(t) ? 'border-stone-800 bg-stone-800 text-white dark:bg-stone-500 dark:border-stone-500 dark:text-stone-950' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
+						class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {rf.activeMealTypes.includes(t) ? 'border-stone-800 bg-stone-800 text-white dark:bg-stone-500 dark:border-stone-500 dark:text-stone-950' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 					>{RECIPE_COURSE_LABELS[t]}</button>
 				{/each}
 			</div>
 		{/if}
 		{#if filteredRecipes.length === 0}
-			{#if search.trim() || activeMealTypes.size > 0 || activeCuisines.size > 0}
+			{#if rf.search.trim() || rf.activeMealTypes.length > 0 || rf.activeCuisines.length > 0}
 				<EmptyState icon={Search} heading="No matches" detail="Try a different search or filter." />
 			{:else}
 				<EmptyState icon={ChefHat} heading="No recipes yet" detail="Save a recipe to pre-fill ingredients when logging meals." />

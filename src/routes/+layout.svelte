@@ -5,6 +5,8 @@
 	import type { LayoutData } from './$types';
 	import { Utensils, ChefHat, ShoppingBasket, ShoppingCart } from 'lucide-svelte';
 	import KeyboardShortcutsModal from '$lib/components/KeyboardShortcutsModal.svelte';
+	import { resetPantryFilters } from '$lib/pantry-filters.svelte';
+	import { resetRecipesFilters } from '$lib/recipes-filters.svelte';
 
 	let { children, data }: { children: any; data: LayoutData } = $props();
 
@@ -16,6 +18,11 @@
 	];
 
 	let shortcutsOpen = $state(false);
+	let lastCartsPath = $state('/carts');
+
+	$effect(() => {
+		if (page.url.pathname.startsWith('/carts')) lastCartsPath = page.url.pathname;
+	});
 </script>
 
 <svelte:window onkeydown={(e) => {
@@ -39,7 +46,11 @@
 					item.href === '/' ? page.url.pathname === '/meals' : page.url.pathname.startsWith(item.href)}
 				<li class="flex-1">
 					<a
-						href={item.href}
+						href={item.href === '/carts' ? (active ? '/carts' : lastCartsPath) : item.href}
+						onclick={active ? () => {
+							if (item.href === '/pantry') resetPantryFilters();
+							if (item.href === '/recipes') resetRecipesFilters();
+						} : undefined}
 						class="flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors {active
 							? 'text-orange-500'
 							: 'text-stone-400 hover:text-stone-600'}"
