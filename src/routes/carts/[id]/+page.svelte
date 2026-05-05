@@ -239,7 +239,7 @@
 
 <!-- FAB: Checkout when items are picked up -->
 {#if shoppedItems.length > 0}
-	<div class="fixed bottom-14 left-0 right-0 z-10 px-4 pb-2 transition-transform duration-200 {fabHidden ? 'translate-y-28' : ''}">
+	<div class="fixed left-0 right-0 z-10 px-4 pb-2 transition-transform duration-200 {fabHidden ? 'translate-y-28' : ''}" style="bottom: calc(3.5rem + env(safe-area-inset-bottom))">
 		<div class="mx-auto w-full max-w-lg">
 			<form method="POST" action="?/finish" use:enhance={() => async ({ update }) => {
 				await update({ reset: false });

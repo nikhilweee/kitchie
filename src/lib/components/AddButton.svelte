@@ -33,9 +33,10 @@
 <svelte:window onkeydown={onKeydown} />
 
 <div
-	class="fixed bottom-14 left-0 right-0 z-10 flex justify-center px-4 pb-2 transition-transform duration-200 {hidden
+	class="fixed left-0 right-0 z-10 flex justify-center px-4 pb-2 transition-transform duration-200 {hidden
 		? 'translate-y-28'
 		: ''}"
+	style="bottom: calc(3.5rem + env(safe-area-inset-bottom))"
 >
 	<button
 		{onclick}

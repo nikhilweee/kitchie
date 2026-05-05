@@ -329,7 +329,7 @@
 {/if}
 
 {#if selectionMode && selectedIds.size > 0}
-		<div class="fixed bottom-14 left-0 right-0 z-10 px-4 pb-2">
+		<div class="fixed left-0 right-0 z-10 px-4 pb-2" style="bottom: calc(3.5rem + env(safe-area-inset-bottom))">
 			<div class="mx-auto flex w-full max-w-lg items-center gap-2">
 				<form method="POST" action="?/bulkConsume" use:enhance={() => async ({ update }) => {
 					const count = selectedIds.size;
