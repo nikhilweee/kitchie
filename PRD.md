@@ -1,142 +1,141 @@
 # Kitchie: Product Requirements Document
 
-**Version:** 1.2  
-**Date:** 2026-04-17  
+**Version:** 2.0
+**Date:** 2026-05-06
 **Status:** Active
+
+This document is a living feature inventory. Checked items have shipped and are verified by a Playwright test in [specs/](specs/) (referenced spec IDs in parentheses). Unchecked items are planned or aspirational.
 
 ---
 
 ## 1. Purpose
 
-Kitchie is a self-hosted personal meal logging and pantry management web app. The core loop: log what you ate → update pantry → app learns your patterns → suggests what to make next.
-
----
+Kitchie is a self-hosted personal meal logging and pantry management web app. Core loop: log what you ate → update pantry → app learns your patterns → suggests what to make next.
 
 ## 2. Users
 
-Single user or small number of known users (family/household). Not a public SaaS. Authentication is required because the app is exposed to the internet.
+Single user or small household. Not a public SaaS. All routes require authentication; accounts are pre-created by an admin.
 
----
+## 3. Stack
 
-## 3. Goals
-
-| Priority | Goal |
-|----------|------|
-| P0 | Log meals quickly from a phone |
-| P0 | Track pantry inventory with cancellable depletion after meal log |
-| P1 | Bulk pantry entry after a shopping trip |
-| P1 | Smart expiry estimation per item type |
-| P2 | Recipes: saved ingredient lists per meal, used to pre-fill pantry update |
-| P2 | Meal suggestions based on history and pantry contents |
+- SvelteKit 2 + Svelte 5 (runes), mobile-first responsive web
+- Tailwind CSS v4
+- SQLite via Drizzle ORM, single file on a Docker volume
+- Custom session auth + bcrypt; no public registration
+- Playwright end-to-end tests
+- Ships as a Docker image; TLS handled by Nginx Proxy Manager outside the Compose stack
 
 ---
 
 ## 4. Features
 
-### 4.1 Meal Logging
+### 4.1 Auth
 
-The meal logging flow has two sequential steps.
+- [x] Login with username + password creates a session and redirects to the app (AUTH-001)
+- [x] Invalid credentials show an inline error (AUTH-002)
+- [x] Unauthenticated requests redirect to `/login` (AUTH-003)
+- [x] Logout clears the session and returns to login (AUTH-004)
+- [x] Profile: update display name, username (must be unique), and password (min 8 chars, current password required) (AUTH-005, AUTH-006, AUTH-007)
+- [x] Change-password page does not create a back-history loop (AUTH-008)
 
-**Step 1 — Log the meal:**
-- **Log view** is the default home screen. A prominent "Add Meal" CTA is always visible at the bottom.
-- Tapping opens a **bottom sheet** with a single-line text input for the meal name.
-- As the user types, the app shows suggestions for matching past meals (by name). Suggestions also appear proactively before the user starts typing. The dropdown is absolutely positioned so it does not shift the form layout.
-- The sheet also includes a **datetime-local field** (date + time) and a **meal type selector** (breakfast / lunch / dinner / snack). Meal type is auto-inferred from the time of day but can be overridden.
-- User selects a suggestion or types a new name, sets the datetime and meal type, and saves.
-- Meal entry is created: name, meal type, logged timestamp.
-- Tap any logged entry to edit name, datetime, or meal type. Delete via the edit sheet or the ✕ button on the list row.
+### 4.2 Meals
 
-**Step 2 — Update pantry (automatic, cancellable):**
-- Immediately after saving, the app shows the pantry update sheet — no separate prompt.
-- **Ingredient selection is search-based:** the sheet shows a list of already-selected ingredients (pre-populated from keyword matches and, in the future, the meal's saved recipe) and a search input to find more pantry items by name.
-- Each selected ingredient has a quantity-used field. The user can remove any pre-selected item or add more from the search.
-- User confirms by tapping "Update pantry" or skips entirely. Confirmed items are decremented from pantry inventory.
+- [x] Log a meal with name, datetime, and meal type (MEAL-001)
+- [x] Meal type auto-inferred from time of day; user can override (MEAL-002)
+- [x] Name input autocompletes from past meals and saved recipes (MEAL-003)
+- [x] "Update pantry" toggle redirects to the pantry update step after logging (MEAL-004)
+- [x] Confirming the pantry update step writes updated quantities and logs `meal_ingredients` in a single action (PANT-009)
+- [x] Edit name / datetime / meal type, or delete a logged meal (MEAL-005, MEAL-006)
+- [x] Log view groups entries by day, most recent first (MEAL-007)
+- [x] `/meals?edit=<id>` deep-links straight to the edit sheet (MEAL-008)
+- [x] Edit sheet shows a tappable recipe link when a recipe is associated (MEAL-009)
 
-Each meal entry stores: name, meal type, logged timestamp, and (if step 2 completed) which pantry items were consumed with quantity.
+### 4.3 Pantry
 
-### 4.2 Pantry Management
+- [x] Add items with name, category, quantity type (count or estimate), quantity, unit, purchase date, expiry date (PANT-001)
+- [x] Name-first inference: category, quantity type, and expiry are auto-filled from the item name; user can override any field (PANT-002, PANT-003)
+- [x] Edit / soft-delete (Trash) / permanently delete with two-tap confirmation (PANT-004, PANT-005, PANT-017, PANT-018)
+- [x] Filter by text search, status chips (Expiring soon, Running low, Out of Stock), and category (PANT-006, PANT-007, PANT-016)
+- [x] Sort by name (letter headers), category, or expiry (time-bucket headers) (PANT-011, PANT-012, PANT-013)
+- [x] qty=0 auto-finishes an item (it moves to Out of Stock); qty>0 restores it (PANT-014, PANT-015, PANT-020, PANT-021)
+- [x] Edit sheet "Consumed" button finishes the item directly (PANT-025, PANT-026)
+- [x] Bulk select via long-press → consume / add to cart / permanently delete (PANT-022, PANT-023, PANT-024)
+- [x] In the meal pantry update step, each picker initialises to the item's current stock value; free-text entries with no match create a new item (finished if qty=0) (PANT-008, PANT-010, PANT-021)
+- [x] Filter selection persists across navigation; tapping the active Pantry tab resets it (PANT-027, PANT-028)
+- [x] `/pantry?edit=<id>` deep-links straight to the edit sheet (PANT-019)
 
-- **Item entry:** name, category, quantity, purchase date, expiry date — all accessible from a bottom sheet. Tapping an item in the list opens the edit sheet.
-- **Name-first UX:** category, quantity type, and expiry are auto-inferred from the item name as the user types. The user can override any inferred value; manual edits are locked so inference does not overwrite them mid-typing.
-- **Quantity tracking:** item-type-aware.
-  - Countable items (eggs, bananas, cans) → numeric count.
-  - Bulk/liquid items (milk, flour, olive oil) → fuzzy estimate (full / ~half / low).
-  - Detection is heuristic on item name; user can override the quantity mode per item.
-  - Quantity is decremented when step 2 of meal logging is completed.
-- **Smart expiry:** app estimates expiry from item category and purchase date. Default TTLs by category: fresh produce 5–7 days, fresh meat/fish 2–3 days, dairy 7–14 days, cooked leftovers 3–5 days, bread/bakery 5–7 days, frozen 90 days, dry goods 365 days, canned goods 730 days, condiments 180 days, packaged snacks 90 days. User can override per item.
-- **Pantry view surfaces:** items expiring within 3 days, items running low, and the rest of the inventory.
+### 4.4 Recipes
 
-### 4.3 Recipes *(planned — not yet built)*
+- [x] After the pantry update step, ingredients are auto-saved as a recipe named after the meal (RECP-001)
+- [x] Duplicate-name auto-save is skipped (RECP-002)
+- [x] If logging an existing recipe with different ingredients, user is offered an "update recipe" prompt (RECP-003)
+- [x] Manual edit of name, course, and ingredient list; delete (RECP-006, RECP-007)
+- [x] Optional cuisine and prep time (Quick / Easy / Medium / Long) (RECP-009, RECP-011)
+- [x] Filter by name, course, or cuisine; sort by prep time or name (RECP-004, RECP-005, RECP-009, RECP-011)
+- [x] Default view groups by course (Breakfast, Main Course, Snack, Dessert) (RECP-012)
+- [x] Selecting a recipe suggestion when logging pre-populates the pantry update step with the recipe's ingredients (RECP-008)
+- [x] `/recipes?edit=<id>` deep-links straight to the edit sheet (RECP-010)
 
-- A **recipe** is a saved collection of pantry items (with quantities) associated with a meal name.
-- When a user logs a meal in step 1, step 2 pre-populates the ingredient list from the saved recipe for that meal name, in addition to any keyword matches.
-- A dedicated **Recipes tab** will let the user view and edit recipes.
-- Schema: `recipes` table (id, userId, name) + `recipe_items` table (recipeId, pantryItemId, itemName, defaultQuantity). The per-log `mealIngredients` table remains separate.
+### 4.5 Carts
 
-### 4.4 Meal Suggestions
+- [x] Create / rename / delete carts (CART-001, CART-003, CART-004, CART-011)
+- [x] Inline search adds existing pantry items; free-text "Add X" creates a new item (CART-002, CART-009)
+- [x] Mark items picked up; checkout writes them to the pantry and clears the cart (CART-006, CART-007)
+- [x] Per-cart shopped/total progress counter on the list page (CART-008)
+- [x] Tapping a cart row navigates to its detail page (CART-010)
+- [x] Carts tab remembers the last-viewed cart; tapping the active tab returns to the list (CART-012)
+- [x] Bulk add selected pantry items to a chosen cart (PANT-023)
+- [x] Remove an individual item from a cart with the X button (CART-005)
 
-- Suggestions appear proactively on the log screen before the user starts typing, based on time of day and recent history. They refine as the user types.
-- Suggestion signals:
-  - Past meal frequency and recency
-  - Time of day (breakfast vs. dinner patterns)
-  - Current pantry contents (prioritize meals using available items)
-- v1 is rule-based. Architecture must allow plugging in an external LLM/ML service later.
+### 4.6 Settings
 
-### 4.5 Authentication
+- [x] Hamburger menu on Meals / Pantry / Recipes opens a sidebar with Categories, Cuisines, Display links (SETT-001)
+- [x] Custom pantry categories with editable shelf life (TTL); appear in the category dropdown (SETT-002, SETT-003)
+- [x] Categories in use cannot be deleted; unused ones can (SETT-004, SETT-005)
+- [x] Custom cuisines; appear in the recipe cuisine dropdown (SETT-006, SETT-007)
+- [x] Cuisines in use cannot be deleted; unused ones can (SETT-008, SETT-010)
+- [x] Display: Comfortable / Slim density toggle, persisted via localStorage (SETT-009)
+- [x] Display: Light / Dark theme toggle, persisted via localStorage (SETT-011)
 
-- Simple custom session auth: cookie-based sessions, username + bcrypt-hashed password.
-- No third-party auth library required.
-- No public registration — accounts are pre-created by the admin.
-- All routes require authentication. Unauthenticated requests redirect to login.
+### 4.7 Suggestions
 
----
+- [x] Meal-name autocomplete from past meals and saved recipes (MEAL-003)
+- [ ] Pantry-aware suggestions: prioritise meals whose ingredients are currently in stock
+- [ ] Time-of-day weighting beyond meal-type inference (e.g. learn breakfast vs. dinner patterns)
+- [ ] LLM/ML-backed suggestion service behind the existing service boundary
 
-## 5. Technical Requirements
+### 4.8 Future
 
-| Requirement | Spec |
-|-------------|------|
-| Deployment | Docker Compose on a VPS |
-| Frontend | Responsive web app; mobile-first; SvelteKit 2.x + Svelte 5 (runes) |
-| Backend | SvelteKit server routes + form actions |
-| Database | SQLite via Drizzle ORM; single file on a Docker volume |
-| Auth | Custom session auth + bcrypt; no open registration |
-| TLS | Nginx Proxy Manager on the VPS handles TLS (not managed inside Compose) |
-| Suggestion interface | Abstracted behind a service boundary for future AI swap-in |
-
-### 5.1 Docker Compose
-
-Compose file defines:
-- `app` service (SvelteKit app, not publicly exposed on standard ports)
-- SQLite database file on a named Docker volume
-
-TLS and public-facing ingress are handled by Nginx Proxy Manager running separately on the VPS.
-
-### 5.2 Responsive / Mobile-First
-
-- Meal logging flow (both steps) must be fully usable one-handed on a phone.
-- Bottom sheet pattern used for all add/edit forms.
-- Absolute-positioned suggestion dropdowns so form layout does not shift as results appear.
-- No native app; browser only.
+- [ ] Recipe step-by-step instructions (currently only an ingredient list is stored)
+- [ ] Recipe import from URL or text paste
+- [ ] Push notifications for items expiring soon
 
 ---
 
-## 6. Data Model
+## 5. Schema
 
-**User** — id, username, password_hash, created_at  
-**Session** — id, user_id, expires_at, created_at  
-**MealEntry** — id, user_id, name, meal_type (breakfast|lunch|dinner|snack), logged_at  
-**MealIngredient** — id, meal_entry_id, pantry_item_id, item_name (snapshot), quantity_used *(created in step 2; absent if skipped)*  
-**PantryItem** — id, user_id, name, category, quantity_type (count|estimate), quantity, purchase_date, expiry_date, expiry_overridden  
-**Recipe** *(planned)* — id, user_id, name  
-**RecipeItem** *(planned)* — id, recipe_id, pantry_item_id, item_name, default_quantity
+Current Drizzle schema lives in [src/lib/server/db/schema.ts](src/lib/server/db/schema.ts):
+
+| Table                 | Purpose                                                         |
+| --------------------- | --------------------------------------------------------------- |
+| `users`               | Account: id, username, password_hash, name                      |
+| `sessions`            | Session cookie store                                            |
+| `pantry_items`        | Inventory; status is `active` / `finished` / `trashed`          |
+| `user_categories`     | Per-user pantry categories with TTL                             |
+| `meal_entries`        | Logged meals; optional `recipe_id` link                         |
+| `meal_ingredients`    | Snapshot of ingredients consumed for a meal entry               |
+| `recipes`             | Saved meal → ingredient list, with course / cuisine / prep time |
+| `recipe_items`        | Ingredients per recipe                                          |
+| `user_cuisines`       | Per-user cuisine list                                           |
+| `shopping_lists`      | Carts                                                           |
+| `shopping_list_items` | Items in a cart, with `shopped` flag                            |
 
 ---
 
-## 7. Out of Scope (v1)
+## 6. Deferred
 
 - Barcode scanning
 - Receipt / image OCR
 - Shared household pantries (multi-user pantry access)
 - Nutritional tracking (calories, macros)
-- Shopping list generation
-- Full recipe storage with step-by-step instructions
+- Native mobile apps (browser only)

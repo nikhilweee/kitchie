@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npx eslint *)",
-      "Bash(npx playwright *)"
+      "Bash(npx playwright *)",
+      "Bash(npx prettier *)"
     ]
   }
 }
