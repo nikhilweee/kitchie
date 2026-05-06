@@ -20,7 +20,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		.orderBy(pantryItems.name);
 
 	const recipeId = meal.recipeId;
-	let pantrySuggestions: Array<{ item: typeof pantryItems.$inferSelect; suggested: boolean }> = [];
+	let pantrySuggestions: Array<{ item: typeof pantryItems.$inferSelect; suggested: boolean }>;
 	let originalRecipeItems: Array<{ itemName: string; pantryItemId: string | null }> = [];
 
 	if (recipeId) {

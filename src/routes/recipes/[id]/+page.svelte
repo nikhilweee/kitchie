@@ -8,23 +8,27 @@
 	import { RECIPE_COURSE_LABELS, RECIPE_COURSES, type RecipeCourse } from '$lib/recipe-course';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import { X } from 'lucide-svelte';
+	import { untrack } from 'svelte';
+	import { resolve } from '$app/paths';
 
 	let { data }: { data: PageData } = $props();
 
 	const recipe = $derived(data.recipe);
 
-	let nameInput = $state(recipe.name);
-	let mealTypeInput = $state<RecipeCourse | ''>((recipe.mealType as RecipeCourse) ?? '');
-	let cuisineInput = $state(recipe.cuisine ?? '');
-	let prepTimeInput = $state<number | null>(recipe.prepTime ?? null);
+	let nameInput = $state(untrack(() => recipe.name));
+	let mealTypeInput = $state<RecipeCourse | ''>(untrack(() => (recipe.mealType as RecipeCourse) ?? ''));
+	let cuisineInput = $state(untrack(() => recipe.cuisine ?? ''));
+	let prepTimeInput = $state<number | null>(untrack(() => recipe.prepTime ?? null));
 
 	type DraftItem = { pantryItemId: string | null; itemName: string; quantity: string };
 	let draftItems = $state<DraftItem[]>(
-		recipe.items.map((i) => ({
-			pantryItemId: i.pantryItemId ?? null,
-			itemName: i.itemName,
-			quantity: i.quantity ?? ''
-		}))
+		untrack(() =>
+			recipe.items.map((i) => ({
+				pantryItemId: i.pantryItemId ?? null,
+				itemName: i.itemName,
+				quantity: i.quantity ?? ''
+			}))
+		)
 	);
 	let ingredientSearch = $state('');
 
@@ -82,7 +86,7 @@
 		use:enhance={() => async ({ result, update }) => {
 			await update({ reset: false });
 			if (result.type === 'success') {
-				goto('/recipes?toast=Recipe+updated');
+				goto(resolve('/recipes?toast=Recipe+updated'));
 			}
 		}}
 	>

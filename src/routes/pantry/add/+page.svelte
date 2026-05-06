@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 	import type { QuantityType } from '$lib/server/db/schema';
 	import PageShell from '$lib/components/PageShell.svelte';
@@ -138,7 +139,7 @@
 		use:enhance={() => async ({ result, update }) => {
 			await update({ reset: false });
 			if (result.type === 'success') {
-				goto('/pantry?toast=Added+to+pantry');
+				goto(resolve('/pantry?toast=Added+to+pantry'));
 			}
 		}}
 	>
@@ -162,7 +163,7 @@
 						<li>
 							<button
 								type="button"
-								onmousedown={() => goto(`/pantry/${item.id}`)}
+								onmousedown={() => goto(resolve('/pantry/[id]', { id: item.id }))}
 								class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
 							>
 								<span class="flex-1 font-medium">{item.name}</span>

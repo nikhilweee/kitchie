@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import type { PageData } from './$types';
 	import { daysUntilExpiry } from '$lib/expiry';
@@ -37,7 +38,8 @@
 	}
 
 	function toggleItem(id: string) {
-		selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id);
+		if (selectedIds.has(id)) selectedIds.delete(id);
+		else selectedIds.add(id);
 	}
 
 	function toggleSelectAll() {
@@ -325,7 +327,7 @@
 </PageShell>
 
 {#if !selectionMode}
-	<AddButton label="Add to Pantry" onclick={() => goto('/pantry/add')} />
+	<AddButton label="Add to Pantry" onclick={() => goto(resolve('/pantry/add'))} />
 {/if}
 
 {#if selectionMode && selectedIds.size > 0}
@@ -337,7 +339,7 @@
 					toast.show(`${count} item${count !== 1 ? 's' : ''} finished`);
 					exitSelection();
 				}} class="contents">
-					{#each [...selectedIds] as id}
+					{#each [...selectedIds] as id (id)}
 						<input type="hidden" name="id" value={id} />
 					{/each}
 					<button type="submit"
@@ -355,7 +357,7 @@
 					toast.show(`${count} item${count !== 1 ? 's' : ''} deleted`);
 					exitSelection();
 				}} class="contents">
-					{#each [...selectedIds] as id}
+					{#each [...selectedIds] as id (id)}
 						<input type="hidden" name="id" value={id} />
 					{/each}
 					<button type="submit" aria-label="Delete selected"
@@ -382,7 +384,7 @@
 							listPickerOpen = false;
 							exitSelection();
 						}}>
-						{#each [...selectedIds] as id}
+						{#each [...selectedIds] as id (id)}
 							<input type="hidden" name="pantryItemId" value={id} />
 						{/each}
 						<button type="submit"
@@ -412,7 +414,7 @@
 					onpointerdown={() => startLongPress(item.id)}
 					onpointerup={cancelLongPress}
 					onpointerleave={cancelLongPress}
-					onclick={() => selectionMode ? toggleItem(item.id) : goto(`/pantry/${item.id}`)}
+					onclick={() => selectionMode ? toggleItem(item.id) : goto(resolve('/pantry/[id]', { id: item.id }))}
 					class="min-w-0 flex-1 text-left"
 				>
 					<p class="truncate font-medium text-stone-900 density-text">{item.name}</p>

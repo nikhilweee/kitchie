@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import FormActions from '$lib/components/FormActions.svelte';
@@ -81,7 +82,7 @@
 		use:enhance={() => async ({ result, update }) => {
 			await update({ reset: false });
 			if (result.type === 'success') {
-				goto('/recipes?toast=Recipe+saved');
+				goto(resolve('/recipes?toast=Recipe+saved'));
 			}
 		}}
 	>
@@ -106,7 +107,7 @@
 						<li>
 							<button
 								type="button"
-								onmousedown={() => goto(`/recipes/${recipe.id}`)}
+								onmousedown={() => goto(resolve('/recipes/[id]', { id: recipe.id }))}
 								class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-stone-700 hover:bg-stone-100"
 							>
 								<span class="flex-1 font-medium">{recipe.name}</span>

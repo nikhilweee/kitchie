@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import type { PageData } from './$types';
 	import PageShell from '$lib/components/PageShell.svelte';
@@ -74,7 +75,7 @@
 				faded={draggedId === cat.id}
 			>
 				<GripVertical class="h-4 w-4 shrink-0 cursor-grab text-stone-300 active:cursor-grabbing" />
-				<button type="button" onclick={() => goto(`/settings/categories/${cat.id}`)} class="min-w-0 flex-1 text-left">
+				<button type="button" onclick={() => goto(resolve('/settings/categories/[id]', { id: cat.id }))} class="min-w-0 flex-1 text-left">
 					<p class="text-sm font-medium text-stone-900 density-text">{cat.name}</p>
 					<p class="text-xs text-stone-400 density-hide">{cat.ttlDays} day shelf life</p>
 				</button>
@@ -86,5 +87,5 @@
 	</ul>
 </PageShell>
 
-<AddButton label="Add category" onclick={() => goto('/settings/categories/add')} />
+<AddButton label="Add category" onclick={() => goto(resolve('/settings/categories/add'))} />
 <Toast message={toast.message} />

@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 	import SmallEstimatePicker from '$lib/components/SmallEstimatePicker.svelte';
 	import SmallCountPicker from '$lib/components/SmallCountPicker.svelte';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import { clickOutside } from '$lib/actions/click-outside';
 	import { X } from 'lucide-svelte';
+	import { untrack } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -19,14 +21,16 @@
 
 	let flowStep = $state<'pantryUpdate' | 'recipeAction'>('pantryUpdate');
 	let pantrySelected = $state<PantrySelection[]>(
-		data.pantrySuggestions
-			.filter((s) => s.suggested)
-			.map((s) => ({
-				pantryItemId: s.item.id,
-				itemName: s.item.name,
-				quantityType: s.item.quantityType as 'count' | 'estimate',
-				newQuantity: s.item.quantity
-			}))
+		untrack(() =>
+			data.pantrySuggestions
+				.filter((s) => s.suggested)
+				.map((s) => ({
+					pantryItemId: s.item.id,
+					itemName: s.item.name,
+					quantityType: s.item.quantityType as 'count' | 'estimate',
+					newQuantity: s.item.quantity
+				}))
+		)
 	);
 	let pantrySearch = $state('');
 
@@ -107,7 +111,7 @@
 			if (flowStep === 'recipeAction') {
 				flowStep = 'pantryUpdate';
 			} else {
-				goto('/meals');
+				goto(resolve('/meals'));
 			}
 		}
 	}
@@ -201,7 +205,7 @@
 			</div>
 
 			<div class="mt-4 flex gap-2">
-				<a href="/meals" class="flex-1 rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-50 density-sheet-btn">Skip</a>
+				<a href={resolve('/meals')} class="flex-1 rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-50 density-sheet-btn">Skip</a>
 				<button
 					type="button"
 					onclick={onFlowNext}

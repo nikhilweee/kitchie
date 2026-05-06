@@ -2,13 +2,14 @@
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/state';
+	import type { Snippet } from 'svelte';
 	import type { LayoutData } from './$types';
 	import { Utensils, ChefHat, ShoppingBasket, ShoppingCart } from 'lucide-svelte';
 	import KeyboardShortcutsModal from '$lib/components/KeyboardShortcutsModal.svelte';
 	import { resetPantryFilters } from '$lib/pantry-filters.svelte';
 	import { resetRecipesFilters } from '$lib/recipes-filters.svelte';
 
-	let { children, data }: { children: any; data: LayoutData } = $props();
+	let { children, data }: { children: Snippet; data: LayoutData } = $props();
 
 	const navItems = [
 		{ href: '/meals', label: 'Meals', icon: Utensils },
@@ -45,8 +46,8 @@
 				{@const active =
 					item.href === '/' ? page.url.pathname === '/meals' : page.url.pathname.startsWith(item.href)}
 				<li class="flex-1">
-					<a
-						href={item.href === '/carts' ? (active ? '/carts' : lastCartsPath) : item.href}
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a href={item.href === '/carts' ? (active ? '/carts' : lastCartsPath) : item.href}
 						onclick={active ? () => {
 							if (item.href === '/pantry') resetPantryFilters();
 							if (item.href === '/recipes') resetRecipesFilters();

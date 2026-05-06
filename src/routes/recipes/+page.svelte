@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import PageShell from '$lib/components/PageShell.svelte';
 	import AddButton from '$lib/components/AddButton.svelte';
@@ -8,7 +9,7 @@
 	import { createToast } from '$lib/toast.svelte';
 	import { RECIPE_COURSE_LABELS, RECIPE_COURSES, type RecipeCourse } from '$lib/recipe-course';
 	import { rf, recipesSort, syncRecipesSort, resetRecipesFilters, type RecipesSortField } from '$lib/recipes-filters.svelte';
-	import PrepTimePicker, { PREP_TIME_LABELS } from '$lib/components/PrepTimePicker.svelte';
+	import { PREP_TIME_LABELS } from '$lib/components/PrepTimePicker.svelte';
 	import ListRow from '$lib/components/ListRow.svelte';
 	import SearchFilterBar from '$lib/components/SearchFilterBar.svelte';
 	import type { PageData } from './$types';
@@ -155,7 +156,7 @@
 				<ul class="mb-2 space-y-2">
 					{#each group.recipes as recipe (recipe.id)}
 						<ListRow>
-							<button type="button" onclick={() => goto(`/recipes/${recipe.id}`)} class="min-w-0 flex-1 text-left">
+							<button type="button" onclick={() => goto(resolve('/recipes/[id]', { id: recipe.id }))} class="min-w-0 flex-1 text-left">
 								<p class="truncate font-medium text-stone-900 density-text">{recipe.name}</p>
 								<p class="text-xs text-stone-400 density-hide">
 									{recipe.items.length === 0 ? 'No ingredients' : recipe.items.map((i) => i.itemName).join(', ')}
@@ -177,4 +178,4 @@
 		{/if}
 </PageShell>
 
-<AddButton label="Add Recipe" onclick={() => goto('/recipes/add')} />
+<AddButton label="Add Recipe" onclick={() => goto(resolve('/recipes/add'))} />

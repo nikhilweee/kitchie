@@ -1,12 +1,14 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 	import PageShell from '$lib/components/PageShell.svelte';
 
 	let { data }: { data: PageData } = $props();
 
-	let nameInput = $state(data.list.name);
+	let nameInput = $state(untrack(() => data.list.name));
 
 	function onKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') history.back();
@@ -30,7 +32,7 @@
 		action="/carts?/rename"
 		use:enhance={() => async ({ result, update }) => {
 			await update({ reset: false });
-			if (result.type === 'success') goto('/carts');
+			if (result.type === 'success') goto(resolve('/carts'));
 		}}
 	>
 		<input type="hidden" name="id" value={data.list.id} />
@@ -54,7 +56,7 @@
 			class="contents"
 			use:enhance={() => async ({ update }) => {
 				await update({ reset: false });
-				goto('/carts');
+				goto(resolve('/carts'));
 			}}
 		>
 			<input type="hidden" name="id" value={data.list.id} />

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import { untrack } from 'svelte';
 	import type { PageData } from './$types';
 	import PageHeader from '$lib/components/PageHeader.svelte';
@@ -73,7 +74,7 @@
 
 		<div class="mt-4 space-y-3">
 			<a
-				href="/profile/password"
+				href={resolve('/profile/password')}
 				class="block w-full rounded-xl border border-stone-300 py-3 text-center text-sm font-medium text-stone-600 hover:bg-stone-100"
 			>
 				Change password

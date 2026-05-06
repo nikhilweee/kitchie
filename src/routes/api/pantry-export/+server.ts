@@ -39,7 +39,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 	const BUCKETS = [
 		{ label: 'Expired',           test: (d: number) => d < 0  },
 		{ label: 'Expires This Week', test: (d: number) => d <= 7  },
-		{ label: 'Expires Later',     test: (_: number) => true    },
+		{ label: 'Expires Later',     test: () => true              },
 	];
 
 	const groups = new Map<string, string[]>(BUCKETS.map((b) => [b.label, []]));

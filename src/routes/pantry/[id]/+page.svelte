@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 	import type { QuantityType } from '$lib/server/db/schema';
 	import PageShell from '$lib/components/PageShell.svelte';
@@ -10,19 +11,20 @@
 	import { toDateStr } from '$lib/date-format';
 	import { UNITS } from '$lib/units';
 	import { UtensilsCrossed, Trash2 } from 'lucide-svelte';
+	import { untrack } from 'svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	const toast = createToast();
 
 	// ── Form state (initialised from item) ─────────────────────────────────────
-	let nameInput = $state(data.item.name);
-	let categoryId = $state(data.item.category);
-	let quantityType = $state<QuantityType>(data.item.quantityType as QuantityType);
-	let quantity = $state(data.item.quantity);
-	let unit = $state(data.item.unit ?? 'count');
-	let purchaseDate = $state(data.item.purchaseDate.split('T')[0]);
-	let expiryDate = $state(data.item.expiryDate.split('T')[0]);
+	let nameInput = $state(untrack(() => data.item.name));
+	let categoryId = $state(untrack(() => data.item.category));
+	let quantityType = $state<QuantityType>(untrack(() => data.item.quantityType as QuantityType));
+	let quantity = $state(untrack(() => data.item.quantity));
+	let unit = $state(untrack(() => data.item.unit ?? 'count'));
+	let purchaseDate = $state(untrack(() => data.item.purchaseDate.split('T')[0]));
+	let expiryDate = $state(untrack(() => data.item.expiryDate.split('T')[0]));
 
 	// Use a derived reference for template bindings that must stay reactive
 	const item = $derived(data.item);
@@ -30,8 +32,6 @@
 	let expiryMode = $state<'relative' | 'exact'>('exact');
 	let expiryDays = $state(30);
 	let purchaseDaysAgo = $state(0);
-	let categoryLocked = $state(true);
-	let expiryLocked = $state(true);
 	let confirmingDelete = $state(false);
 
 	const EXPIRY_OPTIONS = [
@@ -100,7 +100,7 @@
 		use:enhance={() => async ({ result, update }) => {
 			await update({ reset: false });
 			if (result.type === 'success') {
-				goto('/pantry?toast=Pantry+item+updated');
+				goto(resolve('/pantry?toast=Pantry+item+updated'));
 			}
 		}}
 	>
@@ -160,10 +160,10 @@
 				<div class="mb-1 flex items-center justify-between">
 					<span class="text-xs font-medium text-stone-500">Expiry Date</span>
 					<div class="flex overflow-hidden rounded-lg border border-stone-200 text-xs font-medium">
-						<button type="button" onclick={() => { expiryMode = 'exact'; expiryDate = computedExpiryDate; expiryLocked = true; }}
+						<button type="button" onclick={() => { expiryMode = 'exact'; expiryDate = computedExpiryDate; }}
 							class="px-3 py-1.5 transition-colors {expiryMode === 'exact' ? 'bg-stone-800 text-white dark:bg-stone-500 dark:text-stone-950' : 'text-stone-500 hover:bg-stone-100 dark:text-stone-300'}"
 						>Date</button>
-						<button type="button" onclick={() => { expiryMode = 'relative'; expiryLocked = false; }}
+						<button type="button" onclick={() => { expiryMode = 'relative'; }}
 							class="px-3 py-1.5 transition-colors {expiryMode === 'relative' ? 'bg-stone-800 text-white dark:bg-stone-500 dark:text-stone-950' : 'text-stone-500 hover:bg-stone-100 dark:text-stone-300'}"
 						>Duration</button>
 					</div>
@@ -176,7 +176,7 @@
 						{#if expiryMode === 'relative'}
 							<input type="hidden" name="expiryDate" value={computedExpiryDate} />
 							<input type="hidden" name="expiryOverridden" value="false" />
-							<select bind:value={expiryDays} onchange={() => (expiryLocked = true)}
+							<select bind:value={expiryDays}
 								class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none">
 								{#each EXPIRY_OPTIONS as opt (opt.days)}
 									<option value={opt.days}>{opt.label}</option>
@@ -232,7 +232,6 @@
 					id="edit-category"
 					name="category"
 					bind:value={categoryId}
-					onchange={() => (categoryLocked = true)}
 					class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
 				>
 					{#each data.categories as cat (cat.id)}
@@ -261,7 +260,7 @@
 					use:enhance={() => async ({ result, update }) => {
 						await update({ reset: false });
 						if (result.type === 'success') {
-							goto('/pantry?toast=Consumed');
+							goto(resolve('/pantry?toast=Consumed'));
 						}
 					}}
 				>
@@ -276,7 +275,7 @@
 					use:enhance={() => async ({ result, update }) => {
 						await update({ reset: false });
 						if (result.type === 'success') {
-							goto('/pantry?toast=Trashed');
+							goto(resolve('/pantry?toast=Trashed'));
 						}
 					}}
 				>
@@ -336,7 +335,7 @@
 				use:enhance={() => async ({ result, update }) => {
 					await update({ reset: false });
 					if (result.type === 'success') {
-						goto('/pantry?toast=Item+deleted');
+						goto(resolve('/pantry?toast=Item+deleted'));
 					}
 				}}
 			>

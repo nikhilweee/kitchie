@@ -32,7 +32,7 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	logout: async ({ locals, cookies }) => {
+	logout: async ({ cookies }) => {
 		const sessionId = cookies.get(SESSION_COOKIE);
 		if (sessionId) {
 			await deleteSession(sessionId);

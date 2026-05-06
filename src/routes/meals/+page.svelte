@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import type { PageData } from './$types';
 	import { MEAL_TYPE_LABELS } from '$lib/meal-type';
@@ -65,7 +66,7 @@
 				<ul class="space-y-2">
 					{#each entries as entry (entry.id)}
 						<ListRow>
-							<button type="button" onclick={() => goto(`/meals/${entry.id}`)} class="min-w-0 flex-1 text-left">
+							<button type="button" onclick={() => goto(resolve('/meals/[id]', { id: entry.id }))} class="min-w-0 flex-1 text-left">
 								<p class="truncate font-medium text-stone-900 density-text">{entry.name}</p>
 								<p class="text-xs text-stone-400 density-hide">{MEAL_TYPE_LABELS[entry.mealType as MealType]}</p>
 							</button>
@@ -78,5 +79,5 @@
 	{/if}
 </PageShell>
 
-<AddButton label="Add Meal" onclick={() => goto('/meals/add')} />
+<AddButton label="Add Meal" onclick={() => goto(resolve('/meals/add'))} />
 

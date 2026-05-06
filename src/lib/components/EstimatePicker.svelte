@@ -38,7 +38,7 @@
 {#if readonly}
 	{@const l = level()}
 	<div class="flex gap-0.5" aria-label="Quantity level">
-		{#each [1, 2, 3] as zone}
+		{#each [1, 2, 3] as zone (zone)}
 			<div class="h-3 w-1.5 rounded-sm {zoneColor(zone as 1|2|3, l)}"></div>
 		{/each}
 	</div>
@@ -48,7 +48,7 @@
 		role="group"
 		aria-label="Quantity level"
 	>
-		{#each [1, 2, 3] as zone}
+		{#each [1, 2, 3] as zone (zone)}
 			{@const l = level()}
 			<button
 				type="button"

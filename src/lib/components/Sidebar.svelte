@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { Tag, UtensilsCrossed, Clipboard, ClipboardCheck, SlidersHorizontal } from 'lucide-svelte';
 
 	let { open, onclose }: { open: boolean; onclose: () => void } = $props();
@@ -37,21 +38,21 @@
 		<nav class="flex-1 px-3 py-3">
 			<p class="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wider text-stone-400">Settings</p>
 			<a
-				href="/settings/categories"
+				href={resolve('/settings/categories')}
 				class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
 			>
 				<Tag class="h-4 w-4 text-stone-400" />
 				Categories
 			</a>
 			<a
-				href="/settings/cuisines"
+				href={resolve('/settings/cuisines')}
 				class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
 			>
 				<UtensilsCrossed class="h-4 w-4 text-stone-400" />
 				Cuisines
 			</a>
 			<a
-				href="/settings/display"
+				href={resolve('/settings/display')}
 				class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
 			>
 				<SlidersHorizontal class="h-4 w-4 text-stone-400" />

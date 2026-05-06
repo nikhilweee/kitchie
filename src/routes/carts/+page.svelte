@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import type { PageData } from './$types';
 	import PageShell from '$lib/components/PageShell.svelte';
@@ -34,12 +35,12 @@
 		<ul class="space-y-2">
 			{#each data.lists as list (list.id)}
 				<ListRow>
-					<a href="/carts/{list.id}" class="min-w-0 flex-1">
+					<a href={resolve('/carts/[id]', { id: list.id })} class="min-w-0 flex-1">
 						<p class="truncate font-medium text-stone-900 density-text">{list.name}</p>
 						<p class="text-xs text-stone-400 density-hide">{list.shoppedCount}/{list.itemCount} items</p>
 					</a>
 					<span class="hidden shrink-0 items-center text-xs text-stone-400 density-show-slim">{list.shoppedCount}/{list.itemCount}</span>
-					<button type="button" onclick={() => goto(`/carts/${list.id}/edit`)}
+					<button type="button" onclick={() => goto(resolve('/carts/[id]/edit', { id: list.id }))}
 						class="flex shrink-0 items-center justify-center text-stone-300 hover:text-stone-500 transition-colors"
 						aria-label="Rename {list.name}">
 						<Pencil class="h-3.5 w-3.5" />
@@ -50,4 +51,4 @@
 	{/if}
 </PageShell>
 
-<AddButton label="New cart" onclick={() => goto('/carts/new')} />
+<AddButton label="New cart" onclick={() => goto(resolve('/carts/new'))} />

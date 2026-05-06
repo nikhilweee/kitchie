@@ -38,7 +38,7 @@
 	role="group"
 	aria-label="Quantity level"
 >
-	{#each [1, 2, 3] as zone}
+	{#each [1, 2, 3] as zone (zone)}
 		{@const l = level()}
 		<button
 			type="button"

@@ -1,10 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 	import PageShell from '$lib/components/PageShell.svelte';
 
 	let { data }: { data: PageData } = $props();
+
+	let nameEl = $state<HTMLInputElement | undefined>();
+	$effect(() => nameEl?.focus());
 
 	function onKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') {
@@ -27,7 +31,7 @@
 		use:enhance={() => async ({ result, update }) => {
 			await update({ reset: false });
 			if (result.type === 'success') {
-				goto('/settings/categories');
+				goto(resolve('/settings/categories'));
 			}
 		}}
 	>
@@ -40,7 +44,7 @@
 			type="text"
 			required
 			autocapitalize="sentences"
-			autofocus
+			bind:this={nameEl}
 			value={data.category.name}
 			class="mb-4 block w-full rounded-xl border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-900 focus:border-orange-500 focus:outline-none"
 		/>
@@ -65,7 +69,7 @@
 			use:enhance={() => async ({ result, update }) => {
 				await update({ reset: false });
 				if (result.type === 'success') {
-					goto('/settings/categories');
+					goto(resolve('/settings/categories'));
 				}
 			}}
 		>
