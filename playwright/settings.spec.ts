@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Covers: SETT-001, SETT-002, SETT-003, SETT-004, SETT-005, SETT-006, SETT-007, SETT-008
+// Covers: SETT-001, SETT-002, SETT-003, SETT-004, SETT-005, SETT-006, SETT-007, SETT-008, SETT-009, SETT-010, SETT-011
 
 test('SETT-001: hamburger opens sidebar with settings links', async ({ page }) => {
 	await login(page);
@@ -36,6 +36,29 @@ test('SETT-009: display density toggle persists across navigation', async ({ pag
 	await page.goto('/settings/display');
 	await comfortableBtn.click();
 	await expect(page.locator('html')).toHaveAttribute('data-display', 'comfortable');
+});
+
+test('SETT-011: dark mode toggle persists across navigation', async ({ page }) => {
+	await login(page);
+	await page.goto('/settings/display');
+
+	const lightBtn = page.getByRole('button', { name: 'Light', exact: true });
+	const darkBtn = page.getByRole('button', { name: 'Dark', exact: true });
+	await expect(lightBtn).toBeVisible();
+	await expect(darkBtn).toBeVisible();
+
+	// Switch to dark
+	await darkBtn.click();
+	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+	// Navigate away and back — localStorage should restore the theme
+	await page.goto('/pantry');
+	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+	// Reset to light
+	await page.goto('/settings/display');
+	await lightBtn.click();
+	await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
 });
 
 async function addCategory(page: any, name: string, ttlDays: string) {

@@ -43,3 +43,7 @@
 ## CART-010
 **Requirement:** Clicking a cart row on the list page navigates to that cart's detail page.  
 **Test:** `playwright/carts.spec.ts` — "CART-010: clicking a cart row on the list page navigates to the cart detail page"
+
+## CART-012
+**Requirement:** Tapping the Carts bottom-nav tab from another tab returns to the last-viewed cart detail page; tapping the active Carts tab returns to the cart list.  
+**Test:** `playwright/carts.spec.ts` — "CART-012: tapping Carts tab returns to last-viewed cart from another tab"

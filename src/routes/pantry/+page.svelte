@@ -428,9 +428,9 @@
 					</span>
 					<div class="flex w-8 shrink-0 items-center justify-center">
 						{#if item.status === 'finished'}
-							<UtensilsCrossed class="h-3.5 w-3.5 text-stone-400" />
+							<span aria-label="finished"><UtensilsCrossed class="h-3.5 w-3.5 text-stone-400" /></span>
 						{:else}
-							<Trash2 class="h-3.5 w-3.5 text-red-400" />
+							<span aria-label="trashed"><Trash2 class="h-3.5 w-3.5 text-red-400" /></span>
 						{/if}
 					</div>
 					<span class="w-8 shrink-0 text-right text-xs font-medium text-stone-400">

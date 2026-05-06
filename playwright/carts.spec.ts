@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Covers: CART-001 through CART-011
+// Covers: CART-001 through CART-012
 
 async function createCart(page: any, name = `Cart-${Date.now()}`) {
 	await page.goto('/carts');
@@ -221,5 +221,23 @@ test('CART-011: FAB navigates to /carts/new and ESC returns to list', async ({ p
 	await expect(page.getByPlaceholder('e.g. Whole Foods, Costco…')).toBeVisible();
 	// ESC navigates back
 	await page.keyboard.press('Escape');
+	await page.waitForURL('/carts');
+});
+
+test('CART-012: tapping Carts tab returns to last-viewed cart from another tab', async ({ page }) => {
+	await login(page);
+	const name = await createCart(page);
+	await page.waitForURL(/\/carts\/[0-9a-f-]+$/);
+	const cartUrl = page.url();
+
+	// Navigate to Pantry, then tap Carts tab — should land on the specific cart, not the list
+	await page.getByRole('link', { name: 'Pantry' }).click();
+	await page.waitForURL('/pantry');
+	await page.getByRole('link', { name: 'Carts' }).click();
+	await expect(page).toHaveURL(cartUrl);
+	await expect(page.getByRole('heading', { name })).toBeVisible();
+
+	// Tapping the active Carts tab returns to the cart list
+	await page.getByRole('link', { name: 'Carts' }).click();
 	await page.waitForURL('/carts');
 });

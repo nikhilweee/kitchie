@@ -103,3 +103,11 @@
 ## PANT-026
 **Requirement:** An item marked as finished via the edit sheet Consumed button appears in the Out of Stock tab.  
 **Test:** `playwright/pantry.spec.ts` — "PANT-026: Consumed item appears in Out of Stock tab"
+
+## PANT-027
+**Requirement:** The pantry filter chip selection persists across navigation; navigating away to another tab and back preserves the active filter.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-027: pantry filter state persists across navigation away and back"
+
+## PANT-028
+**Requirement:** Tapping the Pantry tab while already on the Pantry page resets all filter chip selections to default.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-028: tapping active Pantry tab resets filter state"

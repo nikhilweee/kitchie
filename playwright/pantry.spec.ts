@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013, PANT-014, PANT-015, PANT-016, PANT-017, PANT-018, PANT-019, PANT-020, PANT-021, PANT-022, PANT-023, PANT-024, PANT-025, PANT-026
+// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013, PANT-014, PANT-015, PANT-016, PANT-017, PANT-018, PANT-019, PANT-020, PANT-021, PANT-022, PANT-023, PANT-024, PANT-025, PANT-026, PANT-027, PANT-028
 
 // Navigate to /meals/add, fill name, check updatePantry, submit → lands on /meals/<id>/update
 async function logMealWithUpdate(page: import('@playwright/test').Page, mealName: string) {
@@ -331,7 +331,8 @@ test('PANT-014 + PANT-015: qty=0 auto-consumes; qty>0 restores to active', async
 	await page.getByRole('button', { name: 'Save' }).click();
 	await page.waitForURL('/pantry');
 
-	// Filter state resets on navigation — item is visible in default (active) view
+	// Out of Stock filter persists across navigation — deselect to see active items
+	await page.getByRole('button', { name: 'Out of Stock' }).click();
 	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
 
 	// PANT-014 (estimate path): Milk infers as estimate type
@@ -370,7 +371,7 @@ test('PANT-016: Out of Stock filter chip shows finished and trashed items with b
 	await page.getByRole('button', { name: 'Out of Stock' }).click();
 	const row = page.locator('li', { hasText: name }).first();
 	await expect(row).toBeVisible();
-	await expect(row.getByText('trashed', { exact: true })).toBeVisible();
+	await expect(row.locator('[aria-label="trashed"]')).toBeVisible();
 });
 
 test('PANT-017: Trash button discards an active item', async ({ page }) => {
@@ -619,4 +620,37 @@ test('PANT-026: Consumed item appears in Out of Stock tab', async ({ page }) => 
 	// Switch to Out of Stock tab — item should be listed there
 	await page.getByRole('button', { name: 'Out of Stock' }).click();
 	await expect(page.locator('li', { hasText: name }).first()).toBeVisible();
+});
+
+test('PANT-027: pantry filter state persists across navigation away and back', async ({ page }) => {
+	await login(page);
+	await page.goto('/pantry');
+	await addPantryItem(page, `Persist-${Date.now()}`);
+
+	// Apply Out of Stock filter
+	await page.getByRole('button', { name: 'Out of Stock' }).click();
+	await expect(page.getByRole('button', { name: 'Out of Stock' })).toHaveClass(/bg-stone-500/);
+
+	// Navigate away to Carts and back to Pantry via tab
+	await page.getByRole('link', { name: 'Carts' }).click();
+	await page.waitForURL('/carts');
+	await page.getByRole('link', { name: 'Pantry' }).click();
+	await page.waitForURL('/pantry');
+
+	// Filter chip is still active
+	await expect(page.getByRole('button', { name: 'Out of Stock' })).toHaveClass(/bg-stone-500/);
+});
+
+test('PANT-028: tapping active Pantry tab resets filter state', async ({ page }) => {
+	await login(page);
+	await page.goto('/pantry');
+	await addPantryItem(page, `Reset-${Date.now()}`);
+
+	// Apply Out of Stock filter
+	await page.getByRole('button', { name: 'Out of Stock' }).click();
+	await expect(page.getByRole('button', { name: 'Out of Stock' })).toHaveClass(/bg-stone-500/);
+
+	// Tap the already-active Pantry tab → filter resets
+	await page.getByRole('link', { name: 'Pantry' }).click();
+	await expect(page.getByRole('button', { name: 'Out of Stock' })).not.toHaveClass(/bg-stone-500/);
 });

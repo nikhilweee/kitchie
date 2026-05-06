@@ -39,3 +39,7 @@
 ## SETT-010
 **Requirement:** A user can delete a cuisine that has no recipes using it.  
 **Test:** `playwright/settings.spec.ts` — "SETT-010: delete an unused cuisine"
+
+## SETT-011
+**Requirement:** The Display settings page lets the user toggle between Light and Dark themes; the selection is reflected immediately via the `data-theme` attribute on `<html>` and persists across navigation via localStorage.  
+**Test:** `playwright/settings.spec.ts` — "SETT-011: dark mode toggle persists across navigation"
