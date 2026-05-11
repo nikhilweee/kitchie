@@ -137,7 +137,7 @@
 						<div class="flex items-center overflow-hidden rounded-xl border border-stone-300 bg-stone-50">
 							<button type="button" onclick={() => (quantity = Math.max(0, quantity - 1))}
 								class="flex h-full w-10 shrink-0 items-center justify-center text-stone-500 hover:bg-stone-100">−</button>
-							<input name="quantity" type="number" bind:value={quantity} min="0" step="1"
+							<input name="quantity" type="number" bind:value={quantity} min="0" step="any"
 								class="w-0 min-w-0 flex-1 bg-transparent text-center text-sm text-stone-900 focus:outline-none" />
 							<button type="button" onclick={() => quantity++}
 								class="flex h-full w-10 shrink-0 items-center justify-center text-stone-500 hover:bg-stone-100">+</button>

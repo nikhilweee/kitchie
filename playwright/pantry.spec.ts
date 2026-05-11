@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 
-// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013, PANT-014, PANT-015, PANT-016, PANT-017, PANT-018, PANT-019, PANT-020, PANT-021, PANT-022, PANT-023, PANT-024, PANT-025, PANT-026, PANT-027, PANT-028
+// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013, PANT-014, PANT-015, PANT-016, PANT-017, PANT-018, PANT-019, PANT-020, PANT-021, PANT-022, PANT-023, PANT-024, PANT-025, PANT-026, PANT-027, PANT-028, PANT-029, PANT-030
 
 // Navigate to /meals/add, fill name, check updatePantry, submit → lands on /meals/<id>/update
 async function logMealWithUpdate(page: import('@playwright/test').Page, mealName: string) {
@@ -653,4 +653,62 @@ test('PANT-028: tapping active Pantry tab resets filter state', async ({ page })
 	// Tap the already-active Pantry tab → filter resets
 	await page.getByRole('link', { name: 'Pantry' }).click();
 	await expect(page.getByRole('button', { name: 'Out of Stock' })).not.toHaveClass(/bg-stone-500/);
+});
+
+test.describe('PANT-029 scroll restoration', () => {
+	// Small viewport so a handful of items overflow and the page can scroll.
+	test.use({ viewport: { width: 375, height: 500 } });
+
+	test('PANT-029: pantry scroll position is restored after returning from edit', async ({ page }) => {
+		await login(page);
+		const ts = Date.now();
+		const names = Array.from({ length: 6 }, (_, i) => `Scroll-${ts}-${i}`);
+		await page.goto('/pantry');
+		for (const name of names) {
+			await addPantryItem(page, name);
+		}
+
+		// Force scroll to a known offset.
+		await page.evaluate(() => window.scrollTo(0, 300));
+		await page.waitForFunction(() => window.scrollY >= 200);
+		const before = await page.evaluate(() => window.scrollY);
+		expect(before).toBeGreaterThan(100);
+
+		// Tap an item; saveScroll captures window.scrollY at click time.
+		await openEdit(page, names[2]);
+
+		// Save and return to /pantry — forward nav that would normally reset to 0.
+		await page.getByRole('button', { name: 'Save' }).click();
+		await page.waitForURL('/pantry');
+
+		// Scroll position should be restored to `before` (small delta tolerated).
+		await page.waitForFunction((expected) => Math.abs(window.scrollY - expected) < 20, before);
+		const after = await page.evaluate(() => window.scrollY);
+		expect(Math.abs(after - before)).toBeLessThan(20);
+	});
+});
+
+test('PANT-030: count-mode quantity accepts decimals', async ({ page }) => {
+	await login(page);
+	const ts = Date.now();
+	const name = `Eggs-${ts}`; // "eggs" infers to count type
+
+	// Add with quantity 1.5
+	await page.goto('/pantry');
+	await page.click('button:has-text("Add to Pantry")');
+	await page.waitForURL('/pantry/add');
+	await page.getByPlaceholder('What did you buy?').fill(name);
+	await page.locator('input[name="quantity"]').fill('1.5');
+	await page.getByRole('button', { name: 'Add item' }).click();
+	await page.waitForURL('/pantry');
+
+	const row = page.locator('li', { hasText: name }).first();
+	await expect(row).toContainText('×1.5');
+
+	// Edit to 2.5, save, verify
+	await openEdit(page, name);
+	await page.locator('input[name="quantity"]').fill('2.5');
+	await page.getByRole('button', { name: 'Save' }).click();
+	await page.waitForURL('/pantry');
+	await expect(page.locator('li', { hasText: name }).first()).toContainText('×2.5');
 });

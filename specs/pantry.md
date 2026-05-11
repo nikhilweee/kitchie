@@ -111,3 +111,11 @@
 ## PANT-028
 **Requirement:** Tapping the Pantry tab while already on the Pantry page resets all filter chip selections to default.  
 **Test:** `playwright/pantry.spec.ts` — "PANT-028: tapping active Pantry tab resets filter state"
+
+## PANT-029
+**Requirement:** When the user opens a pantry item's edit page and then returns to the pantry list (via Save, Finish, Trash, Delete, or browser back), the pantry list scroll position is restored to where it was when the item was tapped.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-029: pantry scroll position is restored after returning from edit"
+
+## PANT-030
+**Requirement:** A pantry item's quantity can be set to a decimal value (e.g. 1.5) in count mode on both the add and edit pages; the value is persisted and rendered with its fractional part.  
+**Test:** `playwright/pantry.spec.ts` — "PANT-030: count-mode quantity accepts decimals"

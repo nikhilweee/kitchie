@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
+	import { afterNavigate, goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import type { PageData } from './$types';
@@ -16,7 +16,24 @@
 	import { createToast } from '$lib/toast.svelte';
 	import { ShoppingBasket, Search, Trash2, ShoppingCart, UtensilsCrossed } from 'lucide-svelte';
 	import { SvelteSet, SvelteMap } from 'svelte/reactivity';
+	import { tick } from 'svelte';
 	import { pf, pantrySort, syncPantrySort, resetPantryFilters, type PantrySortField } from '$lib/pantry-filters.svelte';
+
+	const SCROLL_KEY = 'pantry:scroll';
+
+	function saveScroll() {
+		sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+	}
+
+	// afterNavigate (not onMount) so we run *after* SvelteKit's own scroll-to-top
+	// on forward navigation; otherwise our restore gets overwritten.
+	afterNavigate(async () => {
+		const saved = sessionStorage.getItem(SCROLL_KEY);
+		if (saved === null) return;
+		sessionStorage.removeItem(SCROLL_KEY);
+		await tick();
+		window.scrollTo(0, Number(saved));
+	});
 
 	// ── Bulk selection ─────────────────────────────────────────────────────────
 	let selectionMode = $state(false);
@@ -276,9 +293,6 @@
 				{/snippet}
 			</SearchFilterBar>
 			<div class="mb-4 flex gap-2 overflow-x-auto scrollbar-none">
-				<button type="button" onclick={() => toggleStatus('normal')}
-					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {pf.activeStatus === 'normal' ? 'border-green-600 bg-green-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
-				>In Stock</button>
 				<button type="button" onclick={() => toggleStatus('expiring')}
 					class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide transition-colors {pf.activeStatus === 'expiring' ? 'border-red-600 bg-red-600 text-white' : 'border-stone-300 text-stone-500 hover:border-stone-400'}"
 				>Expiring Soon</button>
@@ -327,7 +341,7 @@
 </PageShell>
 
 {#if !selectionMode}
-	<AddButton label="Add to Pantry" onclick={() => goto(resolve('/pantry/add'))} />
+	<AddButton label="Add to Pantry" onclick={() => { saveScroll(); goto(resolve('/pantry/add')); }} />
 {/if}
 
 {#if selectionMode && selectedIds.size > 0}
@@ -414,7 +428,11 @@
 					onpointerdown={() => startLongPress(item.id)}
 					onpointerup={cancelLongPress}
 					onpointerleave={cancelLongPress}
-					onclick={() => selectionMode ? toggleItem(item.id) : goto(resolve('/pantry/[id]', { id: item.id }))}
+					onclick={() => {
+						if (selectionMode) { toggleItem(item.id); return; }
+						saveScroll();
+						goto(resolve('/pantry/[id]', { id: item.id }));
+					}}
 					class="min-w-0 flex-1 text-left"
 				>
 					<p class="truncate font-medium text-stone-900 density-text">{item.name}</p>

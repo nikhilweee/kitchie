@@ -1,11 +1,14 @@
 import { createPersistedState } from '$lib/persisted.svelte';
 import { createSort } from '$lib/sort.svelte';
 
-export type StatusFilter = 'expiring' | 'low' | 'normal' | 'done';
+export type StatusFilter = 'expiring' | 'low' | 'done';
 export type PantrySortField = 'name' | 'category' | 'expiry' | 'purchased';
 
 const _search  = createPersistedState<string>('pantry:search', '');
 const _status  = createPersistedState<StatusFilter | null>('pantry:status', null);
+
+// Migrate stale 'normal' state from when the "In Stock" pill existed.
+if ((_status.value as string | null) === 'normal') _status.value = null;
 const _cats    = createPersistedState<string[]>('pantry:categories', []);
 const _sortBy  = createPersistedState<PantrySortField>('pantry:sort:by', 'expiry');
 const _sortDir = createPersistedState<'asc' | 'desc'>('pantry:sort:dir', 'asc');
