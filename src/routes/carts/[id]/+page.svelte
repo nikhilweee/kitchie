@@ -107,7 +107,7 @@
 
 <Toast message={toast.message} />
 
-<PageShell title={data.list.name} back="/carts">
+<PageShell title={data.list.name} back="/carts" mainClass="px-4 py-4 pb-32">
 		<!-- Inline search / add bar -->
 		<div class="relative mb-4" use:clickOutside={() => (dropdownOpen = false)}>
 			<input

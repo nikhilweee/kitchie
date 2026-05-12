@@ -119,3 +119,7 @@
 ## PANT-030
 **Requirement:** A pantry item's quantity can be set to a decimal value (e.g. 1.5) in count mode on both the add and edit pages; the value is persisted and rendered with its fractional part.  
 **Test:** `playwright/pantry.spec.ts` — "PANT-030: count-mode quantity accepts decimals"
+
+## PANT-031
+**Requirement:** When the pantry list overflows the viewport, every item is reachable by scrolling — the last item is fully visible at maximum scroll (not occluded by the fixed bottom navigation or the Add-to-Pantry FAB).  
+**Test:** `playwright/pantry.spec.ts` — "PANT-031: pantry list last item is reachable at max scroll"

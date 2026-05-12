@@ -47,3 +47,7 @@
 ## RECP-012
 **Requirement:** Recipes are grouped by course (Breakfast, Main Course, Snack, Dessert) by default, with group headers shown in order.  
 **Test:** `playwright/recipes.spec.ts` — "RECP-012: recipes are grouped by course by default"
+
+## RECP-013
+**Requirement:** When the recipes list overflows the viewport, every recipe is reachable by scrolling — the last recipe is fully visible at maximum scroll (not occluded by the fixed bottom navigation or the Add-Recipe FAB).  
+**Test:** `playwright/recipes.spec.ts` — "RECP-013: recipes list last item is reachable at max scroll"

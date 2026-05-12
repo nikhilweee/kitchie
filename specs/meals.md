@@ -35,3 +35,7 @@
 ## MEAL-009
 **Requirement:** When a meal has an associated recipe, the meal edit sheet displays a tappable recipe link that navigates to `/recipes?edit=<recipeId>`.  
 **Test:** `playwright/meals.spec.ts` — "MEAL-009: meal edit sheet shows recipe link when recipeId is set"
+
+## MEAL-010
+**Requirement:** When the meals list overflows the viewport, every meal is reachable by scrolling — the last meal is fully visible at maximum scroll (not occluded by the fixed bottom navigation or the Add-Meal FAB).  
+**Test:** `playwright/meals.spec.ts` — "MEAL-010: meals list last item is reachable at max scroll"

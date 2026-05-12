@@ -43,3 +43,11 @@
 ## SETT-011
 **Requirement:** The Display settings page lets the user toggle between Light and Dark themes; the selection is reflected immediately via the `data-theme` attribute on `<html>` and persists across navigation via localStorage.  
 **Test:** `playwright/settings.spec.ts` — "SETT-011: dark mode toggle persists across navigation"
+
+## SETT-012
+**Requirement:** When the categories list overflows the viewport, every category is reachable by scrolling — the last category is fully visible at maximum scroll (not occluded by the fixed bottom navigation or the Add-category FAB).  
+**Test:** `playwright/settings.spec.ts` — "SETT-012: categories list last item is reachable at max scroll"
+
+## SETT-013
+**Requirement:** When the cuisines list overflows the viewport, every cuisine is reachable by scrolling — the last cuisine is fully visible at maximum scroll (not occluded by the fixed bottom navigation or the Add-cuisine FAB).  
+**Test:** `playwright/settings.spec.ts` — "SETT-013: cuisines list last item is reachable at max scroll"

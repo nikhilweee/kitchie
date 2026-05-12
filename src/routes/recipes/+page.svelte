@@ -102,7 +102,7 @@
 
 <Toast message={toast.message} />
 
-<PageShell title="Recipes" mainClass="px-4 py-4 pb-36">
+<PageShell title="Recipes" mainClass="px-4 py-4 pb-32">
 		{#if anyRecipes}
 			<SearchFilterBar
 				search={rf.search}

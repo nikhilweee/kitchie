@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
+import { assertLastItemReachable } from './helpers/scroll';
 
-// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013, PANT-014, PANT-015, PANT-016, PANT-017, PANT-018, PANT-019, PANT-020, PANT-021, PANT-022, PANT-023, PANT-024, PANT-025, PANT-026, PANT-027, PANT-028, PANT-029, PANT-030
+// Covers: PANT-001, PANT-002, PANT-003, PANT-004, PANT-005, PANT-006, PANT-007, PANT-008, PANT-009, PANT-010, PANT-011, PANT-012, PANT-013, PANT-014, PANT-015, PANT-016, PANT-017, PANT-018, PANT-019, PANT-020, PANT-021, PANT-022, PANT-023, PANT-024, PANT-025, PANT-026, PANT-027, PANT-028, PANT-029, PANT-030, PANT-031
 
 // Navigate to /meals/add, fill name, check updatePantry, submit → lands on /meals/<id>/update
 async function logMealWithUpdate(page: import('@playwright/test').Page, mealName: string) {
@@ -711,4 +712,22 @@ test('PANT-030: count-mode quantity accepts decimals', async ({ page }) => {
 	await page.getByRole('button', { name: 'Save' }).click();
 	await page.waitForURL('/pantry');
 	await expect(page.locator('li', { hasText: name }).first()).toContainText('×2.5');
+});
+
+test.describe('PANT-031 scroll clearance', () => {
+	test.use({ viewport: { width: 375, height: 500 } });
+
+	test('PANT-031: pantry list last item is reachable at max scroll', async ({ page }) => {
+		await login(page);
+		const ts = Date.now();
+		await page.goto('/pantry');
+		for (let i = 0; i < 10; i++) {
+			await page.getByRole('button', { name: 'Add to Pantry' }).click();
+			await page.waitForURL('/pantry/add');
+			await page.getByPlaceholder('What did you buy?').fill(`PScroll-${ts}-${i}`);
+			await page.getByRole('button', { name: 'Add item' }).click();
+			await page.waitForURL('/pantry');
+		}
+		await assertLastItemReachable(page);
+	});
 });

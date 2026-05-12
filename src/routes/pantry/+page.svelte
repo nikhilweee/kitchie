@@ -259,7 +259,7 @@
 
 <Toast message={toast.message} />
 
-<PageShell title="Pantry" mainClass="px-4 py-4 pb-36">
+<PageShell title="Pantry" mainClass="px-4 py-4 pb-32">
 		{#if data.items.length === 0}
 			<EmptyState icon={ShoppingBasket} heading="Pantry is empty" detail="Add items after your next shopping trip." />
 		{:else}

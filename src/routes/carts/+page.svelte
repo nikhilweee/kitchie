@@ -28,7 +28,7 @@
 
 <Toast message={toast.message} />
 
-<PageShell title="Carts">
+<PageShell title="Carts" mainClass="px-4 py-4 pb-32">
 	{#if data.lists.length === 0}
 		<EmptyState icon={ShoppingCart} heading="No carts yet" detail="Tap + to create a cart" />
 	{:else}

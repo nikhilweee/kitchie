@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
+import { assertLastItemReachable } from './helpers/scroll';
 
-// Covers: MEAL-001, MEAL-002, MEAL-003, MEAL-004, MEAL-005, MEAL-006, MEAL-007, MEAL-008, MEAL-009
+// Covers: MEAL-001, MEAL-002, MEAL-003, MEAL-004, MEAL-005, MEAL-006, MEAL-007, MEAL-008, MEAL-009, MEAL-010
 
 async function addMeal(page: import('@playwright/test').Page, name: string) {
 	await page.click('button:has-text("Add Meal")');
@@ -164,4 +165,18 @@ test('MEAL-009: meal edit page shows recipe link when recipeId is set', async ({
 	await recipeLink.click();
 	await expect(page).toHaveURL(/\/recipes\/.+/);
 	await expect(page.getByPlaceholder('Recipe name')).toBeVisible();
+});
+
+test.describe('MEAL-010 scroll clearance', () => {
+	test.use({ viewport: { width: 375, height: 500 } });
+
+	test('MEAL-010: meals list last item is reachable at max scroll', async ({ page }) => {
+		await login(page);
+		const ts = Date.now();
+		await page.goto('/meals');
+		for (let i = 0; i < 10; i++) {
+			await addMeal(page, `MScroll-${ts}-${i}`);
+		}
+		await assertLastItemReachable(page);
+	});
 });

@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
+import { assertLastItemReachable } from './helpers/scroll';
 
-// Covers: SETT-001, SETT-002, SETT-003, SETT-004, SETT-005, SETT-006, SETT-007, SETT-008, SETT-009, SETT-010, SETT-011
+// Covers: SETT-001, SETT-002, SETT-003, SETT-004, SETT-005, SETT-006, SETT-007, SETT-008, SETT-009, SETT-010, SETT-011, SETT-012, SETT-013
 
 test('SETT-001: hamburger opens sidebar with settings links', async ({ page }) => {
 	await login(page);
@@ -218,4 +219,28 @@ test('SETT-010: delete an unused cuisine', async ({ page }) => {
 	await page.waitForURL('/settings/cuisines');
 
 	await expect(page.locator('li', { hasText: name })).toHaveCount(0);
+});
+
+test.describe('SETT-012/013 scroll clearance', () => {
+	test.use({ viewport: { width: 375, height: 500 } });
+
+	test('SETT-012: categories list last item is reachable at max scroll', async ({ page }) => {
+		await login(page);
+		const ts = Date.now();
+		await page.goto('/settings/categories');
+		for (let i = 0; i < 10; i++) {
+			await addCategory(page, `CatScroll-${ts}-${i}`, '30');
+		}
+		await assertLastItemReachable(page);
+	});
+
+	test('SETT-013: cuisines list last item is reachable at max scroll', async ({ page }) => {
+		await login(page);
+		const ts = Date.now();
+		await page.goto('/settings/cuisines');
+		for (let i = 0; i < 10; i++) {
+			await addCuisine(page, `CuiScroll-${ts}-${i}`);
+		}
+		await assertLastItemReachable(page);
+	});
 });

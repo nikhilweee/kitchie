@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
+import { assertLastItemReachable } from './helpers/scroll';
 
-// Covers: CART-001 through CART-012
+// Covers: CART-001 through CART-014
 
 async function createCart(page: any, name = `Cart-${Date.now()}`) {
 	await page.goto('/carts');
@@ -240,4 +241,35 @@ test('CART-012: tapping Carts tab returns to last-viewed cart from another tab',
 	// Tapping the active Carts tab returns to the cart list
 	await page.getByRole('link', { name: 'Carts' }).click();
 	await page.waitForURL('/carts');
+});
+
+test.describe('CART-013/014 scroll clearance', () => {
+	test.use({ viewport: { width: 375, height: 500 } });
+
+	test('CART-013: carts list last item is reachable at max scroll', async ({ page }) => {
+		await login(page);
+		const ts = Date.now();
+		for (let i = 0; i < 8; i++) {
+			await createCart(page, `CScroll-${ts}-${i}`);
+		}
+		await page.goto('/carts');
+		await assertLastItemReachable(page);
+	});
+
+	test('CART-014: cart detail last item is reachable at max scroll', async ({ page }) => {
+		await login(page);
+		const ts = Date.now();
+		await createCart(page, `CartScroll-${ts}`);
+		// Already on /carts/<id> after createCart. Add 15 items via free-text.
+		for (let i = 0; i < 15; i++) {
+			const item = `Item-${ts}-${i}`;
+			await page.getByPlaceholder('Search or type an item…').fill(item);
+			await page.getByRole('button', { name: `Add "${item}" to cart` }).click();
+			await expect(page.locator('li', { hasText: item }).first()).toBeVisible();
+		}
+		// Mark one item picked up so the Checkout FAB renders (worst-case occlusion).
+		await page.getByRole('button', { name: `Mark Item-${ts}-0 as picked up` }).click();
+		await expect(page.getByRole('button', { name: 'Checkout' })).toBeVisible();
+		await assertLastItemReachable(page);
+	});
 });

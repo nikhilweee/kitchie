@@ -54,7 +54,7 @@
 
 <Toast message={toast.message} />
 
-<PageShell title="Meals" mainClass="px-4 py-4 pb-36">
+<PageShell title="Meals" mainClass="px-4 py-4 pb-32">
 	{#if data.entries.length === 0}
 		<EmptyState icon={Utensils} heading="No meals logged yet" detail="Tap the button below to log your first meal." />
 	{:else}

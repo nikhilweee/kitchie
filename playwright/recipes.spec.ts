@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
+import { assertLastItemReachable } from './helpers/scroll';
 
-// Covers: RECP-001, RECP-002, RECP-003, RECP-004, RECP-005, RECP-006, RECP-007, RECP-008, RECP-009, RECP-010, RECP-011
+// Covers: RECP-001, RECP-002, RECP-003, RECP-004, RECP-005, RECP-006, RECP-007, RECP-008, RECP-009, RECP-010, RECP-011, RECP-013
 
 // Add a recipe through the add sub-page on /recipes/add.
 // If ingredientName is given, it must already exist as a pantry item.
@@ -333,4 +334,18 @@ test('RECP-010: /recipes/<id> deep-link opens recipe edit page', async ({ page }
 	await page.goto('/meals');
 	await page.goto(`/recipes/${editId}`);
 	await expect(page.getByPlaceholder('Recipe name')).toHaveValue(name);
+});
+
+test.describe('RECP-013 scroll clearance', () => {
+	test.use({ viewport: { width: 375, height: 500 } });
+
+	test('RECP-013: recipes list last item is reachable at max scroll', async ({ page }) => {
+		await login(page);
+		const ts = Date.now();
+		await page.goto('/recipes');
+		for (let i = 0; i < 10; i++) {
+			await addRecipe(page, `RScroll-${ts}-${i}`);
+		}
+		await assertLastItemReachable(page);
+	});
 });

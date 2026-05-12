@@ -47,3 +47,11 @@
 ## CART-012
 **Requirement:** Tapping the Carts bottom-nav tab from another tab returns to the last-viewed cart detail page; tapping the active Carts tab returns to the cart list.  
 **Test:** `playwright/carts.spec.ts` — "CART-012: tapping Carts tab returns to last-viewed cart from another tab"
+
+## CART-013
+**Requirement:** When the carts list overflows the viewport, every cart is reachable by scrolling — the last cart is fully visible at maximum scroll (not occluded by the fixed bottom navigation or the New-cart FAB).  
+**Test:** `playwright/carts.spec.ts` — "CART-013: carts list last item is reachable at max scroll"
+
+## CART-014
+**Requirement:** When a cart's item list overflows the viewport, every item is reachable by scrolling — the last item is fully visible at maximum scroll (not occluded by the fixed bottom navigation or the Checkout FAB when items are picked up).  
+**Test:** `playwright/carts.spec.ts` — "CART-014: cart detail last item is reachable at max scroll"
