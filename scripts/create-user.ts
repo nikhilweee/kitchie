@@ -1,6 +1,6 @@
 /**
  * Creates the initial admin user.
- * Usage: npx tsx scripts/create-user.ts <username> <password>
+ * Usage: pnpm exec tsx scripts/create-user.ts <username> <password>
  */
 import Database from 'better-sqlite3';
 import bcrypt from 'bcryptjs';
@@ -9,7 +9,7 @@ import { randomUUID } from 'crypto';
 const [, , username, password] = process.argv;
 
 if (!username || !password) {
-	console.error('Usage: npx tsx scripts/create-user.ts <username> <password>');
+	console.error('Usage: pnpm exec tsx scripts/create-user.ts <username> <password>');
 	process.exit(1);
 }
 

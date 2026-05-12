@@ -1,6 +1,6 @@
 /**
  * Migrate pantry item status values: consumed → finished, discarded → trashed.
- * Usage: npx tsx scripts/migrate-status.ts
+ * Usage: pnpm exec tsx scripts/migrate-status.ts
  */
 import Database from 'better-sqlite3';
 

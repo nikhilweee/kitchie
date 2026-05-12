@@ -10,7 +10,7 @@ export default defineConfig({
 		storageState: STORAGE_STATE,
 	},
 	webServer: {
-		command: 'DATABASE_URL=test.db npm run preview',
+		command: 'DATABASE_URL=test.db pnpm preview',
 		port: 4173,
 		reuseExistingServer: false,
 		timeout: 30000,

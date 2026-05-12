@@ -29,5 +29,5 @@
 
 ## Database Migrations
 
-- Always use `npx drizzle-kit generate` — never write SQL files or edit `drizzle/meta/_journal.json` by hand.
+- Always use `pnpm exec drizzle-kit generate` — never write SQL files or edit `drizzle/meta/_journal.json` by hand.
   - Hand-written files are silently skipped at runtime because they're absent from the journal.

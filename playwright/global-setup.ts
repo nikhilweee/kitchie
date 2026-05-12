@@ -1,6 +1,6 @@
 // Resets the test DB to a clean state, seeds testuser, then saves a session
 // cookie so individual tests skip the login form.
-// Run via: npm run test:playwright (which builds first, then runs playwright test)
+// Run via: pnpm test:playwright (which builds first, then runs playwright test)
 import { chromium } from '@playwright/test';
 import { mkdirSync } from 'fs';
 import Database from 'better-sqlite3';

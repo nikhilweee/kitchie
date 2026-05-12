@@ -1,17 +1,19 @@
-FROM node:22-alpine AS builder
+FROM node:24-slim AS builder
+
+RUN corepack enable pnpm
 
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN DATABASE_URL=":memory:" npm run build
+RUN DATABASE_URL=":memory:" pnpm build
 # Prune dev dependencies
-RUN npm prune --production
+RUN pnpm prune --prod
 
 # ---------------------------------------------------------------------------
 
-FROM node:22-alpine
+FROM node:24-slim
 
 WORKDIR /app
 
