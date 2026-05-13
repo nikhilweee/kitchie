@@ -11,7 +11,7 @@ Self-hosted personal meal logging and pantry management. Mobile-first, single-us
 - **Recipes** — saved ingredient lists per meal name, used to pre-fill pantry updates.
 - **Suggestions** — meal ideas based on history, time of day, and what's currently in the pantry.
 
-See [PRD.md](PRD.md) for the full product spec and [specs/](specs/) for the verified, test-backed feature set.
+See [FEATURES.md](FEATURES.md) for the full product spec and [specs/](specs/) for the verified, test-backed feature set.
 
 ## Tech stack
 
@@ -72,6 +72,6 @@ Deployed as a Docker image — see [Dockerfile](Dockerfile) and [docker-compose.
 
 ## Documentation
 
-- [PRD.md](PRD.md) — product vision, forward-looking
+- [FEATURES.md](FEATURES.md) — product vision, forward-looking
 - [specs/](specs/) — verified shipped features (test-backed)
 - [CLAUDE.md](CLAUDE.md) — engineering and contribution conventions

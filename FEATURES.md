@@ -1,4 +1,4 @@
-# Kitchie: Product Requirements Document
+# Kitchie — Features
 
 **Version:** 2.0
 **Date:** 2026-05-06

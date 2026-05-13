@@ -7,7 +7,7 @@
 > A requirement may only exist in `specs/` if a passing Playwright test references it by ID.  
 > **No test = no spec.**
 
-`PRD.md` is forward-looking — features move from PRD → specs only when they ship with a passing test.
+`FEATURES.md` is forward-looking — features move from FEATURES.md → specs only when they ship with a passing test.
 
 ---
 

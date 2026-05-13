@@ -16,7 +16,7 @@
 ## Specs & Tests
 
 - `specs/` is the living source of truth — a spec entry only exists if a passing Playwright test references it by ID. No test = no spec.
-- `PRD.md` is a feature inventory: shipped features are checked, planned ones unchecked. Update both PRD and specs when shipping a new feature.
+- `FEATURES.md` is a feature inventory: shipped features are checked, planned ones unchecked. Update both FEATURES.md and specs when shipping a new feature.
 - Tests are part of done — ship all three together in the same commit:
   ```
   Add qty=0 auto-consume on pantry update
