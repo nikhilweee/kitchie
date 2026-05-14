@@ -51,3 +51,7 @@
 ## SETT-013
 **Requirement:** When the cuisines list overflows the viewport, every cuisine is reachable by scrolling — the last cuisine is fully visible at maximum scroll (not occluded by the fixed bottom navigation or the Add-cuisine FAB).  
 **Test:** `playwright/settings.spec.ts` — "SETT-013: cuisines list last item is reachable at max scroll"
+
+## SETT-014
+**Requirement:** Toggling between Light and Dark themes updates the `<meta name="theme-color">` tag to match the rendered page background, so when the app is installed as a PWA, the Android status bar (and Chrome address-bar tint) reflects the active theme.  
+**Test:** `playwright/settings.spec.ts` — "SETT-014: theme toggle updates meta theme-color for PWA status bar"

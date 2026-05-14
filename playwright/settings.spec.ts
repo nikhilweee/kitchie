@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { login } from './helpers/auth';
 import { assertLastItemReachable } from './helpers/scroll';
 
-// Covers: SETT-001, SETT-002, SETT-003, SETT-004, SETT-005, SETT-006, SETT-007, SETT-008, SETT-009, SETT-010, SETT-011, SETT-012, SETT-013
+// Covers: SETT-001, SETT-002, SETT-003, SETT-004, SETT-005, SETT-006, SETT-007, SETT-008, SETT-009, SETT-010, SETT-011, SETT-012, SETT-013, SETT-014
 
 test('SETT-001: hamburger opens sidebar with settings links', async ({ page }) => {
 	await login(page);
@@ -243,4 +243,24 @@ test.describe('SETT-012/013 scroll clearance', () => {
 		}
 		await assertLastItemReachable(page);
 	});
+});
+
+test('SETT-014: theme toggle updates meta theme-color for PWA status bar', async ({ page }) => {
+	await login(page);
+	await page.goto('/settings/display');
+	const metaContent = () =>
+		page.locator('meta[name="theme-color"]').getAttribute('content');
+
+	// Default is light.
+	await page.getByRole('button', { name: 'Light' }).click();
+	await expect.poll(metaContent).toBe('#fafaf9');
+
+	// Switching to Dark updates the meta tag.
+	await page.getByRole('button', { name: 'Dark' }).click();
+	await expect.poll(metaContent).toBe('#0c0a09');
+	await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+	// Switching back to Light updates again.
+	await page.getByRole('button', { name: 'Light' }).click();
+	await expect.poll(metaContent).toBe('#fafaf9');
 });
