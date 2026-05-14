@@ -4,7 +4,8 @@
       "Bash(pnpm *)",
       "Bash(pnpm exec eslint *)",
       "Bash(pnpm exec playwright *)",
-      "Bash(pnpm exec prettier *)"
+      "Bash(pnpm exec prettier *)",
+      "Bash(gh run *)"
     ]
   }
 }
