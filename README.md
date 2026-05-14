@@ -1,52 +1,51 @@
 # Kitchie
 
-Self-hosted personal meal logging and pantry management. Mobile-first, single-user or small household. Log what you ate → update pantry → app learns your patterns → suggests what to make next.
+A self-hosted pantry organizer and meal tracker, with built-in shopping carts and a recipe library.
 
 ## Features
 
-- **Meal logging** — fast two-step flow: log the meal, then optionally decrement pantry items used.
-- **Pantry inventory** — bottom-sheet entry with name-first UX; category, quantity type, and expiry are inferred from the item name.
-- **Bulk entry** — add a shopping trip's worth of items via Carts.
-- **Smart expiry** — per-item-type estimates that you can override.
-- **Recipes** — saved ingredient lists per meal name, used to pre-fill pantry updates.
-- **Suggestions** — meal ideas based on history, time of day, and what's currently in the pantry.
+- **Pantry.** Type an item name and Kitchie infers the category, quantity type, and expiry. Filter by what's expiring soon, running low, or out of stock. Long-press to bulk-consume, add to a cart, or trash.
+- **Meals.** Add a meal in two taps. Meal type is inferred from the time of day, and the name field autocompletes from your history and saved recipes. An optional second step decrements the pantry items you used.
+- **Carts.** Build a shopping list, mark items as you pick them up, then check out. Everything lands in your pantry at once.
+- **Recipes.** Recipes save themselves the first time you log a meal with ingredients. The next time you log the same meal, the ingredient list is pre-filled.
+- **Installable.** Adds to your home screen as a Progressive Web App — Chrome on Android, Safari on iOS.
 
-See [FEATURES.md](FEATURES.md) for the full product spec and [specs/](specs/) for the verified, test-backed feature set.
+See [FEATURES.md](FEATURES.md) for the complete feature list (shipped + planned), or [specs/](specs/) for verified, test-backed behavior.
 
 ## Tech stack
 
-- SvelteKit 2 + Svelte 5 (runes)
+- SvelteKit 2 + Svelte 5 (runes), mobile-first
 - Tailwind CSS v4
 - Drizzle ORM + better-sqlite3
 - bcrypt session auth (custom, no third-party)
 - Playwright for end-to-end tests
-- Ships as a Docker image (Node 22 Alpine)
+- Ships as a Docker image (Node 24 slim); TLS handled outside the Compose stack
 
 ## Getting started
 
 ```sh
-npm install
+pnpm install
 cp .env.example .env          # DATABASE_URL=local.db
-npm run db:push               # apply Drizzle migrations
-npx tsx scripts/create-user.ts <username> <password>
-npm run dev                   # http://localhost:5173
+pnpm db:push                  # apply Drizzle migrations
+pnpm exec tsx scripts/create-user.ts <username> <password>
+pnpm dev                      # http://localhost:5173
 ```
 
 There is no public registration — accounts are created with the `create-user.ts` script.
 
 ## Scripts
 
-| Command                   | What it does                              |
-| ------------------------- | ----------------------------------------- |
-| `npm run dev`             | Start the SvelteKit dev server.           |
-| `npm run build`           | Production build via Vite.                |
-| `npm run check`           | Type-check Svelte and TypeScript.         |
-| `npm run lint`            | Prettier check + ESLint.                  |
-| `npm run format`          | Prettier write.                           |
-| `npm run db:push`         | Apply pending Drizzle migrations.         |
-| `npm run db:generate`     | Generate a migration from schema changes. |
-| `npm run db:studio`       | Open Drizzle Studio.                      |
-| `npm run test:playwright` | Build, then run the Playwright suite.     |
+| Command                | What it does                              |
+| ---------------------- | ----------------------------------------- |
+| `pnpm dev`             | Start the SvelteKit dev server.           |
+| `pnpm build`           | Production build via Vite.                |
+| `pnpm check`           | Type-check Svelte and TypeScript.         |
+| `pnpm lint`            | Prettier check + ESLint.                  |
+| `pnpm format`          | Prettier write.                           |
+| `pnpm db:push`         | Apply pending Drizzle migrations.         |
+| `pnpm db:generate`     | Generate a migration from schema changes. |
+| `pnpm db:studio`       | Open Drizzle Studio.                      |
+| `pnpm test:playwright` | Build, then run the Playwright suite.     |
 
 ## Project layout
 
@@ -64,14 +63,14 @@ specs/           Living, test-backed feature specs
 
 ## Testing
 
-Tests live in [playwright/](playwright/) and reference spec IDs from [specs/](specs/). `npm run test:playwright` builds the app first and then runs the full suite. A spec entry only exists if a passing Playwright test references it by ID — see [specs/README.md](specs/README.md) for the format and workflow.
+Tests live in [playwright/](playwright/) and reference spec IDs from [specs/](specs/). `pnpm test:playwright` builds the app first and then runs the full suite. A spec entry only exists if a passing Playwright test references it by ID — see [specs/README.md](specs/README.md) for the format and workflow.
 
 ## Deployment
 
-Deployed as a Docker image — see [Dockerfile](Dockerfile) and [docker-compose.yml](docker-compose.yml).
+Deployed as a Docker image — see [Dockerfile](Dockerfile) and [docker-compose.yml](docker-compose.yml). TLS is expected to be terminated by a reverse proxy (e.g. Nginx Proxy Manager) outside the Compose stack.
 
 ## Documentation
 
-- [FEATURES.md](FEATURES.md) — product vision, forward-looking
+- [FEATURES.md](FEATURES.md) — feature inventory (shipped + planned)
 - [specs/](specs/) — verified shipped features (test-backed)
 - [CLAUDE.md](CLAUDE.md) — engineering and contribution conventions

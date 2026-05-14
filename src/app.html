@@ -4,6 +4,13 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<meta name="text-scale" content="scale" />
+		<link rel="manifest" href="/manifest.webmanifest" />
+		<meta name="theme-color" content="#fafaf9" />
+		<!-- iOS "Add to Home Screen" support -->
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+		<meta name="apple-mobile-web-app-title" content="Kitchie" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 		<!-- Set display density and theme before first paint to prevent flash -->
 		<script>try{var d=localStorage.getItem('display');document.documentElement.dataset.display=d?JSON.parse(d):'comfortable'}catch(e){document.documentElement.dataset.display='comfortable'}</script>
 		<script>try{var t=localStorage.getItem('theme');document.documentElement.dataset.theme=t?JSON.parse(t):'light'}catch(e){document.documentElement.dataset.theme='light'}</script>
