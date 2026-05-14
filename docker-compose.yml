@@ -9,6 +9,16 @@ services:
       DATABASE_URL: /app/data/kitchie.db
     networks:
       - proxyman_default
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 --cleanup --label-enable
 
 networks:
   proxyman_default:
